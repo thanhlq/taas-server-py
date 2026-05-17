@@ -1,0 +1,82 @@
+{
+  "include": [
+    "libs/",
+    "apps/"
+  ],
+  "extraPaths": [
+    "libs/core_types/src",
+    "libs/db_sa/src",
+    "libs/a12n/src",
+    "libs/a12n_db_sa/src",
+  ],
+  "exclude": [
+    ".venv",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*"
+  ],
+  "defineConstant": {
+    "DEBUG": true
+  },
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "pythonPlatform": "All",
+  "executionEnvironments": [
+    {
+      "root": "libs/core_types",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/a12n",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/a12n_db_sa",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/db_sa",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    }
+  ],
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "ereportMissingTypeArgument": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportMissingTypeArgument": "none",
+  "reportMissingParameterType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportArgumentType": "none",
+  "typeCheckingMode": "strict",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "none",
+  "reportImportCycles": "error",
+  "reportUnusedImport": "warning",
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "error",
+  "reportOptionalSubscript": "error",
+  "reportOptionalMemberAccess": "error",
+  "reportOptionalCall": "error",
+  "reportOptionalIterable": "error",
+  "reportOptionalContextManager": "error",
+  "reportOptionalOperand": "error",
+  "reportTypedDictNotRequiredAccess": "error",
+  "reportUntypedFunctionDecorator": "none",
+  "reportPrivateImportUsage": "warning",
+  "reportConstantRedefinition": "error",
+  "reportIncompatibleMethodOverride": "warning",
+  "reportIncompatibleVariableOverride": "error",
+  "reportInconsistentConstructor": "error",
+  "strictListInference": true,
+  "strictDictionaryInference": true,
+  "strictSetInference": true
+}

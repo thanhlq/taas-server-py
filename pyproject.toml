@@ -1,0 +1,31 @@
+[project]
+name = "taas-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+
+]
+
+[tool.uv.workspace]
+members = [
+    "libs/core_types",
+    "libs/framework_fastapi",
+    "libs/a12n_db_sa",
+    "libs/a12n",
+    "apps/ews_api",
+    "apps/a12n_api",
+    "apps/db_sa",
+]
+
+# exclude = ["services/nodejs-worker"]
+
+[tool.uv.sources]
+core_types = { workspace = true }
+framework_fastapi = { workspace = true }
+a12n_db_sa = { workspace = true }
+a12n = { workspace = true }
+ews_api = { workspace = true }
+a12n_api = { workspace = true }
+db_sa = { workspace = true }

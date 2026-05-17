@@ -1,0 +1,64 @@
+{
+  "files.associations": {
+      "*.json": "jsonc"
+      // Or for a specific file:
+      // "myconfig.json": "jsonc"
+  },
+  "ruff.configuration": "./ruff.toml",
+  "python.languageServer": "Pylance",
+  "python.analysis.extraPaths": [
+    "./libs/core_types/src",
+    "./libs/a12n/src",
+    "./libs/framework_fastapi/src",
+    "./libs/iam_keycloak/src",
+  ],
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.includeInSetting": [
+    "**/*.py"
+  ],
+  "python.analysis.exclude": [
+    "**/node_modules",
+    "**/.venv",
+    "**/venv",
+    "**/__pycache__"
+  ],
+  "python.analysis.importFormat": "absolute",
+  "pylance.insidersChannel": "off",
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "core_types",
+      "depth": 3
+    },
+    {
+      "name": "a12n",
+      "depth": 3
+    },
+    {
+      "name": "a12n_db_sa",
+      "depth": 3
+    },
+    {
+      "name": "db_sa",
+      "depth": 3
+    },
+  ],
+  "search.exclude": {
+    "**/.ruff_cache": true,
+    "**/.venv": true,
+    "**/.turbo": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/*.log": true,
+    "**/pnpm-lock.yaml": true,
+    // "**/*.json": true,
+  },
+  // "files.exclude": {
+  //   "**/node_modules": true,
+  //   "**/dist": true,
+  //   "**/*.lock": true,
+  //   "**/*.log": true
+  // },
+  "makefile.configureOnOpen": false
+}

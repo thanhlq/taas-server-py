@@ -1,0 +1,83 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug eWorksuite API in Docker",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 7001
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
+      "name": "Debug eWorksuite WORKER in Docker",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 7002
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
+      "name": "Python Debugger: Attach using Process Id",
+      "type": "debugpy",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    },
+    {
+      "name": "ews API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "ews_api.main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8195"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "EXTRA_CONFIG": "ews-api",
+        "PYTHON_ENV": "development"
+        // Add more environment variables here as needed
+      }
+    },
+    {
+      "name": "ews WORKDER",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "ews_worker.main",
+      "args": [
+        "--reload",
+        "--env-file",
+        ".env.worker"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "EXTRA_CONFIG": "ews-worker",
+        "PYTHON_ENV": "development"
+        // Add more environment variables here as needed
+      }
+    },
+  ]
+}

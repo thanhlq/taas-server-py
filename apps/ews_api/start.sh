@@ -1,0 +1,1 @@
+uv run --package ews-api python main.py
