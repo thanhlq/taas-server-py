@@ -5,6 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-  'core-types',
-  'framework-fastapi',
+  'platform_core',
+  'rest_fastapi',
 ]

@@ -4,7 +4,7 @@
 
 The purpose is to build
 
-### libs/core_types
+### libs/platform_core
 
 Contain all core definitions and common utils for building of application
 

@@ -4,7 +4,7 @@
     "apps/"
   ],
   "extraPaths": [
-    "libs/core_types/src",
+    "libs/platform_core/src",
     "libs/db_sa/src",
     "libs/a12n/src",
     "libs/a12n_db_sa/src",
@@ -24,7 +24,7 @@
   "pythonPlatform": "All",
   "executionEnvironments": [
     {
-      "root": "libs/core_types",
+      "root": "libs/platform_core",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },

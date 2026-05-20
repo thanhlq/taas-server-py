@@ -10,22 +10,26 @@ dependencies = [
 
 [tool.uv.workspace]
 members = [
-    "libs/core_types",
-    "libs/framework_fastapi",
+    "libs/platform_core",
+    "libs/rest_fastapi",
     "libs/a12n_db_sa",
     "libs/a12n",
     "apps/ews_api",
     "apps/a12n_api",
-    "apps/db_sa",
+    "libs/platform_db_sa",
+    "libs/business_core",
+    # 'libs/*',
+    # 'apps/*',
 ]
 
 # exclude = ["services/nodejs-worker"]
 
 [tool.uv.sources]
-core_types = { workspace = true }
-framework_fastapi = { workspace = true }
+platform_core = { workspace = true }
+rest_fastapi = { workspace = true }
 a12n_db_sa = { workspace = true }
 a12n = { workspace = true }
 ews_api = { workspace = true }
 a12n_api = { workspace = true }
-db_sa = { workspace = true }
+platform_db_sa = { workspace = true }
+business_core = { workspace = true }
