@@ -8,5 +8,4 @@ dependencies = [
   'platform_core',
   'business_core',
   'rest_fastapi',
-  "fastapi-msgspec>=0.1.0",
 ]

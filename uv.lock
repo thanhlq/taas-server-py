@@ -205,10 +205,16 @@ version = "0.1.0"
 source = { editable = "libs/business_core" }
 dependencies = [
     { name = "platform-core" },
+    { name = "pydantic" },
+    { name = "rest-fastapi" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "platform-core", editable = "libs/platform_core" }]
+requires-dist = [
+    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "pydantic", specifier = "==2.13.4" },
+    { name = "rest-fastapi", editable = "libs/rest_fastapi" },
+]
 
 [[package]]
 name = "cbor2"
@@ -407,7 +413,6 @@ version = "0.1.0"
 source = { editable = "apps/ews_api" }
 dependencies = [
     { name = "business-core" },
-    { name = "fastapi-msgspec" },
     { name = "platform-core" },
     { name = "rest-fastapi" },
 ]
@@ -415,7 +420,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "business-core", editable = "libs/business_core" },
-    { name = "fastapi-msgspec", specifier = ">=0.1.0" },
     { name = "platform-core", editable = "libs/platform_core" },
     { name = "rest-fastapi", editable = "libs/rest_fastapi" },
 ]
@@ -434,19 +438,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5d/45/c130091c2dfa061bbfe3150f2a5091ef1adf149f2a8d2ae769ecaf6e99a2/fastapi-0.136.1.tar.gz", hash = "sha256:7af665ad7acfa0a3baf8983d393b6b471b9da10ede59c60045f49fbc89a0fa7f", size = 397448, upload-time = "2026-04-23T16:49:44.046Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/ff/2e4eca3ade2c22fe1dea7043b8ee9dabe47753349eb1b56a202de8af6349/fastapi-0.136.1-py3-none-any.whl", hash = "sha256:a6e9d7eeada96c93a4d69cb03836b44fa34e2854accb7244a1ece36cd4781c3f", size = 117683, upload-time = "2026-04-23T16:49:42.437Z" },
-]
-
-[[package]]
-name = "fastapi-msgspec"
-version = "0.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "fastapi" },
-    { name = "msgspec" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/99/49387da093b60599efe6d4afac3c5fe9ec14c4471e11edf5c3770213793b/fastapi_msgspec-0.1.0.tar.gz", hash = "sha256:ba177f9cd9d05799cc1afe94e0fe73def06d93fcd38df5a91c91d8ad8bd1bb17", size = 6736, upload-time = "2024-05-06T12:06:48.411Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/e0/8858c08cc92bf80551228ba319ba04862809e31eb725ad7b4af46b2ac46f/fastapi_msgspec-0.1.0-py3-none-any.whl", hash = "sha256:84b63ad7b82fe6696b25a77f547568d2081f4bbe798355668d98f1aee304b13f", size = 5169, upload-time = "2024-05-06T12:06:44.95Z" },
 ]
 
 [[package]]
