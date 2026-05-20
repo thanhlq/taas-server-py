@@ -26,7 +26,6 @@ class ProjectController:
     def _register_routes(self):
         @self.router.get(
             path="/",
-            openapi_extra=msgspec_response(list[Project]),
         )
         def list_projects() -> list[Project]:
             return samples_project
