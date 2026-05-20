@@ -23,7 +23,7 @@ from typing import Protocol, runtime_checkable
 
 import msgspec
 
-from platform_core.base_entity import BaseEntity
+from platform_core.serialization import BaseEntity
 
 
 # --------------------------------------------------------------------------- #
