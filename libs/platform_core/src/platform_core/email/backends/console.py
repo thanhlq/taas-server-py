@@ -18,8 +18,6 @@ class ConsoleBackend(BaseEmailBackend):
     Example:
         Basic configuration::
 
-            from litestar_email import EmailConfig
-
             config = EmailConfig(backend="console")
     """
 

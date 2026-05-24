@@ -1,4 +1,5 @@
 from .settings import (
+    CONFIG_PREFIX,
     AppSettings,
     DatabaseSettings,
     ServerSettings,
@@ -7,6 +8,7 @@ from .settings import (
 )
 
 __all__ = (
+    'CONFIG_PREFIX',
     'DatabaseSettings',
     'ServerSettings',
     'AppSettings',

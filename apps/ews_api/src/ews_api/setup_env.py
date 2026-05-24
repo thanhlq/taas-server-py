@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from platform_core.config import CONFIG_PREFIX
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -20,10 +22,9 @@ def setup_environment() -> Settings:
 
     settings = get_settings()
 
-    os.environ.setdefault('LITESTAR_APP', 'app.server.asgi:create_app')
-    os.environ.setdefault('LITESTAR_APP_NAME', settings.app.NAME)
-    # os.environ.setdefault("LITESTAR_GRANIAN_IN_SUBPROCESS", "false")
-    os.environ.setdefault('LITESTAR_GRANIAN_USE_LITESTAR_LOGGER', 'true')
+    os.environ.setdefault(f'{CONFIG_PREFIX}_APP', 'app.server.asgi:create_app')
+    os.environ.setdefault(f'{CONFIG_PREFIX}_APP_NAME', settings.app.NAME)
+    # os.environ.setdefault(f"{CONFIG_PREFIX}_GRANIAN_IN_SUBPROCESS", "false")
     # original_format_help = LitestarExtensionGroup.format_help
 
     print('Starting with db url: ', settings.db.URL)  # noqa: T201

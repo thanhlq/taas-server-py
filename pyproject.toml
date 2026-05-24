@@ -14,13 +14,11 @@ members = [
     "libs/rest_fastapi",
     "libs/a12n_db_sa",
     "libs/a12n",
+    "libs/db",
+    "libs/business_core",
     "apps/ews_api",
     "apps/a12n_api",
-    "libs/platform_db_sa",
-    "libs/business_core",
     "apps/ews_worker",
-    # 'libs/*',
-    # 'apps/*',
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -33,7 +31,7 @@ a12n = { workspace = true }
 ews_api = { workspace = true }
 ews_worker = { workspace = true }
 a12n_api = { workspace = true }
-platform_db_sa = { workspace = true }
+db = { workspace = true }
 business_core = { workspace = true }
 
 

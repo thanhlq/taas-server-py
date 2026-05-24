@@ -4,6 +4,7 @@ import os
 import warnings
 from typing import TYPE_CHECKING
 
+from platform_core.config import CONFIG_PREFIX
 from platform_core.exceptions import TaasWarning
 
 if TYPE_CHECKING:
@@ -13,73 +14,81 @@ if TYPE_CHECKING:
 
 
 def warn_implicit_sync_to_thread(source: AnyCallable, stacklevel: int = 2) -> None:
-    if os.getenv("LITESTAR_WARN_IMPLICIT_SYNC_TO_THREAD") == "0":
+    if os.getenv(f'{CONFIG_PREFIX}_WARN_IMPLICIT_SYNC_TO_THREAD') == '0':
         return
 
     warnings.warn(
-        f"Use of a synchronous callable {source} without setting sync_to_thread is "
-        "discouraged since synchronous callables can block the main thread if they "
-        "perform blocking operations. If the callable is guaranteed to be non-blocking, "
-        "you can set sync_to_thread=False to skip this warning, or set the environment"
-        "variable LITESTAR_WARN_IMPLICIT_SYNC_TO_THREAD=0 to disable warnings of this "
-        "type entirely.",
+        f'Use of a synchronous callable {source} without setting sync_to_thread is '
+        'discouraged since synchronous callables can block the main thread if they '
+        'perform blocking operations. If the callable is guaranteed to be non-blocking, '
+        'you can set sync_to_thread=False to skip this warning, or set the environment'
+        f'variable {CONFIG_PREFIX}_WARN_IMPLICIT_SYNC_TO_THREAD=0 to disable warnings of this '
+        'type entirely.',
         category=TaasWarning,
         stacklevel=stacklevel,
     )
 
 
-def warn_sync_to_thread_with_async_callable(source: AnyCallable, stacklevel: int = 2) -> None:
-    if os.getenv("LITESTAR_WARN_SYNC_TO_THREAD_WITH_ASYNC") == "0":
+def warn_sync_to_thread_with_async_callable(
+    source: AnyCallable, stacklevel: int = 2
+) -> None:
+    if os.getenv(f'{CONFIG_PREFIX}_WARN_SYNC_TO_THREAD_WITH_ASYNC') == '0':
         return
 
     warnings.warn(
-        f"Use of an asynchronous callable {source} with sync_to_thread; sync_to_thread "
-        "has no effect on async callable. You can disable this warning by setting "
-        "LITESTAR_WARN_SYNC_TO_THREAD_WITH_ASYNC=0",
+        f'Use of an asynchronous callable {source} with sync_to_thread; sync_to_thread '
+        'has no effect on async callable. You can disable this warning by setting '
+        f'{CONFIG_PREFIX}_WARN_SYNC_TO_THREAD_WITH_ASYNC=0',
         category=TaasWarning,
         stacklevel=stacklevel,
     )
 
 
-def warn_sync_to_thread_with_generator(source: AnyGenerator, stacklevel: int = 2) -> None:
-    if os.getenv("LITESTAR_WARN_SYNC_TO_THREAD_WITH_GENERATOR") == "0":
+def warn_sync_to_thread_with_generator(
+    source: AnyGenerator, stacklevel: int = 2
+) -> None:
+    if os.getenv(f'{CONFIG_PREFIX}_WARN_SYNC_TO_THREAD_WITH_GENERATOR') == '0':
         return
 
     warnings.warn(
-        f"Use of generator {source} with sync_to_thread; sync_to_thread has no effect "
-        "on generators. You can disable this warning by setting "
-        "LITESTAR_WARN_SYNC_TO_THREAD_WITH_GENERATOR=0",
+        f'Use of generator {source} with sync_to_thread; sync_to_thread has no effect '
+        'on generators. You can disable this warning by setting '
+        f'{CONFIG_PREFIX}_WARN_SYNC_TO_THREAD_WITH_GENERATOR=0',
         category=TaasWarning,
         stacklevel=stacklevel,
     )
 
 
 def warn_pdb_on_exception(stacklevel: int = 2) -> None:
-    warnings.warn("Python Debugger on exception enabled", category=TaasWarning, stacklevel=stacklevel)
+    warnings.warn(
+        'Python Debugger on exception enabled',
+        category=TaasWarning,
+        stacklevel=stacklevel,
+    )
 
 
 def warn_middleware_excluded_on_all_routes(
     pattern: re.Pattern,
     middleware_cls: type | None = None,
 ) -> None:
-    middleware_name = f" {middleware_cls.__name__!r}" if middleware_cls else ""
+    middleware_name = f' {middleware_cls.__name__!r}' if middleware_cls else ''
     warnings.warn(
-        f"Middleware{middleware_name} exclude pattern {pattern.pattern!r} greedily "
-        "matches all paths, effectively disabling this middleware. If this was "
-        "intentional, consider removing this middleware entirely",
+        f'Middleware{middleware_name} exclude pattern {pattern.pattern!r} greedily '
+        'matches all paths, effectively disabling this middleware. If this was '
+        'intentional, consider removing this middleware entirely',
         category=TaasWarning,
         stacklevel=2,
     )
 
 
 def warn_signature_namespace_override(signature_key: str, stacklevel: int = 2) -> None:
-    if os.getenv("LITESTAR_WARN_SIGNATURE_NAMESPACE_OVERRIDE") == "0":
+    if os.getenv(f'{CONFIG_PREFIX}_WARN_SIGNATURE_NAMESPACE_OVERRIDE') == '0':
         return
 
     warnings.warn(
         f"Type '{signature_key}' is already defined as a different type in the signature namespace"
-        "If this is intentional, you can disable this warning by setting "
-        "LITESTAR_WARN_SIGNATURE_NAMESPACE_OVERRIDE=0",
+        'If this is intentional, you can disable this warning by setting '
+        f'{CONFIG_PREFIX}_WARN_SIGNATURE_NAMESPACE_OVERRIDE=0',
         category=TaasWarning,
         stacklevel=stacklevel,
     )

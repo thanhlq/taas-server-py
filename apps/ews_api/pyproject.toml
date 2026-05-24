@@ -8,6 +8,7 @@ dependencies = [
   'platform_core',
   'business_core',
   'rest_fastapi',
+  'db'
 ]
 
 [project.scripts]

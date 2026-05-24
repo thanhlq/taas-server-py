@@ -31,8 +31,9 @@ from platform_core.utils.module_loader import module_to_os_path
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
 
+CONFIG_PREFIX = 'TAAS'
 
-DEFAULT_MODULE_NAME = 'platform_core'
+DEFAULT_MODULE_NAME = 'db'  # libs/db
 # TODO: to improve since deploying in evironemtn as cloudflare workers,
 # the file system is read only, we need to find a better way to handle static files in that case.
 BASE_DIR: Final[Path] = module_to_os_path(DEFAULT_MODULE_NAME)
@@ -148,16 +149,16 @@ class ServerSettings:
 
     APP_LOC: str = 'dma.asgi:create_app'
     """Path to app executable or factory."""
-    HOST: str = field(default_factory=get_env('LITESTAR_HOST', '0.0.0.0'))  # noqa: S104
+    HOST: str = field(default_factory=get_env(f'{CONFIG_PREFIX}_HOST', '0.0.0.0'))  # noqa: S104
     """Server network host."""
-    PORT: int = field(default_factory=get_env('LITESTAR_PORT', 8000))
+    PORT: int = field(default_factory=get_env(f'{CONFIG_PREFIX}_PORT', 8000))
     """Server port."""
-    KEEPALIVE: int = field(default_factory=get_env('LITESTAR_KEEPALIVE', 65))
+    KEEPALIVE: int = field(default_factory=get_env(f'{CONFIG_PREFIX}_KEEPALIVE', 65))
     """Seconds to hold connections open (65 is > AWS lb idle timeout)."""
-    RELOAD: bool = field(default_factory=get_env('LITESTAR_RELOAD', False))
+    RELOAD: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_RELOAD', False))
     """Turn on hot reloading."""
     RELOAD_DIRS: list[str] = field(
-        default_factory=get_env('LITESTAR_RELOAD_DIRS', [f'{BASE_DIR}'])
+        default_factory=get_env(f'{CONFIG_PREFIX}_RELOAD_DIRS', [f'{BASE_DIR}'])
     )
     """Directories to watch for reloading."""
 
@@ -244,7 +245,7 @@ class AppSettings:
     """Application contact email"""
     URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8000'))
     """The frontend base URL"""
-    DEBUG: bool = field(default_factory=get_env('LITESTAR_DEBUG', False))
+    DEBUG: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG', False))
     """Run `Litestar` with `debug=True`."""
     SECRET_KEY: str = field(
         default_factory=get_env(
