@@ -1,5 +1,5 @@
 [project]
-name = "ews-api"
+name = "ews_api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -9,3 +9,10 @@ dependencies = [
   'business_core',
   'rest_fastapi',
 ]
+
+[project.scripts]
+ews_api = "ews_api:main"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"

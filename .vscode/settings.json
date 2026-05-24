@@ -1,4 +1,16 @@
 {
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.trimAutoWhitespace": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
   "files.associations": {
       "*.json": "jsonc"
       // Or for a specific file:

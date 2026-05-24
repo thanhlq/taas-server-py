@@ -1,0 +1,2 @@
+class BaseRouteHandler:
+  pass
