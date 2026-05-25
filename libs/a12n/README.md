@@ -1,3 +1,0 @@
-# Authenication Lib
-
-Which 

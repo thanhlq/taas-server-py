@@ -21,8 +21,7 @@
   "python.analysis.extraPaths": [
     "./libs/platform_core/src",
     "./libs/platform_db_sa/src",
-    "./libs/business_core/src",
-    "./libs/a12n/src",
+    "./libs/ews/src",
     "./libs/rest_fastapi/src",
     "./libs/iam_keycloak/src",
   ],
@@ -46,19 +45,7 @@
       "depth": 3
     },
     {
-      "name": "platform_db_sa",
-      "depth": 3
-    },
-    {
-      "name": "business_core",
-      "depth": 3
-    },
-    {
-      "name": "a12n",
-      "depth": 3
-    },
-    {
-      "name": "a12n_db_sa",
+      "name": "ews",
       "depth": 3
     },
 

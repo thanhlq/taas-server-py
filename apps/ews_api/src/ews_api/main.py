@@ -2,7 +2,7 @@
 #
 # uv run --package ews_api python main.py
 
-from business_core.domain.project import ProjectController
+from ews.domain.project import ProjectController
 from rest_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from rest_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 from rest_fastapi.fastapi_msgspec.routing import MsgSpecRoute

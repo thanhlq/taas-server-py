@@ -1,5 +1,5 @@
-from business_core.domain.project.schemas import Project
-from business_core.domain.project.schemas._project import ProjectEntityPy
+from ews.domain.project.schemas import Project
+from ews.domain.project.schemas._project import ProjectEntityPy
 from rest_fastapi.fastapi_msgspec.openapi import msgspec_response
 from rest_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 

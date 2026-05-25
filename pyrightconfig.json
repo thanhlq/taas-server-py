@@ -3,12 +3,6 @@
     "libs/",
     "apps/"
   ],
-  "extraPaths": [
-    "libs/platform_core/src",
-    "libs/db_sa/src",
-    "libs/a12n/src",
-    "libs/a12n_db_sa/src",
-  ],
   "exclude": [
     ".venv",
     "**/node_modules",
@@ -22,6 +16,9 @@
   "venv": ".venv",
   "pythonVersion": "3.14",
   "pythonPlatform": "All",
+  "extraPaths": [
+    "libs/platform_core/src",
+  ],
   "executionEnvironments": [
     {
       "root": "libs/platform_core",

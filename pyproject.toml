@@ -12,12 +12,9 @@ dependencies = [
 members = [
     "libs/platform_core",
     "libs/rest_fastapi",
-    "libs/a12n_db_sa",
-    "libs/a12n",
     "libs/db",
-    "libs/business_core",
+    "libs/ews",
     "apps/ews_api",
-    "apps/a12n_api",
     "apps/ews_worker",
 ]
 
@@ -25,14 +22,11 @@ members = [
 
 [tool.uv.sources]
 platform_core = { workspace = true }
+db = { workspace = true }
+ews = { workspace = true }
 rest_fastapi = { workspace = true }
-a12n_db_sa = { workspace = true }
-a12n = { workspace = true }
 ews_api = { workspace = true }
 ews_worker = { workspace = true }
-a12n_api = { workspace = true }
-db = { workspace = true }
-business_core = { workspace = true }
 
 
 [dependency-groups]
