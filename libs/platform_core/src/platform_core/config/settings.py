@@ -121,27 +121,6 @@ class DatabaseSettings:
             ),
         )
 
-        """Get Vite configuration.
-
-        Args:
-            base_dir: Base directory for resolving paths.
-
-        Returns:
-            The Vite configuration.
-        """
-        js_home = base_dir / 'js' / 'web'
-        return ViteConfig(
-            mode='spa',
-            dev_mode=self.DEV_MODE,
-            runtime=RuntimeConfig(executor='bun', trusted_proxies=self.TRUSTED_PROXIES),
-            paths=PathConfig(
-                root=js_home,
-                bundle_dir=self.BUNDLE_DIR,
-                asset_url=self.ASSET_URL,
-            ),
-            types=TypeGenConfig(output=Path('src/lib/generated')),
-        )
-
 
 @dataclass
 class ServerSettings:
