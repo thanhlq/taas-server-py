@@ -7,6 +7,7 @@ Litestar can't introspect ``msgspec.Struct`` into its OpenAPI doc, so we:
 * Merge the discovered components into ``components.schemas`` of the final
   OpenAPI document via :func:`install_msgspec_openapi`.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -15,38 +16,42 @@ import msgspec
 from litestar import Litestar
 from litestar.openapi.spec import OpenAPI
 
-_COMPONENTS_KEY = "x-msgspec-components"
+_COMPONENTS_KEY = 'x-msgspec-components'
+
 
 def msgspec_response(
     return_type: Any,
     *,
     status_code: int = 200,
-    description: str = "Successful Response",
+    description: str = 'Successful Response',
 ) -> dict[str, Any]:
     """Build an ``openapi_extra`` dict describing a msgspec response."""
     (schema,), components = msgspec.json.schema_components(
         [return_type],
-        ref_template="#/components/schemas/{name}",
+        ref_template='#/components/schemas/{name}',
     )
     return {
-        "responses": {
+        'responses': {
             str(status_code): {
-                "description": description,
-                "content": {"application/json": {"schema": schema}},
+                'description': description,
+                'content': {'application/json': {'schema': schema}},
             }
         },
         _COMPONENTS_KEY: components,
     }
 
+
 def install_msgspec_openapi(app: Litestar) -> None:
     """Install a custom ``app.openapi`` that merges msgspec component schemas."""
     original_openapi_fn = app.openapi
+
     def custom_openapi(*args, **kwargs) -> OpenAPI:
         schema = original_openapi_fn(*args, **kwargs)
         components = schema.components.schemas
         for route in app.routes:
-            extra = getattr(route, "openapi_extra", None) or {}
+            extra = getattr(route, 'openapi_extra', None) or {}
             for name, comp in (extra.get(_COMPONENTS_KEY) or {}).items():
                 components.setdefault(name, comp)
         return schema
+
     app.openapi = custom_openapi

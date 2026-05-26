@@ -1,1 +1,1 @@
-from .openapi import msgspec_response, install_msgspec_openapi
+from .openapi import install_msgspec_openapi, msgspec_response
