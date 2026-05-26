@@ -2,12 +2,13 @@
 #
 # uv run --package ews_api python main.py
 
+from fastapi import FastAPI
+
 from ews.domain.project import ProjectController
+from http_fastapi.adapters import include_controller
+from http_fastapi.base_fastapi_app import build_app
 from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
-from fastapi import APIRouter, FastAPI
-from http_fastapi.base_fastapi_app import build_app
 from http_fastapi.uvicorn import run_uvicorn
 
 from .setup_env import setup_environment
@@ -21,15 +22,7 @@ install_msgspec_openapi(app)
 def main():
     print('Hello from ews-api!')
 
-    router = APIRouter(
-        prefix=ProjectController.api_prefix,
-        tags=['Project API'],
-        route_class=MsgSpecRoute,
-    )
-
-    ProjectController(router)
-
-    app.include_router(router)
+    include_controller(app, ProjectController())
 
     app.add_api_route('/hello', lambda: {'message': 'Hello, World!'}, methods=['GET'])
 

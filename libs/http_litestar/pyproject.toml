@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    'litestar==0.11.0',
+    'litestar==2.22.0',
 ]
 
 [build-system]

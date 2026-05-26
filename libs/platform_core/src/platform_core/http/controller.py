@@ -1,26 +1,37 @@
-"""
- - The idea is to define a base controller class that can be used to create controllers for different types of routes (HTTP, WebSocket, etc.).
- - And also the key point is to use this controller for definition of HTTP routes, which will allow us to have a consistent way.
- - This base controller will be used to wire up the route handlers (like HTTPRouteHandler, WebsocketRouteHandler, etc.) with the actual
-    route handler functions.
- - And then, we can use any http framework (like FastAPI, Flask, etc.) to implement the actual route handlers
+"""Base controller for framework-agnostic HTTP route declarations.
 
-Examples:
-
-```python
-from platform_core.http.controller import BaseController
-from platform_core.http.decorators import get, post, delete, patch, put
-
-class ProjectController(BaseController):
-
-    @get('/projects')
-    def list_projects(self, ) -> ASGIApp:
-
+A :class:`Controller` subclass collects route metadata attached by the
+decorators in :mod:`platform_core.http.decorator` and exposes them through
+:meth:`get_routes`. Adapters consume those routes to register them with a
+concrete HTTP framework (FastAPI, Litestar, ...).
 """
 
-from platform_core.types.asgi_types import ASGIApp, Scope
-from platform_core.types.internal_types import RouteHandlerType
+from __future__ import annotations
+
+from typing import ClassVar, Sequence
+
+from platform_core.http.decorator import ROUTE_ATTR
+from platform_core.http.route import Route
+
 
 class BaseController:
+    api_prefix: ClassVar[str] = ''
+    tags: ClassVar[Sequence[str] | None] = None
 
-    def __init__(self, route_handler: RouteHandlerType):
+    def get_routes(self) -> list[Route]:
+        """Return routes with each handler bound to this controller instance."""
+        routes: list[Route] = []
+        seen: set[str] = set()
+        # Walk the MRO so subclasses inherit parent routes, with subclass
+        # overrides winning by name.
+        for klass in type(self).__mro__:
+            for name, attr in klass.__dict__.items():
+                if name in seen:
+                    continue
+                meta: Route | None = getattr(attr, ROUTE_ATTR, None)
+                if meta is None:
+                    continue
+                seen.add(name)
+                bound_handler = getattr(self, name)
+                routes.append(meta.with_handler(bound_handler))
+        return routes

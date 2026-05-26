@@ -1,4 +1,4 @@
-from .controllers._project_ctl import ProjectController
+from .controllers._project_controller import ProjectController
 
 __all__ = [
     "ProjectController",
