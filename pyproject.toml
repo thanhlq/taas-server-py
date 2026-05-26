@@ -16,6 +16,7 @@ members = [
     "libs/ews",
     "apps/ews_api",
     "apps/ews_worker",
+    "libs/http_litestar",
 ]
 
 # exclude = ["services/nodejs-worker"]

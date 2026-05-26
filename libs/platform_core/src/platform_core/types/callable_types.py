@@ -36,3 +36,6 @@ GetLogger: TypeAlias = 'Callable[..., Logger]'
 LifespanHook: TypeAlias = (
     'Callable[[Litestar], SyncOrAsyncUnion[Any]] | Callable[[], SyncOrAsyncUnion[Any]]'
 )
+AfterRequestHookHandler: TypeAlias = (
+    "Callable[[ASGIApp], SyncOrAsyncUnion[ASGIApp]] | Callable[[Response], SyncOrAsyncUnion[Response]]"
+)
