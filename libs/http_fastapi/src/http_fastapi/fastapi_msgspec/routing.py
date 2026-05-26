@@ -9,9 +9,9 @@ from fastapi.routing import APIRoute
 from starlette.requests import Request
 from starlette.responses import Response
 
-from rest_fastapi.fastapi_msgspec.openapi import msgspec_response
-from rest_fastapi.fastapi_msgspec.requests import MSGSpecJSONRequest
-from rest_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
+from http_fastapi.fastapi_msgspec.openapi import msgspec_response
+from http_fastapi.fastapi_msgspec.requests import MSGSpecJSONRequest
+from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 
 
 def _contains_struct(tp: Any) -> bool:

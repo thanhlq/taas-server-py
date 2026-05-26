@@ -18,13 +18,6 @@
   },
   "ruff.configuration": "./ruff.toml",
   "python.languageServer": "Pylance",
-  "python.analysis.extraPaths": [
-    "./libs/platform_core/src",
-    "./libs/platform_db_sa/src",
-    "./libs/ews/src",
-    "./libs/rest_fastapi/src",
-    "./libs/iam_keycloak/src",
-  ],
   "python.defaultInterpreterPath": "./.venv/bin/python",
   // "python.analysis.autoSearchPaths": true,
   "python.analysis.autoImportCompletions": true,
@@ -38,18 +31,6 @@
     "**/__pycache__"
   ],
   "python.analysis.importFormat": "absolute",
-  "pylance.insidersChannel": "off",
-  "python.analysis.packageIndexDepths": [
-    {
-      "name": "platform_core",
-      "depth": 3
-    },
-    {
-      "name": "ews",
-      "depth": 3
-    },
-
-  ],
   "search.exclude": {
     "**/.ruff_cache": true,
     "**/.venv": true,

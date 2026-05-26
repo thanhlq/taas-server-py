@@ -16,13 +16,13 @@ response models while still producing a correct OpenAPI document.
 
 ```python
 from fastapi import APIRouter
-from rest_fastapi.base_fastapi_app import build_app
-from rest_fastapi.fastapi_msgspec.openapi import (
+from http_fastapi.base_fastapi_app import build_app
+from http_fastapi.fastapi_msgspec.openapi import (
     install_msgspec_openapi,
     msgspec_response,
 )
-from rest_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from rest_fastapi.fastapi_msgspec.routing import MsgSpecRoute
+from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
+from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 
 app = build_app(default_response_class=MsgSpecJSONResponse)
 install_msgspec_openapi(app)

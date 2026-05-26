@@ -17,7 +17,12 @@
   "pythonVersion": "3.14",
   "pythonPlatform": "All",
   "extraPaths": [
+    "libs/db/src",
+    "libs/ews/src",
+    "libs/http_fastapi/src",
     "libs/platform_core/src",
+    "apps/ews_api/src",
+    "apps/ews_worker/src"
   ],
   "executionEnvironments": [
     {
@@ -26,17 +31,27 @@
       "extraPaths": ["src"]
     },
     {
-      "root": "libs/a12n",
+      "root": "libs/http_fastapi",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
     {
-      "root": "libs/a12n_db_sa",
+      "root": "libs/db",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
     {
-      "root": "libs/db_sa",
+      "root": "libs/ews",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "apps/ews_api",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "apps/ews_worker",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     }

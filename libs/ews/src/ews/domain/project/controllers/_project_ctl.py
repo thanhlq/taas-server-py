@@ -1,23 +1,22 @@
 from ews.domain.project.schemas import Project
 from ews.domain.project.schemas._project import ProjectEntityPy
-from rest_fastapi.fastapi_msgspec.openapi import msgspec_response
-from rest_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-
+from http_fastapi.fastapi_msgspec.openapi import msgspec_response
+from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 from platform_core.utils.datetime_utils import now_in_utc
 
 samples_project: list[Project] = [
-    Project(id=1, name="Sample Project", created_at=now_in_utc()),
-    Project(id=2, name="Another Project", created_at=now_in_utc())
+    Project(id=1, name='Sample Project', created_at=now_in_utc()),
+    Project(id=2, name='Another Project', created_at=now_in_utc()),
 ]
 
 samples_project2: list[ProjectEntityPy] = [
-    ProjectEntityPy(id=1, name="Sample Project", created_at=now_in_utc()),
-    ProjectEntityPy(id=2, name="Another Project", created_at=now_in_utc())
+    ProjectEntityPy(id=1, name='Sample Project', created_at=now_in_utc()),
+    ProjectEntityPy(id=2, name='Another Project', created_at=now_in_utc()),
 ]
 
 
 class ProjectController:
-    api_prefix = "/api/v1/projects"
+    api_prefix = '/api/v1/projects'
 
     def __init__(self, router):
         self.router = router
@@ -25,13 +24,13 @@ class ProjectController:
 
     def _register_routes(self):
         @self.router.get(
-            path="/",
+            path='/',
         )
         def list_projects() -> list[Project]:
             return samples_project
 
         @self.router.get(
-            path="/p1",
+            path='/p1',
             response_model=None,
             openapi_extra=msgspec_response(list[Project]),
         )
@@ -39,7 +38,7 @@ class ProjectController:
             return MsgSpecJSONResponse(samples_project)
 
         @self.router.get(
-            path="/p2",
+            path='/p2',
         )
         def list_projects2() -> list[ProjectEntityPy]:
             return samples_project2

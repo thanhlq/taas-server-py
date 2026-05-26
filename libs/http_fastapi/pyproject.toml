@@ -1,5 +1,5 @@
 [project]
-name = "rest_fastapi"
+name = "http_fastapi"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

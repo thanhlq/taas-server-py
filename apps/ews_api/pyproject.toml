@@ -7,8 +7,10 @@ requires-python = ">=3.14"
 dependencies = [
   'platform_core',
   'ews',
-  'rest_fastapi',
-  'db'
+  'http_fastapi',
+  'db',
+  'fastapi==0.136.1',
+  'uvicorn==0.34.0',
 ]
 
 [project.scripts]

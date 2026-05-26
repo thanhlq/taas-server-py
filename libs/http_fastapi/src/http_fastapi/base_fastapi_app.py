@@ -22,4 +22,7 @@ def build_app(**kwargs) -> FastAPI:
         },
         **kwargs
     )
+
+    app.add_api_route("/hello", lambda: {"message": "Hello from FastAPI!"}, methods=["GET"])
+
     return app

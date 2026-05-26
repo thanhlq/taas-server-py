@@ -11,7 +11,7 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "libs/platform_core",
-    "libs/rest_fastapi",
+    "libs/http_fastapi",
     "libs/db",
     "libs/ews",
     "apps/ews_api",
@@ -24,7 +24,7 @@ members = [
 platform_core = { workspace = true }
 db = { workspace = true }
 ews = { workspace = true }
-rest_fastapi = { workspace = true }
+http_fastapi = { workspace = true }
 ews_api = { workspace = true }
 ews_worker = { workspace = true }
 
