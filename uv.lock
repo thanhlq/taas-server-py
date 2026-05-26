@@ -292,6 +292,8 @@ dependencies = [
     { name = "ews" },
     { name = "fastapi" },
     { name = "http-fastapi" },
+    { name = "http-litestar" },
+    { name = "litestar" },
     { name = "platform-core" },
     { name = "uvicorn" },
 ]
@@ -302,6 +304,8 @@ requires-dist = [
     { name = "ews", editable = "libs/ews" },
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "http-fastapi", editable = "libs/http_fastapi" },
+    { name = "http-litestar", editable = "libs/http_litestar" },
+    { name = "litestar", specifier = "==2.22.0" },
     { name = "platform-core", editable = "libs/platform_core" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]
@@ -423,10 +427,16 @@ version = "0.1.0"
 source = { editable = "libs/http_litestar" }
 dependencies = [
     { name = "litestar" },
+    { name = "platform-core" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "litestar", specifier = "==2.22.0" }]
+requires-dist = [
+    { name = "litestar", specifier = "==2.22.0" },
+    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "uvicorn", specifier = "==0.34.0" },
+]
 
 [[package]]
 name = "httpcore"

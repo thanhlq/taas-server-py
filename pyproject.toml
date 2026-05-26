@@ -26,6 +26,7 @@ platform_core = { workspace = true }
 db = { workspace = true }
 ews = { workspace = true }
 http_fastapi = { workspace = true }
+http_litestar = { workspace = true }
 ews_api = { workspace = true }
 ews_worker = { workspace = true }
 
