@@ -11,6 +11,9 @@ dependencies = [
     'litestar==2.22.0',
     'uvicorn==0.34.0',
     'platform_core',
+
+    # 🔌 Real-time Communication
+    'python-socketio==5.16.2',
 ]
 
 [build-system]

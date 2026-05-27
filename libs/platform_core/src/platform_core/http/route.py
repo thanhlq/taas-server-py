@@ -50,3 +50,55 @@ class Route:
             middleware=self.middleware,
             extra=dict(self.extra),
         )
+
+
+@dataclass
+class WebSocketRoute:
+    """Framework-agnostic description of a WebSocket endpoint.
+
+    The handler receives a :class:`platform_core.http.websocket.WebSocketSession`
+    that the adapter wraps around its native socket.
+    """
+
+    path: str
+    handler: Callable[..., Any]
+    name: str | None = None
+    permissions: tuple[str, ...] | None = None
+    middleware: tuple[Any, ...] | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+    def with_handler(self, handler: Callable[..., Any]) -> WebSocketRoute:
+        return WebSocketRoute(
+            path=self.path,
+            handler=handler,
+            name=self.name,
+            permissions=self.permissions,
+            middleware=self.middleware,
+            extra=dict(self.extra),
+        )
+
+
+@dataclass
+class SocketIOHandler:
+    """Framework-agnostic description of a Socket.IO event handler.
+
+    Socket.IO is an event-based protocol (layered over WebSocket / HTTP
+    long-polling) rather than a single bidirectional stream. Handlers bind to
+    named events (``connect``, ``disconnect``, or custom events like
+    ``subscribe``) within a namespace. The adapter wires these onto a
+    ``socketio.AsyncServer`` and passes each handler a framework-neutral
+    session wrapper.
+    """
+
+    event: str
+    handler: Callable[..., Any]
+    namespace: str = '/'
+    name: str | None = None
+
+    def with_handler(self, handler: Callable[..., Any]) -> SocketIOHandler:
+        return SocketIOHandler(
+            event=self.event,
+            handler=handler,
+            namespace=self.namespace,
+            name=self.name,
+        )

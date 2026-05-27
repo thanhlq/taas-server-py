@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import APIRouter, FastAPI
-from platform_core.http import BaseController, Route
+from platform_core.http import BaseController, Route, WebSocketRoute
+from starlette.websockets import WebSocket
 
+from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 
 
@@ -30,6 +32,8 @@ def build_router_for_controller(
     router = APIRouter(**_router_kwargs(controller, router_kwargs))
     for r in controller.get_routes():
         _add_route(router, r)
+    for ws in controller.get_websocket_routes():
+        _add_websocket_route(router, ws)
     return router
 
 
@@ -65,5 +69,35 @@ def _add_route(router: APIRouter, route: Route) -> None:
         path=route.path,
         endpoint=route.handler,
         methods=list(route.methods),
+        **kwargs,
+    )
+
+
+def _wrap_websocket_handler(handler: Callable[..., Any]) -> Callable[..., Any]:
+    """Adapt a ``WebSocketSession``-based handler into a Starlette endpoint.
+
+    FastAPI injects the raw ``WebSocket`` by type annotation; we wrap it in a
+    :class:`FastAPIWebSocketSession` so the business handler stays
+    framework-agnostic.
+
+    We deliberately avoid ``functools.wraps`` here: it sets ``__wrapped__``,
+    which makes FastAPI's ``inspect.signature`` follow through to the business
+    handler's ``WebSocketSession`` annotation and fail to build a dependant.
+    """
+
+    async def endpoint(websocket: WebSocket) -> None:
+        await handler(FastAPIWebSocketSession(websocket))
+
+    return endpoint
+
+
+def _add_websocket_route(router: APIRouter, ws: WebSocketRoute) -> None:
+    kwargs: dict[str, Any] = {}
+    if ws.name:
+        kwargs["name"] = ws.name
+    kwargs.update(ws.extra)
+    router.add_api_websocket_route(
+        path=ws.path,
+        endpoint=_wrap_websocket_handler(ws.handler),
         **kwargs,
     )

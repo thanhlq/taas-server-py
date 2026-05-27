@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
-from litestar import Litestar, Router
-from litestar.handlers import HTTPRouteHandler
-from platform_core.http import BaseController, Route
+from litestar import Litestar, Router, WebSocket
+from litestar.handlers import HTTPRouteHandler, WebsocketRouteHandler
+from platform_core.http import BaseController, Route, WebSocketRoute
+
+from http_litestar.adapters._websocket import LitestarWebSocketSession
 
 
 def build_handler_for_route(route: Route) -> HTTPRouteHandler:
@@ -42,6 +44,28 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     return HTTPRouteHandler(**kwargs)(handler)
 
 
+def build_ws_handler_for_route(ws: WebSocketRoute) -> WebsocketRouteHandler:
+    """Convert a framework-agnostic :class:`WebSocketRoute` to a Litestar handler.
+
+    Litestar injects the socket into a parameter named ``socket`` (typed
+    ``WebSocket``); we wrap it in :class:`LitestarWebSocketSession` so the
+    business handler stays framework-agnostic.
+    """
+    user_handler: Callable[..., Any] = ws.handler
+
+    # No functools.wraps: it sets ``__wrapped__``, which would make Litestar's
+    # signature model follow through to the business handler's
+    # ``WebSocketSession`` annotation instead of seeing ``socket: WebSocket``.
+    async def endpoint(socket: WebSocket) -> None:
+        await user_handler(LitestarWebSocketSession(socket))
+
+    kwargs: dict[str, Any] = {"path": ws.path}
+    if ws.name:
+        kwargs["name"] = ws.name
+    kwargs.update(ws.extra)
+    return WebsocketRouteHandler(**kwargs)(endpoint)
+
+
 def _router_kwargs(
     controller: BaseController, overrides: dict[str, Any]
 ) -> dict[str, Any]:
@@ -60,7 +84,10 @@ def build_router_for_controller(
     **router_kwargs: Any,
 ) -> Router:
     """Build a :class:`Router` populated with the controller's routes."""
-    handlers = [build_handler_for_route(r) for r in controller.get_routes()]
+    handlers: list[Any] = [build_handler_for_route(r) for r in controller.get_routes()]
+    handlers.extend(
+        build_ws_handler_for_route(ws) for ws in controller.get_websocket_routes()
+    )
     kwargs = _router_kwargs(controller, router_kwargs)
     kwargs.setdefault("route_handlers", handlers)
     return Router(**kwargs)

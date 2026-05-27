@@ -41,6 +41,7 @@ dev = [
     "bandit>=1.7.0",
     "pre-commit>=3.0.0",
     "httpx>=0.24.0",  # For API testing
+    "aiohttp>=3.9.0",  # For python-socketio AsyncClient in tests
     "testcontainers[postgres]>=4.0.0",
     "pytest-xdist>=3.5.0",
     "filelock>=3.12.0",
