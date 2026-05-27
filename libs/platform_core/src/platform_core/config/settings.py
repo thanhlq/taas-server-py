@@ -127,6 +127,7 @@ class ServerSettings:
     """Server configurations."""
 
     APP_LOC: str = 'dma.asgi:create_app'
+
     """Path to app executable or factory."""
     HOST: str = field(default_factory=get_env(f'{CONFIG_PREFIX}_HOST', '0.0.0.0'))  # noqa: S104
     """Server network host."""
@@ -140,6 +141,94 @@ class ServerSettings:
         default_factory=get_env(f'{CONFIG_PREFIX}_RELOAD_DIRS', [f'{BASE_DIR}'])
     )
     """Directories to watch for reloading."""
+
+    API_CACHE_ENABLED: bool = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_API_CACHE_ENABLED', False)
+    )
+    API_CACHE_PROVIDER: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_API_CACHE_PROVIDER', 'redis')
+    )
+    API_CACHE_TTL: int = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_API_CACHE_TTL', 60)
+    )
+    """Time to live for API cache in seconds."""
+    API_CACHE_KEY_PREFIX: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_API_CACHE_KEY_PREFIX', 'api_cache')
+    )
+    API_CACHE_REDIS_HOST: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_API_CACHE_REDIS_HOST', 'redis://redis:6379/0'
+        )
+    )
+    API_CACHE_REDIS_MASTER_NAME: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_API_CACHE_REDIS_MASTER_NAME', 'cache-master'
+        )
+    )
+    """Redis Sentinel master name for API cache."""
+
+    RATE_LIMIT_ENABLED: bool = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_ENABLED', False)
+    )
+    RATE_LIMIT_PROVIDER: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_PROVIDER', 'redis')
+    )
+    RATE_LIMIT_REDIS_HOST: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_RATE_LIMIT_REDIS_HOST', 'redis://redis:6379/0'
+        )
+    )
+    """Redis host for rate limiting."""
+    RATE_LIMIT_REDIS_MASTER_NAME: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_RATE_LIMIT_REDIS_MASTER_NAME', 'rate-master'
+        )
+    )
+    """Redis Sentinel master name for rate limiting."""
+    RATE_LIMIT_TTL: int = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_TTL', 60)
+    )
+    """Time to live for rate limit keys in seconds."""
+    RATE_LIMIT_KEY_PREFIX: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_KEY_PREFIX', 'rate_limit')
+    )
+    """Key prefix to use for rate limit keys."""
+
+    DISTRIBUTED_LOCK_ENABLED: bool = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_ENABLED', False)
+    )
+    DISTRIBUTED_LOCK_PROVIDER: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_PROVIDER', 'redis')
+    )
+    DISTRIBUTED_LOCK_REDIS_HOST: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_REDIS_HOST', 'redis://redis:6379/0'
+        )
+    )
+    """Redis host for distributed locking."""
+    DISTRIBUTED_LOCK_REDIS_MASTER_NAME: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_REDIS_MASTER_NAME', 'lock-master'
+        )
+    )
+    """Redis Sentinel master name for distributed locking."""
+    DISTRIBUTED_LOCK_TTL: int = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_TTL', 60)
+    )
+    """Time to live for distributed lock keys in seconds."""
+    DISTRIBUTED_LOCK_KEY_PREFIX: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_DISTRIBUTED_LOCK_KEY_PREFIX', 'distributed_lock'
+        )
+    )
+
+    WEBSOCKET_REDIS_HOST: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_REDIS_HOST', 'redis://redis:6379/0')
+    )
+    WEBSOCKET_REDIS_MASTER_NAME: str = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_REDIS_MASTER_NAME', 'pubsub-master')
+    )
+    """Redis Sentinel master name for WebSocket connections."""
 
 
 @dataclass

@@ -5,7 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-
+    'msgspec==0.21.1',
+    'pydantic==2.13.4',
 ]
 
 [tool.uv.workspace]
@@ -17,6 +18,8 @@ members = [
     "apps/ews_api",
     "apps/ews_worker",
     "libs/http_litestar",
+    "libs/store_redis",
+    "libs/store_memcached",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -29,6 +32,8 @@ http_fastapi = { workspace = true }
 http_litestar = { workspace = true }
 ews_api = { workspace = true }
 ews_worker = { workspace = true }
+store_redis = { workspace = true }
+store_memcached = { workspace = true }
 
 
 [dependency-groups]
