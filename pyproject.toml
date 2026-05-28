@@ -16,6 +16,7 @@ members = [
     "libs/db",
     "libs/ews",
     "apps/ews_api",
+    "apps/ews_api_litestar",
     "apps/ews_worker",
     "libs/http_litestar",
     "libs/store_redis",
@@ -31,6 +32,7 @@ ews = { workspace = true }
 http_fastapi = { workspace = true }
 http_litestar = { workspace = true }
 ews_api = { workspace = true }
+ews_api_litestar = { workspace = true }
 ews_worker = { workspace = true }
 store_redis = { workspace = true }
 store_memcached = { workspace = true }

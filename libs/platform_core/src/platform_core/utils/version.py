@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 import re
 import sys
@@ -15,6 +16,11 @@ _PRE_RELEASE_TAGS_CONVERSIONS: dict[str, _ReleaseLevel] = {'a': 'alpha', 'b': 'b
 
 _VERSION_PARTS_RE = re.compile(r'(\d+|[a-z]+|\.)')
 
+APP_MODULE_NAME = 'APP_MODULE_NAME'
+"""
+The name of the environment variable that can be used to specify the ASGI app to run.
+This is use to get the version of the installed package
+"""
 
 class Version(NamedTuple):
     """Litestar version information"""
@@ -60,4 +66,8 @@ def parse_version(raw_version: str) -> Version:
 @lru_cache(maxsize=1, typed=True)
 def get_version() -> Version:
     """Get the version of the installed litestar package"""
-    return parse_version(importlib_metadata.version('ews_api'))
+    try:
+        return parse_version(importlib_metadata.version(os.getenv(APP_MODULE_NAME, 'litestar')))
+    except Exception as e:
+        print(f'Error getting version: {e}', file=sys.stderr)
+        return Version(1, 0, 0, 'final', 0)

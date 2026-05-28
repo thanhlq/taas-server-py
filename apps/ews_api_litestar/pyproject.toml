@@ -1,5 +1,5 @@
 [project]
-name = "ews_api"
+name = "ews_api_litestar"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
   'platform_core',
   'ews',
-  'http_fastapi',
+  'http_litestar',
   'db',
   'fastapi==0.136.1',
   'litestar==2.22.0',
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ews_api = "ews_api.main:main"
+ews_api_litestar = "ews_api_litestar.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]

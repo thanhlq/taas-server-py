@@ -3,6 +3,7 @@
 # Litestar variant of the ews_api server. The route definitions live in
 # ``ews`` and are framework-agnostic; this entry point wires them into a
 # Litestar app via ``http_litestar.adapters``.
+import os
 from litestar import Litestar
 
 from ews.domain.project import ProjectController
@@ -12,8 +13,9 @@ from http_litestar.adapters import (
 )
 from http_litestar.base_litestar_app import build_app
 from http_litestar.uvicorn import run_uvicorn
-
 from .setup_env import setup_environment
+
+os.environ['APP_MODULE_NAME'] = 'ews_api_litestar'
 
 settings = setup_environment()
 
@@ -30,7 +32,6 @@ asgi_app = create_socketio_asgi_app(app, _controller)
 
 
 def main() -> None:
-    print('Hello from ews-api (litestar)!')
     run_uvicorn(asgi_app)
 
 
