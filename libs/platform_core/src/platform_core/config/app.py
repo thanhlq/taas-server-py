@@ -115,6 +115,7 @@ class AppConfig:
     """A list of string tags that will be appended to the schema of all route handlers under the application."""
 
     allowed_hosts: AllowedHostsConfig | list[str] | None = field(default=None)
+    # """ csrf_config: CSRFConfig | None = field(default=None) """
 
     def __post_init__(self) -> None:
         """Normalize the allowed hosts to be a config or None.

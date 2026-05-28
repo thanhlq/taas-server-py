@@ -37,12 +37,15 @@ def show_api_app_info(app: BaseApiApplication) -> None:  # pragma: no cover
     table.add_row(
         'Python Debugger on exception', _format_is_enabled(app.config.pdb_on_exception)
     )
-    table.add_row('CORS', _format_is_enabled(app.config.cors_config))
+    table.add_row('CORS', f'{_format_is_enabled(app.config.cors_config)}, allow_origins={app.config.cors_config.allow_origins if app.config.cors_config else "None"}')
     table.add_row('CSRF', _format_is_enabled(app.config.csrf_config))
     if app.config.allowed_hosts:
         allowed_hosts = app.config.allowed_hosts
 
         table.add_row('Allowed hosts', ', '.join(allowed_hosts))
+
+    ratelimit_enabled = app.config.ratelimit_config and app.config.ratelimit_config.enabled
+    table.add_row('Rate Limiting', _format_is_enabled(ratelimit_enabled))
 
     openapi_enabled = _format_is_enabled(app.config.openapi_config)
     table.add_row('OpenAPI', openapi_enabled)
