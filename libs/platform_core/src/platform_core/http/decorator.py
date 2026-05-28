@@ -32,6 +32,7 @@ def route(
     tags: Sequence[str] | None = None,
     permissions: Sequence[str] | None = None,
     middleware: Sequence[Any] | None = None,
+    ratelimit: str | None = None,
     **extra: Any,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -47,6 +48,7 @@ def route(
             tags=tuple(tags) if tags is not None else None,
             permissions=tuple(permissions) if permissions is not None else None,
             middleware=tuple(middleware) if middleware is not None else None,
+            rate_limit=ratelimit,
             extra=dict(extra),
         )
         setattr(func, ROUTE_ATTR, meta)

@@ -2,9 +2,9 @@ from fastapi import FastAPI
 
 
 def build_app(**kwargs) -> FastAPI:
+
     app = FastAPI(
         # default_response_class=kwargs.get("default_response_class", ORJSONResponse),
-
         swagger_ui_parameters={
             'deepLinking': False,
             # OAuth2 redirect endpoint (automatically provided by FastAPI)
@@ -20,9 +20,11 @@ def build_app(**kwargs) -> FastAPI:
             'scopes': 'openid profile email',
             'usePkceWithAuthorizationCodeGrant': True,
         },
-        **kwargs
+        **kwargs,
     )
 
-    app.add_api_route("/hello", lambda: {"message": "Hello from FastAPI!"}, methods=["GET"])
+    app.add_api_route(
+        '/hello', lambda: {'message': 'Hello from FastAPI!'}, methods=['GET']
+    )
 
     return app

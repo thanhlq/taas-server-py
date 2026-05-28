@@ -71,10 +71,15 @@ class SQLAlchemyAsyncConfig(
     session_config: AsyncSessionConfig = field(default_factory=AsyncSessionConfig)  # pyright: ignore[reportIncompatibleVariableOverride]
     """Configuration options for the :class:`async_sessionmaker<sqlalchemy.ext.asyncio.async_sessionmaker>`."""
     session_maker_class: 'type[async_sessionmaker[AsyncSession]]' = async_sessionmaker  # pyright: ignore[reportIncompatibleVariableOverride]
+
+    before_send_handler: Optional[str] = None
+    """
+    Quick summary:
+    """
+
     """Sessionmaker class to use."""
     alembic_config: 'AlembicAsyncConfig' = field(default_factory=AlembicAsyncConfig)
     """Configuration for the SQLAlchemy Alembic migrations.
-
     The configuration options are documented in the Alembic documentation.
     """
 

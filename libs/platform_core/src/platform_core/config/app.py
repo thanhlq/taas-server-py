@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from platform_core.config.compression import CompressionConfig
     from platform_core.config.cors import CORSConfig
     from platform_core.config.csrf import CSRFConfig
+    from platform_core.config.ratelimit import RateLimitConfig
+    from platform_core.config.wss import WebSocketConfig
+    from platform_core.config.lock import DistributedLockConfig
+    from platform_core.config.cache import CacheConfig
     from platform_core.config.log_config import BaseLoggingConfig
     from platform_core.events.emitter import BaseEventEmitterBackend
     from platform_core.events.listener import EventListener
@@ -48,6 +52,10 @@ class AppConfig:
     """If set this enables the builtin CORS middleware."""
     csrf_config: CSRFConfig | None = field(default=None)
     """If set this enables the builtin CSRF middleware."""
+    ratelimit_config: RateLimitConfig | None = field(default=None)
+    cache_config: CacheConfig | None = field(default=None)
+    distributed_lock_config: DistributedLockConfig | None = field(default=None)
+    websocket_config: WebSocketConfig | None = field(default=None)
     debug: bool = field(default=False)
     """If ``True``, app errors rendered as HTML with a stack trace."""
     event_emitter_backend: type[BaseEventEmitterBackend] = field(
@@ -105,6 +113,8 @@ class AppConfig:
     """A :class:`State` <.datastructures.State>` instance holding application state."""
     tags: list[str] = field(default_factory=list)
     """A list of string tags that will be appended to the schema of all route handlers under the application."""
+
+    allowed_hosts: AllowedHostsConfig | list[str] | None = field(default=None)
 
     def __post_init__(self) -> None:
         """Normalize the allowed hosts to be a config or None.

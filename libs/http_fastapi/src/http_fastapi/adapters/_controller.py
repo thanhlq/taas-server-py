@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 from typing import Any, Callable
 
 from fastapi import APIRouter, FastAPI
 from platform_core.http import BaseController, Route, WebSocketRoute
+from starlette.requests import Request
 from starlette.websockets import WebSocket
 
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
@@ -26,12 +29,19 @@ def _router_kwargs(
 
 def build_router_for_controller(
     controller: BaseController,
+    *,
+    app: FastAPI | None = None,
     **router_kwargs: Any,
 ) -> APIRouter:
-    """Build an :class:`APIRouter` populated with the controller's routes."""
+    """Build an :class:`APIRouter` populated with the controller's routes.
+
+    ``app`` is needed only to look up ``app.state.limiter`` for per-route rate
+    limits; pass it when calling from :func:`include_controller`.
+    """
     router = APIRouter(**_router_kwargs(controller, router_kwargs))
+    limiter = getattr(getattr(app, 'state', None), 'limiter', None) if app else None
     for r in controller.get_routes():
-        _add_route(router, r)
+        _add_route(router, r, limiter)
     for ws in controller.get_websocket_routes():
         _add_websocket_route(router, ws)
     return router
@@ -43,12 +53,12 @@ def include_controller(
     **router_kwargs: Any,
 ) -> APIRouter:
     """Build a router for ``controller`` and attach it to ``app``."""
-    router = build_router_for_controller(controller, **router_kwargs)
+    router = build_router_for_controller(controller, app=app, **router_kwargs)
     app.include_router(router)
     return router
 
 
-def _add_route(router: APIRouter, route: Route) -> None:
+def _add_route(router: APIRouter, route: Route, limiter: Any = None) -> None:
     kwargs: dict[str, Any] = {}
     if route.name:
         kwargs['name'] = route.name
@@ -65,12 +75,59 @@ def _add_route(router: APIRouter, route: Route) -> None:
     # ``extra`` holds framework-specific passthrough such as ``openapi_extra``
     # or ``dependencies`` — adapters merge it directly into add_api_route().
     kwargs.update(route.extra)
+
+    endpoint = route.handler
+    if route.rate_limit and limiter is not None:
+        endpoint = _apply_rate_limit(endpoint, route.rate_limit, limiter)
+
     router.add_api_route(
         path=route.path,
-        endpoint=route.handler,
+        endpoint=endpoint,
         methods=list(route.methods),
         **kwargs,
     )
+
+
+def _apply_rate_limit(
+    handler: Callable[..., Any], limit_value: str, limiter: Any
+) -> Callable[..., Any]:
+    """Wrap ``handler`` so slowapi can enforce ``limit_value``.
+
+    slowapi's ``@limiter.limit`` requires the endpoint to take ``request:
+    Request`` so it can locate the request object. Controller methods don't
+    declare it — so we synthesise a wrapper that does, FastAPI then injects
+    the real ``Request`` by signature inspection, and the original handler
+    keeps its clean signature.
+    """
+    sig = inspect.signature(handler)
+    has_request = any(p.name == 'request' for p in sig.parameters.values())
+
+    if has_request:
+        # Handler already wants the request — just decorate directly.
+        return limiter.limit(limit_value)(handler)
+
+    new_params = [
+        inspect.Parameter(
+            'request', inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Request
+        ),
+        *sig.parameters.values(),
+    ]
+    new_sig = sig.replace(parameters=new_params)
+
+    if asyncio.iscoroutinefunction(handler):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            kwargs.pop('request', None)
+            return await handler(*args, **kwargs)
+    else:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+            kwargs.pop('request', None)
+            return handler(*args, **kwargs)
+
+    wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
+    wrapper.__name__ = getattr(handler, '__name__', 'rate_limited_endpoint')
+    wrapper.__qualname__ = getattr(handler, '__qualname__', wrapper.__name__)
+    wrapper.__module__ = getattr(handler, '__module__', __name__)
+    return limiter.limit(limit_value)(wrapper)
 
 
 def _wrap_websocket_handler(handler: Callable[..., Any]) -> Callable[..., Any]:

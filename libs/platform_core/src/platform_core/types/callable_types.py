@@ -13,8 +13,6 @@ from typing import (
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from platform_core.app import TaasApp
-    from platform_core.config.app import AppConfig
     from platform_core.handlers.base import BaseRouteHandler
     from platform_core.types.asgi_types import ASGIApp, Message, Method, Scope
     from platform_core.types.helper_types import SyncOrAsyncUnion

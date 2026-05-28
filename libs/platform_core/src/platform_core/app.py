@@ -1,3 +1,9 @@
+from platform_core.config import Settings
+import logging
+from logging import Logger
+from platform_core.cli import get_console
+from rich.console import Console
+from abc import abstractmethod, ABC
 from dataclasses import field
 
 from platform_core.config.allowed_hosts import AllowedHostsConfig
@@ -6,28 +12,56 @@ from platform_core.config.compression import CompressionConfig
 from platform_core.config.cors import CORSConfig
 from platform_core.config.csrf import CSRFConfig
 from platform_core.openapi.config import OpenAPIConfig
+from platform_core.utils.singleton import singleton
 
 
-class TaasApp:
-    debug: bool = False
-    pdb_on_exception: bool = False
+__all__ = ('BaseApiApplication', 'AppConfig')
 
-    cors_config: CORSConfig | None = None
-    csrf_config: CSRFConfig | None = None
 
-    allowed_hosts: list[str] | AllowedHostsConfig | None = field(default=None)
+class BaseApiApplication[A](ABC):
+    _app: A
+    _config: AppConfig
+    _console: Console
+    _logger: Logger
 
-    openapi_config: OpenAPIConfig | None = None
-
-    compression_config: CompressionConfig | None = None
-
-    def __init__(self, config: AppConfig) -> None:
-        self.debug = config.debug
-        self.pdb_on_exception = config.pdb_on_exception
-        self.cors_config = config.cors_config
-        self.csrf_config = config.csrf_config
-        self.allowed_hosts = config.allowed_hosts
-        self.openapi_config = config.openapi_config
-        self.compression_config = config.compression_config
-
+    def __init__(self, settings: Settings) -> None:
+        self._config = AppConfig(
+            compression_config=settings.app.get_compression_config(),
+            ratelimit_config=settings.app.get_ratelimit_config(),
+            distributed_lock_config=settings.app.get_distributed_lock_config(),
+            websocket_config=settings.app.get_websocket_config(),
+            cors_config=settings.app.get_cors_config(),
+            # csrf_config=config.app.get_csrf_config(),
+        )
         self.template_engine = None
+
+    @property
+    def logger(self) -> Logger:
+        if not hasattr(self, '_logger'):
+            self._logger = logging.getLogger(self.get_app_id())
+        return self._logger
+
+    @property
+    def config(self) -> AppConfig:
+        return self._config
+
+    @property
+    def console(self) -> Console:
+        if not hasattr(self, '_console'):
+            self._console = get_console()
+        return self._console
+
+    @abstractmethod
+    def get_app_id(self) -> str:
+        """Return a unique identifier for this application, used for things like caching."""
+        raise NotImplementedError('Subclasses must implement this method.')
+
+    def build_app(self) -> A:
+        """Build the actual ASGI app instance, this is called during app initialization."""
+        raise NotImplementedError('Subclasses must implement this method.')
+
+    def get_app(self) -> A:
+        """Return the ASGI app instance, building it if it hasn't been built yet."""
+        if not hasattr(self, '_app'):
+            self._app = self.build_app()
+        return self._app

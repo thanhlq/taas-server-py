@@ -19,9 +19,6 @@ os.environ['APP_MODULE_NAME'] = 'ews_api'
 
 from .setup_env import setup_environment
 
-settings = setup_environment()
-
-
 def main():
     from .app import app
 

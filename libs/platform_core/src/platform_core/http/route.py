@@ -29,6 +29,9 @@ class Route:
     tags: tuple[str, ...] | None = None
     permissions: tuple[str, ...] | None = None
     middleware: tuple[Any, ...] | None = None
+    # Per-route rate limit in `limits`-library syntax, e.g. "5/minute",
+    # "100/hour", "1/second". None ⇒ the app-level default applies.
+    rate_limit: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def with_handler(self, handler: Callable[..., Any]) -> Route:
@@ -48,6 +51,7 @@ class Route:
             tags=self.tags,
             permissions=self.permissions,
             middleware=self.middleware,
+            rate_limit=self.rate_limit,
             extra=dict(self.extra),
         )
 

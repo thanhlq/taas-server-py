@@ -1,4 +1,5 @@
 from __future__ import annotations
+from platform_core.cli import get_console
 
 import os
 import sys
@@ -12,8 +13,14 @@ if TYPE_CHECKING:
 
     from platform_core.config import Settings
 
+_settings: Settings | None = None
+
 
 def setup_environment() -> Settings:
+    global _settings
+    if _settings is not None:
+        return _settings
+
     """Configure the environment variables and path."""
     current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
     sys.path.append(str(current_path))
@@ -21,14 +28,14 @@ def setup_environment() -> Settings:
 
     print('Current path: ', current_path)  # noqa: T201
 
-
-    settings = get_settings()
+    _settings = get_settings()
 
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP', 'app.server.asgi:create_app')
-    os.environ.setdefault(f'{CONFIG_PREFIX}_APP_NAME', settings.app.NAME)
+    os.environ.setdefault(f'{CONFIG_PREFIX}_APP_NAME', _settings.app.NAME)
     # os.environ.setdefault(f"{CONFIG_PREFIX}_GRANIAN_IN_SUBPROCESS", "false")
     # original_format_help = LitestarExtensionGroup.format_help
 
-    print('Starting with db url: ', settings.db.URL)  # noqa: T201
+    return _settings
 
-    return settings
+
+__all__ = ['setup_environment']

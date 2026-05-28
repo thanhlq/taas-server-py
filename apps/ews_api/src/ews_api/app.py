@@ -5,6 +5,9 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
+from platform_core.cli import show_api_app_info
+
+from platform_core.app import BaseApiApplication, AppConfig
 
 from typing import Any
 from http_fastapi.base_fastapi_app import build_app
@@ -13,21 +16,23 @@ from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 from .setup_env import setup_environment
 from platform_core.config import AppSettings, Settings
 from fastapi import FastAPI
-from logging import getLogger
+from logging import getLogger, Logger
 from store_redis import RedisStore
 
 
-def is_rate_limit_enabled(settings: Settings) -> bool:
-    return bool(settings.server.RATE_LIMIT_ENABLED)
+class EwsApplication(BaseApiApplication[FastAPI]):
+    def __init__(self, settings: Settings) -> None:
+        super().__init__(settings)
+
+    def get_app_id(self) -> str:
+        return 'ews_api'
+
+    def build_app(self) -> FastAPI:
+        return _setup_fastapi_app(logger=self.logger, app_config=self.config)
 
 
-def _setup_fastapi_app() -> FastAPI:
-    settings = setup_environment()
-
-    logger = getLogger()
-
+def _setup_fastapi_app(logger: Logger, app_config: AppConfig) -> FastAPI:
     app: FastAPI = build_app(default_response_class=MsgSpecJSONResponse)
-
     install_msgspec_openapi(app)
 
     @app.exception_handler(exc_class_or_status_code=Exception)
@@ -42,16 +47,22 @@ def _setup_fastapi_app() -> FastAPI:
             content={'detail': 'Internal Server Error'},
         )
 
-    if is_rate_limit_enabled(settings):
+    if app_config.ratelimit_config and app_config.ratelimit_config.enabled:
         from http_fastapi.middewares.slowapi_ratelimit import (
             setup_fastapi_rate_limiting,
         )
 
-        setup_fastapi_rate_limiting(app, settings)
+        setup_fastapi_rate_limiting(app, app_config.ratelimit_config)
     else:
         logger.warning('Rate limiting is disabled.')
 
     return app
 
 
-app = _setup_fastapi_app()
+_ews_app = EwsApplication(setup_environment())
+
+show_api_app_info(_ews_app)
+
+app = _ews_app.get_app()
+
+__all__ = ('app',)

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 def _project_room(project_id: int) -> str:
     return f'project:{project_id}'
 
+
 samples_project: list[Project] = [
     Project(id=1, name='Sample Project', created_at=now_in_utc()),
     Project(id=2, name='Another Project', created_at=now_in_utc()),
@@ -38,14 +39,22 @@ def _sample_task_notifications(project_id: int) -> list[TaskNotification]:
             event=TaskNotificationEvent.TASK_CREATED,
             project_id=project_id,
             task_id=101,
-            title='Draft project brief',
+            title='Draft project brief 1',
             occurred_at=now_in_utc(),
         ),
         TaskNotification(
             event=TaskNotificationEvent.TASK_ASSIGNED,
             project_id=project_id,
             task_id=101,
-            title='Draft project brief',
+            title='Draft project brief 2',
+            assignee='thanhlq@msn.com',
+            occurred_at=now_in_utc(),
+        ),
+        TaskNotification(
+            event=TaskNotificationEvent.TASK_ASSIGNED,
+            project_id=project_id,
+            task_id=101,
+            title='Draft project brief 3',
             assignee='thanhlq@msn.com',
             occurred_at=now_in_utc(),
         ),
@@ -56,7 +65,7 @@ class ProjectController(BaseController):
     api_prefix = '/api/v1/projects'
     tags = ('Project API',)
 
-    @get('/')
+    @get('/', ratelimit='3/minute')
     def list_projects(self) -> list[Project]:
         return samples_project
 
@@ -88,9 +97,7 @@ class ProjectController(BaseController):
             action = (command or {}).get('action')
             if action == 'subscribe':
                 project_id = int(command.get('project_id', 0))
-                await socket.send_json(
-                    {'type': 'subscribed', 'project_id': project_id}
-                )
+                await socket.send_json({'type': 'subscribed', 'project_id': project_id})
                 for notification in _sample_task_notifications(project_id):
                     await socket.send_json(msgspec.to_builtins(notification))
             elif action == 'ping':
@@ -104,9 +111,7 @@ class ProjectController(BaseController):
 
     @socketio_event('connect')
     async def sio_connect(self, session: 'SocketIOSession', data: Any) -> None:
-        await session.emit_to_caller(
-            'connected', {'channel': 'project-tasks'}
-        )
+        await session.emit_to_caller('connected', {'channel': 'project-tasks'})
 
     @socketio_event('subscribe')
     async def sio_subscribe(self, session: 'SocketIOSession', data: Any) -> None:
