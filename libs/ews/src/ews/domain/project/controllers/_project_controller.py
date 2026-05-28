@@ -46,7 +46,7 @@ def _sample_task_notifications(project_id: int) -> list[TaskNotification]:
             project_id=project_id,
             task_id=101,
             title='Draft project brief',
-            assignee='thanh@floin.com',
+            assignee='thanhlq@msn.com',
             occurred_at=now_in_utc(),
         ),
     ]

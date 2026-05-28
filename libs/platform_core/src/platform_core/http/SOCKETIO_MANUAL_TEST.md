@@ -100,7 +100,7 @@ connected, sid = <id>
 connected event: { channel: 'project-tasks' }
 subscribed: { project_id: 2 }
 task.created: { event: 'task.created', projectId: 2, taskId: 101, ... }
-task.assigned: { event: 'task.assigned', projectId: 2, ..., assignee: 'thanh@floin.com' }
+task.assigned: { event: 'task.assigned', projectId: 2, ..., assignee: 'thanhlq@msn.com' }
 pong: {}
 ```
 

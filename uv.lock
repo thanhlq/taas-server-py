@@ -12,6 +12,7 @@ members = [
     "http-fastapi",
     "http-litestar",
     "platform-core",
+    "slowapi-advanced",
     "store-memcached",
     "store-redis",
     "taas-server",
@@ -1347,6 +1348,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a0/99/adfc7f94ca024736f061257d39118e1542bade7a52e86415a4c4ae92d8ff/slowapi-0.1.9.tar.gz", hash = "sha256:639192d0f1ca01b1c6d95bf6c71d794c3a9ee189855337b4821f7f457dddad77", size = 14028, upload-time = "2024-02-05T12:11:52.13Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/bb/f71c4b7d7e7eb3fc1e8c0458a8979b912f40b58002b9fbf37729b8cb464b/slowapi-0.1.9-py3-none-any.whl", hash = "sha256:cfad116cfb84ad9d763ee155c1e5c5cbf00b0d47399a769b227865f5df576e36", size = 14670, upload-time = "2024-02-05T12:11:50.898Z" },
+]
+
+[[package]]
+name = "slowapi-advanced"
+version = "0.1.0"
+source = { editable = "libs/slowapi_advanced" }
+dependencies = [
+    { name = "limits" },
+    { name = "redis" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "limits", specifier = "==5.8.0" },
+    { name = "redis", specifier = ">=7.0.0" },
 ]
 
 [[package]]

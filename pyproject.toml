@@ -21,6 +21,7 @@ members = [
     "libs/http_litestar",
     "libs/store_redis",
     "libs/store_memcached",
+    "libs/slowapi_advanced",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -36,7 +37,7 @@ ews_api_litestar = { workspace = true }
 ews_worker = { workspace = true }
 store_redis = { workspace = true }
 store_memcached = { workspace = true }
-
+slowapi_advanced = { workspace = true }
 
 [dependency-groups]
 dev = [

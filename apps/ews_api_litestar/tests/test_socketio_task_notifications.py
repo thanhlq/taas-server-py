@@ -102,4 +102,4 @@ def test_socketio_task_notifications(builder: Callable[[], object], port: int) -
     assert by_event['subscribed'] == {'project_id': 2}
     assert by_event['task.created']['event'] == 'task.created'
     assert by_event['task.created']['projectId'] == 2
-    assert by_event['task.assigned']['assignee'] == 'thanh@floin.com'
+    assert by_event['task.assigned']['assignee'] == 'thanhlq@msn.com'
