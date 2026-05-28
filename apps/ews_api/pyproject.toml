@@ -9,6 +9,7 @@ dependencies = [
   'ews',
   'http_fastapi',
   'db',
+  'store_redis',
   'fastapi==0.136.1',
   'litestar==2.22.0',
   'uvicorn==0.34.0',

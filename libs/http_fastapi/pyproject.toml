@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "platform_core",
+    'slowapi_advanced',
 
     # API Framework
     "fastapi==0.136.1",

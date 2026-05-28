@@ -2,9 +2,9 @@
 
 This project is enhanced from https://github.com/laurentS/slowapi
 
-But improved with latest limits lib and not linked to fastapi anymore.
-
-This library can be used for fastapi, litestar,...
+- But improved with latest limits lib and not linked to fastapi anymore.
+- This library can be used for fastapi, litestar,... for rate limitting feature.
+- 
 
 Examples for fastapi configuration:
 

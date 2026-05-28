@@ -15,10 +15,12 @@ if TYPE_CHECKING:
 
 def setup_environment() -> Settings:
     """Configure the environment variables and path."""
-    current_path = Path(__file__).parent.parent.resolve()
+    current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
     sys.path.append(str(current_path))
     from platform_core.config import get_settings
-    # from platform_core.cli._utils import LitestarExtensionGroup
+
+    print('Current path: ', current_path)  # noqa: T201
+
 
     settings = get_settings()
 

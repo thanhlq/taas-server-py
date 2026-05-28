@@ -179,6 +179,11 @@ class ServerSettings:
         )
     )
     """Redis host for rate limiting."""
+    RATE_LIMIT_REDIS_PASSWORD: str = field(
+        default_factory=get_env(
+            f'{CONFIG_PREFIX}_RATE_LIMIT_REDIS_PASSWORD', ''
+        )
+    )
     RATE_LIMIT_REDIS_MASTER_NAME: str = field(
         default_factory=get_env(
             f'{CONFIG_PREFIX}_RATE_LIMIT_REDIS_MASTER_NAME', 'rate-master'

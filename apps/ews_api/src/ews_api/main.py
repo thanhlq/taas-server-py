@@ -2,6 +2,7 @@
 #
 # uv run --package ews_api python main.py
 
+from ews_api.app import _setup_fastapi_app
 import os
 from fastapi.responses import JSONResponse
 from typing import Any
@@ -20,26 +21,11 @@ from .setup_env import setup_environment
 
 settings = setup_environment()
 
-app: FastAPI = build_app(default_response_class=MsgSpecJSONResponse)
-install_msgspec_openapi(app)
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Any, exc: Exception):
-    # Print full traceback to console
-    print("Unhandled exception occurred:")
-    import traceback
-    traceback.print_exc()
-
-    # Or log it with your logger instead of print
-    # logger.error("Unhandled exception", exc_info=exc)
-
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error"},
-    )
 
 
 def main():
+    from .app import app
+
     controller = ProjectController()
     include_controller(app, controller)
 

@@ -86,6 +86,18 @@ class RedisConfig:
         """Parse the host string into a list of (host, port) tuples for cluster mode."""
         return _parse_sentinel_hosts(self.get_host())
 
+    def get_all_in_one_redis_url(self) -> str:
+        """Construct a Redis URL that can be used by redis-py clients."""
+        if self.mode == 'single':
+            return f'redis://{self.get_host()}:{self.get_port()}/{self.db}'
+        elif self.mode in ['sentinel', 'cluster']:
+            # For sentinel and cluster modes, we can return a comma-separated list of hosts.
+            return f'redis+{self.mode}://{self.get_host()}/?db={self.db}'
+        else:
+            raise ValueError(
+                "Invalid mode. Expected 'single', 'sentinel', or 'cluster'."
+            )
+
     def __str__(self) -> str:
         return f'RedisConfig(mode={self.mode}, host={self.host}, port={self.port}, password={"***" if self.password else None}, db={self.db}, sentinel_master_name={self.sentinel_master_name})'
 
