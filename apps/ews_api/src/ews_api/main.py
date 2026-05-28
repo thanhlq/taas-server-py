@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from typing import Any
 from fastapi import FastAPI
 
-from ews.domain.project import ProjectController
+from ews import ews_conrrollers
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.base_fastapi_app import build_app
 from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
@@ -26,8 +26,8 @@ settings = setup_environment()
 def main():
     from .app import app
 
-    controller = ProjectController()
-    include_controller(app, controller)
+    for controller in ews_conrrollers:
+        include_controller(app, controller())
 
     app.add_api_route('/hello', lambda: {'message': 'Hello, World!'}, methods=['GET'])
 
