@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <!-- Must be a v4 client to match python-socketio 5.x -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Socket.IO task-notification test — open the console</h1>
+    <script>
+      const socket = io("http://127.0.0.1:8191", {
+        transports: ["websocket"], // skip long-polling; optional
+      });
+
+      socket.on("connect", () => {
+        console.log("connected, sid =", socket.id);
+        // Subscribe to project 2's task feed
+        socket.emit("subscribe", { project_id: 2 });
+        // Round-trip ping
+        socket.emit("ping", {});
+      });
+
+      socket.on("connected",     (d) => console.log("connected event:", d));
+      socket.on("subscribed",    (d) => console.log("subscribed:", d));
+      socket.on("task.created",  (d) => console.log("task.created:", d));
+      socket.on("task.assigned", (d) => console.log("task.assigned:", d));
+      socket.on("pong",          (d) => console.log("pong:", d));
+
+      socket.on("connect_error", (e) => console.error("connect_error:", e.message));
+      socket.on("disconnect",    (r) => console.log("disconnected:", r));
+    </script>
+  </body>
+</html>

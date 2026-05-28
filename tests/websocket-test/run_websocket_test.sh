@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Default values
 HOST="localhost"
-PORT="8000"
+PORT="8191"
 USER_UUID="test-user-$(date +%s)"
 TEST_TYPE="basic"
 NUM_MESSAGES="10"
