@@ -1,3 +1,4 @@
+from platform_core.config.openapi import build_openapi_config
 from platform_core.config import Settings
 import logging
 from logging import Logger
@@ -23,16 +24,26 @@ class BaseApiApplication[A](ABC):
     _config: AppConfig
     _console: Console
     _logger: Logger
+    _root_path: str
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, root_path: str) -> None:
         self._config = AppConfig(
             compression_config=settings.app.get_compression_config(),
             ratelimit_config=settings.app.get_ratelimit_config(),
             distributed_lock_config=settings.app.get_distributed_lock_config(),
             websocket_config=settings.app.get_websocket_config(),
             cors_config=settings.app.get_cors_config(),
+            debug=settings.app.DEBUG,
             # csrf_config=config.app.get_csrf_config(),
         )
+        self._root_path = root_path
+        self.openapi_enabled = settings.app.OPENAPI_ENABLED
+        if (self.openapi_enabled):
+            self._config.openapi_config = build_openapi_config(
+                title=f'{settings.app.NAME} API',
+                version=settings.app.VERSION,
+            )
+
         self.template_engine = None
 
     @property
@@ -65,3 +76,8 @@ class BaseApiApplication[A](ABC):
         if not hasattr(self, '_app'):
             self._app = self.build_app()
         return self._app
+
+    def show_app_info(self) -> None:
+        from platform_core.cli._show_app_info import show_api_app_info
+
+        show_api_app_info(self)

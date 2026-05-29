@@ -11,6 +11,6 @@ try:  # pragma: no cover
     """Name of the project."""
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.1"
-    __project__ = "TaaS Fullstack Template"
+    __project__ = "eWorkSuite"
 finally:  # pragma: no cover
     del version, PackageNotFoundError, metadata

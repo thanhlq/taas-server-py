@@ -8,6 +8,7 @@ and other business libraries stay framework-free.
 """
 
 from platform_core.http.controller import BaseController
+from platform_core.http.base_app import BaseApiApplication, AppConfig
 from platform_core.http.decorator import (
     delete,
     get,
@@ -28,6 +29,8 @@ from platform_core.http._websocket import WebSocketSession
 
 __all__ = [
     'BaseController',
+    'BaseApiApplication',
+    'AppConfig',
     'HttpMethod',
     'Route',
     'SocketIOHandler',

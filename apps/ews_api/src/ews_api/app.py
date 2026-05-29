@@ -7,7 +7,7 @@ The module is responsible for setting up the FastAPI app, including:
 """
 from platform_core.cli import show_api_app_info
 
-from platform_core.app import BaseApiApplication, AppConfig
+from platform_core.http.base_app import BaseApiApplication, AppConfig
 
 from typing import Any
 from http_fastapi.base_fastapi_app import build_app
@@ -21,8 +21,8 @@ from store_redis import RedisStore
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):
-    def __init__(self, settings: Settings) -> None:
-        super().__init__(settings)
+    def __init__(self, settings: Settings, root_path: str) -> None:
+        super().__init__(settings, root_path)
 
     def get_app_id(self) -> str:
         return 'ews_api'
@@ -59,9 +59,9 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig) -> FastAPI:
     return app
 
 
-_ews_app = EwsApplication(setup_environment())
-
-show_api_app_info(_ews_app)
+settings, root_path = setup_environment()
+_ews_app = EwsApplication(settings, root_path)
+_ews_app.show_app_info()
 
 app = _ews_app.get_app()
 

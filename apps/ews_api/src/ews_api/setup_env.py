@@ -14,28 +14,28 @@ if TYPE_CHECKING:
     from platform_core.config import Settings
 
 _settings: Settings | None = None
+root_path: str
 
-
-def setup_environment() -> Settings:
+def setup_environment() -> tuple[Settings, str]:
     global _settings
+    global root_path
     if _settings is not None:
-        return _settings
+        return _settings, root_path
 
     """Configure the environment variables and path."""
     current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
     sys.path.append(str(current_path))
     from platform_core.config import get_settings
 
-    print('Current path: ', current_path)  # noqa: T201
-
     _settings = get_settings()
+    root_path = current_path.as_posix()
 
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP', 'app.server.asgi:create_app')
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP_NAME', _settings.app.NAME)
     # os.environ.setdefault(f"{CONFIG_PREFIX}_GRANIAN_IN_SUBPROCESS", "false")
     # original_format_help = LitestarExtensionGroup.format_help
 
-    return _settings
+    return _settings, root_path
 
 
 __all__ = ['setup_environment']

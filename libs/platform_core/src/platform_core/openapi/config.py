@@ -31,6 +31,10 @@ class OpenAPIConfig:
     version: str
     """API version, e.g. '1.0.0'."""
 
+    path: str = field(default='/docs')
+    root_schema_site: Literal['redoc', 'swagger-ui'] = field(default=_DEFAULT_SCHEMA_SITE)
+    """The OpenAPI schema UI to use at the root path. Can be either 'redoc' or 'swagger-ui'."""
+
     create_examples: bool = field(default=False)
     """Generate examples using the polyfactory library."""
     random_seed: int = 10

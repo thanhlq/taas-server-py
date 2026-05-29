@@ -219,23 +219,24 @@ class EmailSettings:
 class AppSettings:
     """Application configuration"""
 
-    NAME: str = field(default_factory=lambda: 'Litestar Fullstack Template')
+    NAME: str = field(default_factory=lambda: 'eWorkSuite')
     """Application name."""
     VERSION: str = field(default=f'v{current_version}')
-    """Current application"""
+    """Current application version."""
     CONTACT_NAME: str = field(default='Admin')
     """Application contact name"""
-    CONTACT_EMAIL: str = field(default='admin@localhost')
+    CONTACT_EMAIL: str = field(default='admin@eworksuite.com')
     """Application contact email"""
-    URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8000'))
+    URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8191'))
     """The frontend base URL"""
-    DEBUG: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG', False))
+    DEBUG: bool = field(default_factory=get_env('DEBUG', False, bool))
     """Run `Litestar` with `debug=True`."""
     SECRET_KEY: str = field(
         default_factory=get_env(
             'SECRET_KEY', binascii.hexlify(os.urandom(32)).decode(encoding='utf-8')
         ),
     )
+    OPENAPI_ENABLED: bool = field(default_factory=get_env('OPENAPI_ENABLED', True, bool))
     """Application secret key."""
     JWT_ENCRYPTION_ALGORITHM: str = 'HS256'
     """JWT Algorithm to use"""

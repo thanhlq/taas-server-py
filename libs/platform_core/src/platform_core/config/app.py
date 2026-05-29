@@ -44,6 +44,9 @@ class AppConfig:
     The final attribute values are used to instantiate the application object.
     """
 
+    deploy_env: str | None = field(default='development')
+    """The environment the app is being deployed in, e.g. "production", "staging", "development".
+    """
     compression_config: CompressionConfig | None = field(default=None)
     """Configures compression behaviour of the application, this enabled a builtin or user defined Compression
     middleware.
@@ -75,6 +78,8 @@ class AppConfig:
     """A list of :class:`LifespanHook <.types.LifespanHook>` called during application shutdown."""
     on_startup: list[LifespanHook] = field(default_factory=list)
     """A list of :class:`LifespanHook <.types.LifespanHook>` called during application startup."""
+    openapi_enabled: bool = field(default=True)
+    """A boolean flag dictating whether or not to generate and serve an OpenAPI schema."""
     openapi_config: OpenAPIConfig | None = field(default=None)
     """Defaults to :data:`DEFAULT_OPENAPI_CONFIG <platform_core.app.DEFAULT_OPENAPI_CONFIG>`"""
     opt: dict[str, Any] = field(default_factory=dict)
