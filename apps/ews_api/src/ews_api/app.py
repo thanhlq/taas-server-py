@@ -5,6 +5,7 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
+import asyncio
 from platform_core.config.wss import WebSocketConfig
 import socketio
 from platform_core.http.base_app import BaseApiApplication, AppConfig
@@ -48,10 +49,19 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
         if self.is_websocket_enabled():
             websocket_config: WebSocketConfig = self.config.websocket_config # type: ignore
-            self._socketio_app = create_socketio_asgi_app(
+            self._socketio_app, server = create_socketio_asgi_app(
                 _fastapi_app,
                 *_controllers,
                 client_manager=build_websocket_redis_manager(websocket_config))
+
+            # Validate the manager is what we configured. Blocks startup if not.
+            from platform_core.http._socketio import verify_socketio_manager
+            asyncio.run(verify_socketio_manager(
+                server,            # the AsyncServer instance
+                expect_redis=True,         # only require Redis when we asked for it
+                roundtrip=True,                     # set False to skip the pub/sub probe
+                timeout=2.0,
+            ))
 
         return _fastapi_app
 

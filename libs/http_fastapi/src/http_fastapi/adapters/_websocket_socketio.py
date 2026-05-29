@@ -30,7 +30,7 @@ def create_socketio_asgi_app(
     socketio_path: str = 'socket.io',
     client_manager: socketio.AsyncManager | None = None,
     **server_kwargs: Any,
-) -> socketio.ASGIApp:
+) -> tuple[socketio.ASGIApp, socketio.AsyncServer]:
     """
     Build (or reuse) a Socket.IO server, register ``controllers`` on it, and
     wrap the FastAPI ``app`` so both are served from one ASGI app.
@@ -49,5 +49,4 @@ def create_socketio_asgi_app(
         socketio_path=socketio_path,
     )
 
-
-    return _socketio_app
+    return _socketio_app, server
