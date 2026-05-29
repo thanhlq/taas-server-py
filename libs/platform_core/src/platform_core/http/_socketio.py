@@ -11,6 +11,7 @@ Business handlers never import ``socketio`` directly; they accept a
 :class:`SocketIOSession` and rely on the ``@socketio_event`` decorator.
 """
 from __future__ import annotations
+from logging import Logger
 
 from typing import Any
 
@@ -77,7 +78,7 @@ class SocketIOSession:
         await self._server.disconnect(self.sid, namespace=self.namespace)
 
 
-def build_socketio_server(**kwargs: Any) -> socketio.AsyncServer:
+def build_socketio_server(client_manager=None, logger: Logger | bool = False, **kwargs: Any) -> socketio.AsyncServer:
     """Create an ``AsyncServer`` with sensible defaults for ASGI hosting.
 
     ``cors_allowed_origins='*'`` is the default so browser Socket.IO clients
@@ -88,6 +89,11 @@ def build_socketio_server(**kwargs: Any) -> socketio.AsyncServer:
 
     kwargs.setdefault('async_mode', 'asgi')
     kwargs.setdefault('cors_allowed_origins', '*')
+    if client_manager is not None:
+        kwargs['client_manager'] = client_manager
+    if logger:
+        kwargs['logger'] = logger
+        kwargs['engineio_logger'] = logger
     return socketio.AsyncServer(**kwargs)
 
 

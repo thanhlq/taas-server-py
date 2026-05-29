@@ -2,7 +2,6 @@
 
 from platform_core.config.ratelimit import RateLimitConfig
 from platform_core.config.redis_config import RedisConfig
-from platform_core.config import Settings
 from slowapi_advanced.errors import RateLimitExceeded
 from slowapi_advanced.middleware import SlowAPIMiddleware
 from slowapi_advanced.util import get_remote_address

@@ -12,7 +12,6 @@ from platform_core.types.composite_types import Middleware
 from platform_core.types.empty import Empty
 
 if TYPE_CHECKING:
-    from contextlib import AbstractAsyncContextManager
 
     from platform_core.config.compression import CompressionConfig
     from platform_core.config.cors import CORSConfig
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
     from platform_core.openapi.config import OpenAPIConfig
     from platform_core.openapi.spec import SecurityRequirement
     from platform_core.types.callable_types import LifespanHook
-    from platform_core.types.composite_types import TypeDecodersSequence
     from platform_core.types.empty import EmptyType
 
 

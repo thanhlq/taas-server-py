@@ -5,6 +5,7 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
+from platform_core.config.wss import WebSocketConfig
 import socketio
 from platform_core.http.base_app import BaseApiApplication, AppConfig
 
@@ -18,12 +19,14 @@ from fastapi import FastAPI
 from logging import Logger
 from ews import ews_conrrollers
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
+from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
 
 class EwsApplication(BaseApiApplication[FastAPI]):
     _socketio_app: Optional[socketio.ASGIApp] = None
 
     def __init__(self, settings: Settings, root_path: str) -> None:
         super().__init__(settings, root_path)
+        self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 
     def get_app_id(self) -> str:
         return 'ews_api'
@@ -44,10 +47,11 @@ class EwsApplication(BaseApiApplication[FastAPI]):
             include_controller(_fastapi_app, controller)
 
         if self.is_websocket_enabled():
-            # Socket.IO is the default real-time transport: it wraps the FastAPI app so
-            # Socket.IO traffic (default path /socket.io) and HTTP share one ASGI app.
-            # The raw-WebSocket route registered by include_controller still works too.
-            self._socketio_app = create_socketio_asgi_app(_fastapi_app, *_controllers)
+            websocket_config: WebSocketConfig = self.config.websocket_config # type: ignore
+            self._socketio_app = create_socketio_asgi_app(
+                _fastapi_app,
+                *_controllers,
+                client_manager=build_websocket_redis_manager(websocket_config))
 
         return _fastapi_app
 
@@ -86,7 +90,6 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig) -> FastAPI:
 
 settings, root_path = setup_environment()
 _ews_app = EwsApplication(settings, root_path)
-_ews_app.build_application()
 
 app = _ews_app.get_websocket_app() if _ews_app.is_websocket_enabled() else _ews_app.get_app()
 

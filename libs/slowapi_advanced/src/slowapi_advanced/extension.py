@@ -93,10 +93,6 @@ def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Re
             status_code=503,
         )
 
-    # if type(exc).__name__ is not RateLimitExceeded:
-
-    print('type of exc: ', type(exc).__name__)
-
     response = JSONResponse(
         {
             'error': f'Rate limit exceeded: {exc.detail if exc.detail else "rate-limit: Unknown"}'
