@@ -52,7 +52,9 @@ STATIC_DIR = Path(BASE_DIR / 'server' / 'static' / 'web')
 class DatabaseSettings:
     ECHO: bool = field(default_factory=get_env('DATABASE_ECHO', False))
     """Enable SQLAlchemy engine logs."""
-    DEBUG: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG_DATABASE', False, bool))
+    DEBUG: bool = field(
+        default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG_DATABASE', False, bool)
+    )
 
     ECHO_POOL: bool = field(default_factory=get_env('DATABASE_ECHO_POOL', False))
     """Enable SQLAlchemy connection pool logs."""
@@ -247,7 +249,9 @@ class AppSettings:
             'SECRET_KEY', binascii.hexlify(os.urandom(32)).decode(encoding='utf-8')
         ),
     )
-    OPENAPI_ENABLED: bool = field(default_factory=get_env('OPENAPI_ENABLED', True, bool))
+    OPENAPI_ENABLED: bool = field(
+        default_factory=get_env('OPENAPI_ENABLED', True, bool)
+    )
     """Application secret key."""
     JWT_ENCRYPTION_ALGORITHM: str = 'HS256'
     """JWT Algorithm to use"""
@@ -349,11 +353,11 @@ class AppSettings:
         return self._cache_config
 
     _websocket_config: WebSocketConfig | None = None
+
     def get_websocket_config(self) -> WebSocketConfig:
         if self._websocket_config is None:
             self._websocket_config = WebSocketConfig()
         return self._websocket_config
-
 
     def __post_init__(self) -> None:
         # Check if the ALLOWED_CORS_ORIGINS is a string.
@@ -365,7 +369,7 @@ class AppSettings:
                 try:
                     # Safely evaluate the string as a Python list.
                     self.ALLOWED_CORS_ORIGINS = json.loads(self.ALLOWED_CORS_ORIGINS)  # pyright: ignore[reportConstantRedefinition]
-                except (SyntaxError, ValueError):
+                except SyntaxError, ValueError:
                     # Handle potential errors if the string is not a valid Python literal.
                     msg = 'ALLOWED_CORS_ORIGINS is not a valid list representation.'
                     raise ValueError(msg) from None
@@ -452,10 +456,11 @@ class Settings:
 
         return _home_path
 
-
     @classmethod
     @lru_cache(maxsize=1, typed=True)
-    def from_env(cls, dotenv_filename: str = '.env', home_path: Optional[str] = None) -> Settings:
+    def from_env(
+        cls, dotenv_filename: str = '.env', home_path: Optional[str] = None
+    ) -> Settings:
         _app_home_path = cls()._find_app_home_path(home_path)
 
         logger = logging.getLogger()
@@ -488,7 +493,9 @@ class Settings:
         return Settings(app=app, db=db, server=server, log=log)
 
 
-def get_settings(*, env_file: str = '.env', home_path: Optional[str] = None) -> Settings:
+def get_settings(
+    *, env_file: str = '.env', home_path: Optional[str] = None
+) -> Settings:
     return Settings.from_env(env_file, home_path)
 
 

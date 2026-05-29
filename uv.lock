@@ -305,6 +305,11 @@ wheels = [
 name = "db"
 version = "0.1.0"
 source = { editable = "libs/db" }
+dependencies = [
+    { name = "alembic" },
+    { name = "platform-core" },
+    { name = "sqlalchemy" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -312,6 +317,11 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.18.4" },
+    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "sqlalchemy", specifier = ">=2.0.48" },
+]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = "==9.0.2" }]
