@@ -15,7 +15,7 @@ from typing import Any
 
 import socketio
 from litestar import Litestar
-from platform_core.http import BaseController
+from platform_core.http import BaseController, BaseApiApplication
 from platform_core.http._socketio import (
     build_socketio_server,
     register_controller,
@@ -27,6 +27,7 @@ def create_socketio_asgi_app(
     *controllers: BaseController,
     server: socketio.AsyncServer | None = None,
     socketio_path: str = 'socket.io',
+    app_context: BaseApiApplication | None = None,
     **server_kwargs: Any,
 ) -> socketio.ASGIApp:
     """Build (or reuse) a Socket.IO server, register ``controllers`` on it, and

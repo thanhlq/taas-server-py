@@ -22,6 +22,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    TYPE_CHECKING,
 )
 
 from limits import RateLimitItem  # type: ignore
@@ -37,30 +38,33 @@ from typing_extensions import Literal
 from .errors import RateLimitExceeded
 from .wrappers import Limit, LimitGroup
 
+# if TYPE_CHECKING:
+# from redis.exceptions import ConnectionError as RedisConnectionError
+
 # used to annotate get_app_config method
-T = TypeVar("T")
+T = TypeVar('T')
 # Define an alias for the most commonly used type
 StrOrCallableStr = Union[str, Callable[..., str]]
 
 
 class C:
-    ENABLED = "RATELIMIT_ENABLED"
-    HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
-    STORAGE_URL = "RATELIMIT_STORAGE_URL"
-    STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
-    STRATEGY = "RATELIMIT_STRATEGY"
-    GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
-    DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
-    APPLICATION_LIMITS = "RATELIMIT_APPLICATION"
-    HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
-    HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
-    HEADER_RESET = "RATELIMIT_HEADER_RESET"
-    SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
-    IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
-    IN_MEMORY_FALLBACK_ENABLED = "RATELIMIT_IN_MEMORY_FALLBACK_ENABLED"
-    HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
-    HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
-    KEY_PREFIX = "RATELIMIT_KEY_PREFIX"
+    ENABLED = 'RATELIMIT_ENABLED'
+    HEADERS_ENABLED = 'RATELIMIT_HEADERS_ENABLED'
+    STORAGE_URL = 'RATELIMIT_STORAGE_URL'
+    STORAGE_OPTIONS = 'RATELIMIT_STORAGE_OPTIONS'
+    STRATEGY = 'RATELIMIT_STRATEGY'
+    GLOBAL_LIMITS = 'RATELIMIT_GLOBAL'
+    DEFAULT_LIMITS = 'RATELIMIT_DEFAULT'
+    APPLICATION_LIMITS = 'RATELIMIT_APPLICATION'
+    HEADER_LIMIT = 'RATELIMIT_HEADER_LIMIT'
+    HEADER_REMAINING = 'RATELIMIT_HEADER_REMAINING'
+    HEADER_RESET = 'RATELIMIT_HEADER_RESET'
+    SWALLOW_ERRORS = 'RATELIMIT_SWALLOW_ERRORS'
+    IN_MEMORY_FALLBACK = 'RATELIMIT_IN_MEMORY_FALLBACK'
+    IN_MEMORY_FALLBACK_ENABLED = 'RATELIMIT_IN_MEMORY_FALLBACK_ENABLED'
+    HEADER_RETRY_AFTER = 'RATELIMIT_HEADER_RETRY_AFTER'
+    HEADER_RETRY_AFTER_VALUE = 'RATELIMIT_HEADER_RETRY_AFTER_VALUE'
+    KEY_PREFIX = 'RATELIMIT_KEY_PREFIX'
 
 
 class HEADERS:
@@ -78,8 +82,26 @@ def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Re
     Build a simple JSON response that includes the details of the rate limit
     that was hit. If no limit is hit, the countdown is added to headers.
     """
+
+    if type(exc).__name__ in ['ConnectionError']:
+        # This means the storage backend is down. We return a 503 to indicate a server error, but we also include
+        # details in the response body to indicate that the rate limit storage is down.
+        return JSONResponse(
+            {
+                'error': 'Rate limit storage backend is unreachable. Rate limiting is temporarily unavailable.'
+            },
+            status_code=503,
+        )
+
+    # if type(exc).__name__ is not RateLimitExceeded:
+
+    print('type of exc: ', type(exc).__name__)
+
     response = JSONResponse(
-        {"error": f"Rate limit exceeded: {exc.detail}"}, status_code=429
+        {
+            'error': f'Rate limit exceeded: {exc.detail if exc.detail else "rate-limit: Unknown"}'
+        },
+        status_code=429,
     )
     response = request.app.state.limiter._inject_headers(
         response, request.state.view_rate_limit
@@ -142,10 +164,10 @@ class Limiter:
         in_memory_fallback: List[StrOrCallableStr] = [],
         in_memory_fallback_enabled: bool = False,
         retry_after: Optional[str] = None,
-        key_prefix: str = "",
+        key_prefix: str = '',
         enabled: bool = True,
         config_filename: Optional[str] = None,
-        key_style: Literal["endpoint", "url"] = "url",
+        key_style: Literal['endpoint', 'url'] = 'url',
     ) -> None:
         """
         Configure the rate limiter at app level
@@ -154,11 +176,11 @@ class Limiter:
         # self.app = app
         # app.state.limiter = self
 
-        self.logger = logging.getLogger("slowapi_advanced")
+        self.logger = logging.getLogger('slowapi_advanced')
 
-        dotenv_file_exists = os.path.isfile(".env")
+        dotenv_file_exists = os.path.isfile('.env')
         self.app_config = Config(
-            ".env"
+            '.env'
             if dotenv_file_exists and config_filename is None
             else config_filename
         )
@@ -199,7 +221,7 @@ class Limiter:
                     LimitGroup(
                         limit,
                         self._key_func,
-                        "global",
+                        'global',
                         False,
                         None,
                         None,
@@ -241,30 +263,30 @@ class Limiter:
         )
         self._storage_options.update(self.get_app_config(C.STORAGE_OPTIONS, {}))
         self._storage = storage_from_string(
-            self._storage_uri or self.get_app_config(C.STORAGE_URL, "memory://"),
+            self._storage_uri or self.get_app_config(C.STORAGE_URL, 'memory://'),
             **self._storage_options,
         )
-        strategy = self._strategy or self.get_app_config(C.STRATEGY, "fixed-window")
+        strategy = self._strategy or self.get_app_config(C.STRATEGY, 'fixed-window')
         if strategy not in STRATEGIES:
-            raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
+            raise ConfigurationError('Invalid rate limiting strategy %s' % strategy)
         self._limiter: RateLimiter = STRATEGIES[strategy](self._storage)
         self._header_mapping.update(
             {
                 HEADERS.RESET: self._header_mapping.get(
                     HEADERS.RESET,
-                    self.get_app_config(C.HEADER_RESET, "X-RateLimit-Reset"),
+                    self.get_app_config(C.HEADER_RESET, 'X-RateLimit-Reset'),
                 ),
                 HEADERS.REMAINING: self._header_mapping.get(
                     HEADERS.REMAINING,
-                    self.get_app_config(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
+                    self.get_app_config(C.HEADER_REMAINING, 'X-RateLimit-Remaining'),
                 ),
                 HEADERS.LIMIT: self._header_mapping.get(
                     HEADERS.LIMIT,
-                    self.get_app_config(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+                    self.get_app_config(C.HEADER_LIMIT, 'X-RateLimit-Limit'),
                 ),
                 HEADERS.RETRY_AFTER: self._header_mapping.get(
                     HEADERS.RETRY_AFTER,
-                    self.get_app_config(C.HEADER_RETRY_AFTER, "Retry-After"),
+                    self.get_app_config(C.HEADER_RETRY_AFTER, 'Retry-After'),
                 ),
             }
         )
@@ -280,7 +302,7 @@ class Limiter:
                 LimitGroup(
                     app_limits,
                     self._key_func,
-                    "global",
+                    'global',
                     False,
                     None,
                     None,
@@ -358,9 +380,9 @@ class Limiter:
         """
         try:
             self._storage.reset()
-            self.logger.info("Storage has been reset and all limits cleared")
+            self.logger.info('Storage has been reset and all limits cleared')
         except NotImplementedError:
-            self.logger.warning("This storage type does not support being reset")
+            self.logger.warning('This storage type does not support being reset')
 
     @property
     def limiter(self) -> RateLimiter:
@@ -368,9 +390,9 @@ class Limiter:
         The backend that keeps track of consumption of endpoints vs limits
         """
         if self._storage_dead and self._in_memory_fallback_enabled:
-            assert (
-                self._fallback_limiter
-            ), "Fallback limiter is needed when in memory fallback is enabled"
+            assert self._fallback_limiter, (
+                'Fallback limiter is needed when in memory fallback is enabled'
+            )
             return self._fallback_limiter
         else:
             return self._limiter
@@ -381,7 +403,7 @@ class Limiter:
         if self.enabled and self._headers_enabled and current_limit is not None:
             if not isinstance(response, Response):
                 raise Exception(
-                    "parameter `response` must be an instance of starlette.responses.Response"
+                    'parameter `response` must be an instance of starlette.responses.Response'
                 )
             try:
                 window_stats: Tuple[int, int] = self.limiter.get_window_stats(
@@ -399,7 +421,7 @@ class Limiter:
                 )
 
                 # response may have an existing retry after
-                existing_retry_after_header = response.headers.get("Retry-After")
+                existing_retry_after_header = response.headers.get('Retry-After')
 
                 if existing_retry_after_header is not None:
                     reset_in = max(
@@ -409,20 +431,20 @@ class Limiter:
 
                 response.headers[self._header_mapping[HEADERS.RETRY_AFTER]] = (
                     formatdate(reset_in)
-                    if self._retry_after == "http-date"
+                    if self._retry_after == 'http-date'
                     else str(int(reset_in - time.time()))
                 )
             except:
                 if self._in_memory_fallback and not self._storage_dead:
                     self.logger.warning(
-                        "Rate limit storage unreachable - falling back to"
-                        " in-memory storage"
+                        'Rate limit storage unreachable - falling back to'
+                        ' in-memory storage'
                     )
                     self._storage_dead = True
                     response = self._inject_headers(response, current_limit)
                 if self._swallow_errors:
                     self.logger.exception(
-                        "Failed to update rate limit headers. Swallowing error"
+                        'Failed to update rate limit headers. Swallowing error'
                     )
                 else:
                     raise
@@ -451,7 +473,7 @@ class Limiter:
                 headers[self._header_mapping[HEADERS.RESET]] = str(reset_in)
 
                 # response may have an existing retry after
-                existing_retry_after_header = headers.get("Retry-After")
+                existing_retry_after_header = headers.get('Retry-After')
 
                 if existing_retry_after_header is not None:
                     reset_in = max(
@@ -461,20 +483,20 @@ class Limiter:
 
                 headers[self._header_mapping[HEADERS.RETRY_AFTER]] = (
                     formatdate(reset_in)
-                    if self._retry_after == "http-date"
+                    if self._retry_after == 'http-date'
                     else str(int(reset_in - time.time()))
                 )
             except Exception:
                 if self._in_memory_fallback and not self._storage_dead:
                     self.logger.warning(
-                        "Rate limit storage unreachable - falling back to"
-                        " in-memory storage"
+                        'Rate limit storage unreachable - falling back to'
+                        ' in-memory storage'
                     )
                     self._storage_dead = True
                     headers = self._inject_asgi_headers(headers, current_limit)
                 if self._swallow_errors:
                     self.logger.exception(
-                        "Failed to update rate limit headers. Swallowing error"
+                        'Failed to update rate limit headers. Swallowing error'
                     )
                 else:
                     raise
@@ -492,9 +514,9 @@ class Limiter:
             if lim.methods is not None and request.method.lower() not in lim.methods:
                 continue
             if lim.per_method:
-                limit_scope += ":%s" % request.method
+                limit_scope += ':%s' % request.method
 
-            if "request" in inspect.signature(lim.key_func).parameters.keys():
+            if 'request' in inspect.signature(lim.key_func).parameters.keys():
                 limit_key = lim.key_func(request)
             else:
                 limit_key = lim.key_func()
@@ -509,7 +531,7 @@ class Limiter:
                 cost = lim.cost(request) if callable(lim.cost) else lim.cost
                 if not self.limiter.hit(lim.limit, *args, cost=cost):
                     self.logger.warning(
-                        "ratelimit %s (%s) exceeded at endpoint: %s",
+                        'ratelimit %s (%s) exceeded at endpoint: %s',
                         lim.limit,
                         limit_key,
                         limit_scope,
@@ -519,7 +541,7 @@ class Limiter:
                     break
             else:
                 self.logger.error(
-                    "Skipping limit: %s. Empty value found in parameters.", lim.limit
+                    'Skipping limit: %s. Empty value found in parameters.', lim.limit
                 )
                 continue
         # keep track of which limit was hit, to be picked up for the response header
@@ -533,7 +555,7 @@ class Limiter:
             retry_after_date: Optional[datetime] = parsedate_to_datetime(
                 retry_header_value
             )
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             retry_after_date = None
 
         if retry_after_date is not None:
@@ -543,7 +565,7 @@ class Limiter:
             retry_after_int: int = int(retry_header_value)
         except TypeError:
             raise ValueError(
-                "Retry-After Header does not meet RFC2616 - value is not of http-date or int type."
+                'Retry-After Header does not meet RFC2616 - value is not of http-date or int type.'
             )
 
         return int(time.time() + retry_after_int)
@@ -557,13 +579,13 @@ class Limiter:
         """
         Determine if the request is within limits
         """
-        endpoint_url = request["path"] or ""
+        endpoint_url = request['path'] or ''
         view_func = endpoint_func
 
         endpoint_func_name = (
-            f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+            f'{view_func.__module__}.{view_func.__name__}' if view_func else ''
         )
-        _endpoint_key = endpoint_url if self._key_style == "url" else endpoint_func_name
+        _endpoint_key = endpoint_url if self._key_style == 'url' else endpoint_func_name
         # cases where we don't need to check the limits
         if (
             not _endpoint_key
@@ -590,7 +612,7 @@ class Limiter:
                         dynamic_limits.extend(list(lim.with_request(request)))
                     except ValueError as e:
                         self.logger.error(
-                            "failed to load ratelimit for view function %s (%s)",
+                            'failed to load ratelimit for view function %s (%s)',
                             endpoint_func_name,
                             e,
                         )
@@ -602,7 +624,7 @@ class Limiter:
                     pass
                 else:
                     if self.__should_check_backend() and self._storage.check():
-                        self.logger.info("Rate limit storage recovered")
+                        self.logger.info('Rate limit storage recovered')
                         self._storage_dead = False
                         self.__check_backend_count = 0
                     else:
@@ -634,14 +656,13 @@ class Limiter:
                 raise
             if self._in_memory_fallback_enabled and not self._storage_dead:
                 self.logger.warning(
-                    "Rate limit storage unreachable - falling back to"
-                    " in-memory storage"
+                    'Rate limit storage unreachable - falling back to in-memory storage'
                 )
                 self._storage_dead = True
                 self._check_request_limit(request, endpoint_func, in_middleware)
             else:
                 if self._swallow_errors:
-                    self.logger.exception("Failed to rate limit. Swallowing error")
+                    self.logger.exception('Failed to rate limit. Swallowing error')
                 else:
                     raise
 
@@ -662,7 +683,7 @@ class Limiter:
 
         def decorator(func: Callable[..., Response]):
             keyfunc = key_func or self._key_func
-            name = f"{func.__module__}.{func.__name__}"
+            name = f'{func.__module__}.{func.__name__}'
             dynamic_limit = None
             static_limits: List[Limit] = []
             if callable(limit_value):
@@ -694,7 +715,7 @@ class Limiter:
                     )
                 except ValueError as e:
                     self.logger.error(
-                        "Failed to configure throttling for %s (%s)",
+                        'Failed to configure throttling for %s (%s)',
                         name,
                         e,
                     )
@@ -706,7 +727,7 @@ class Limiter:
 
             sig = inspect.signature(func)
             for idx, parameter in enumerate(sig.parameters.values()):
-                if parameter.name == "request" or parameter.name == "websocket":
+                if parameter.name == 'request' or parameter.name == 'websocket':
                     break
             else:
                 raise Exception(
@@ -719,14 +740,14 @@ class Limiter:
                 async def async_wrapper(*args: Any, **kwargs: Any) -> Response:
                     # get the request object from the decorated endpoint function
                     if self.enabled:
-                        request = kwargs.get("request", args[idx] if args else None)
+                        request = kwargs.get('request', args[idx] if args else None)
                         if not isinstance(request, Request):
                             raise Exception(
-                                "parameter `request` must be an instance of starlette.requests.Request"
+                                'parameter `request` must be an instance of starlette.requests.Request'
                             )
 
                         if self._auto_check and not getattr(
-                            request.state, "_rate_limiting_complete", False
+                            request.state, '_rate_limiting_complete', False
                         ):
                             self._check_request_limit(request, func, False)
                             request.state._rate_limiting_complete = True
@@ -735,7 +756,7 @@ class Limiter:
                         if not isinstance(response, Response):
                             # get the response object from the decorated endpoint function
                             self._inject_headers(
-                                kwargs.get("response"),  # type: ignore
+                                kwargs.get('response'),  # type: ignore
                                 request.state.view_rate_limit,
                             )
                         else:
@@ -752,14 +773,14 @@ class Limiter:
                 def sync_wrapper(*args: Any, **kwargs: Any) -> Response:
                     # get the request object from the decorated endpoint function
                     if self.enabled:
-                        request = kwargs.get("request", args[idx] if args else None)
+                        request = kwargs.get('request', args[idx] if args else None)
                         if not isinstance(request, Request):
                             raise Exception(
-                                "parameter `request` must be an instance of starlette.requests.Request"
+                                'parameter `request` must be an instance of starlette.requests.Request'
                             )
 
                         if self._auto_check and not getattr(
-                            request.state, "_rate_limiting_complete", False
+                            request.state, '_rate_limiting_complete', False
                         ):
                             self._check_request_limit(request, func, False)
                             request.state._rate_limiting_complete = True
@@ -768,7 +789,7 @@ class Limiter:
                         if not isinstance(response, Response):
                             # get the response object from the decorated endpoint function
                             self._inject_headers(
-                                kwargs.get("response"),
+                                kwargs.get('response'),
                                 request.state.view_rate_limit,  # type: ignore
                             )
                         else:
@@ -866,7 +887,7 @@ class Limiter:
         """
         Decorator to mark a view as exempt from rate limits.
         """
-        name = "%s.%s" % (obj.__module__, obj.__name__)
+        name = '%s.%s' % (obj.__module__, obj.__name__)
 
         self._exempt_routes.add(name)
 

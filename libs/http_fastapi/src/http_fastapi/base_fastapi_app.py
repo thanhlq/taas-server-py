@@ -25,7 +25,7 @@ def build_app(config: AppConfig) -> FastAPI:
     )
 
     app.add_api_route(
-        '/', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
+        '/hello', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
     )
 
     return app

@@ -6,8 +6,6 @@ The module is responsible for setting up the FastAPI app, including:
   - routes
 """
 import socketio
-from ews_api_litestar.main import _controller
-
 from platform_core.http.base_app import BaseApiApplication, AppConfig
 
 from typing import Any, Optional
@@ -41,6 +39,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     def build_application(self) -> 'FastAPI':
         _fastapi_app: FastAPI = _setup_fastapi_app(logger=self.logger, app_config=self.config)
         _controllers = self.get_app_controllers()
+
         for controller in _controllers:
             include_controller(_fastapi_app, controller)
 

@@ -80,10 +80,10 @@ class BaseApiApplication[A](ABC):
             show_all_environment_variables,
         )
 
-        # show_api_app_info(self)
+        show_api_app_info(self)
 
-        if self.config.debug:
-            show_all_environment_variables()
+        # if self.config.debug:
+        #     show_all_environment_variables()
 
     @abstractmethod
     def get_app_controllers(self) -> list:

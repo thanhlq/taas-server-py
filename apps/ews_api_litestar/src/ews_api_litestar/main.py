@@ -15,23 +15,21 @@ from http_litestar.base_litestar_app import build_app
 from http_litestar.uvicorn import run_uvicorn
 from .setup_env import setup_environment
 
-os.environ['APP_MODULE_NAME'] = 'ews_api_litestar'
-
-settings = setup_environment()
-
-_controller = ProjectController()
-
-app: Litestar = build_app(
-    route_handlers=[build_router_for_controller(_controller)],
-)
-
-# Socket.IO is the default real-time transport: it wraps the Litestar app so
-# Socket.IO traffic (default path /socket.io) and HTTP share one ASGI app.
-# The raw-WebSocket route built into the router still works too.
-asgi_app = create_socketio_asgi_app(app, _controller)
-
 
 def main() -> None:
+    os.environ['APP_MODULE_NAME'] = 'ews_api_litestar'
+    settings = setup_environment()
+
+    _controller = ProjectController()
+
+    app: Litestar = build_app(
+        route_handlers=[build_router_for_controller(_controller)],
+    )
+
+    # Socket.IO is the default real-time transport: it wraps the Litestar app so
+    # Socket.IO traffic (default path /socket.io) and HTTP share one ASGI app.
+    # The raw-WebSocket route built into the router still works too.
+    asgi_app = create_socketio_asgi_app(app, _controller)
     run_uvicorn(asgi_app)
 
 
