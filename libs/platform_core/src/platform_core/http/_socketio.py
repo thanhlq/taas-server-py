@@ -83,6 +83,9 @@ def build_socketio_server(**kwargs: Any) -> socketio.AsyncServer:
     ``cors_allowed_origins='*'`` is the default so browser Socket.IO clients
     can connect during development; override via ``kwargs`` for production.
     """
+
+    print("Building Socket.IO server with kwargs:", kwargs)
+
     kwargs.setdefault('async_mode', 'asgi')
     kwargs.setdefault('cors_allowed_origins', '*')
     return socketio.AsyncServer(**kwargs)

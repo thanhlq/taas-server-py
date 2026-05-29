@@ -1,4 +1,5 @@
 from __future__ import annotations
+from starlette.responses import Response
 
 import enum
 from dataclasses import dataclass, field
@@ -43,6 +44,12 @@ class AppConfig:
 
     The final attribute values are used to instantiate the application object.
     """
+
+    app_name: str | None = field(default=None)
+
+    # Serialization:
+    default_response_class: type[Response] | None = field(default=None)
+    """The default response class to use for route handlers that don't explicitly set one."""
 
     deploy_env: str | None = field(default='development')
     """The environment the app is being deployed in, e.g. "production", "staging", "development".

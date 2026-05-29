@@ -1,10 +1,12 @@
+from fastapi.responses import JSONResponse
+from platform_core.http import AppConfig
 from fastapi import FastAPI
 
 
-def build_app(**kwargs) -> FastAPI:
+def build_app(config: AppConfig) -> FastAPI:
 
     app = FastAPI(
-        # default_response_class=kwargs.get("default_response_class", ORJSONResponse),
+        default_response_class=config.default_response_class or JSONResponse,
         swagger_ui_parameters={
             'deepLinking': False,
             # OAuth2 redirect endpoint (automatically provided by FastAPI)
@@ -16,15 +18,14 @@ def build_app(**kwargs) -> FastAPI:
         swagger_ui_init_oauth={
             'clientId': 'eworksuite-web',
             # "clientSecret": settings.KEYCLOAK_LOGIN_CLIENT_SECRET,  # Uncomment only if using confidential client
-            'appName': 'eWorkSuite API Documentation',
+            'appName': f'{config.app_name} API Documentation',
             'scopes': 'openid profile email',
             'usePkceWithAuthorizationCodeGrant': True,
         },
-        **kwargs,
     )
 
     app.add_api_route(
-        '/hello', lambda: {'message': 'Hello from FastAPI!'}, methods=['GET']
+        '/', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
     )
 
     return app

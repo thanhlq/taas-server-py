@@ -1,11 +1,13 @@
 import os
-from platform_core.http import BaseApiApplication
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from platform_core.utils.version import get_version
 from rich import get_console
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from platform_core.http.base_app import BaseApiApplication
 
 console = get_console()
 
@@ -38,7 +40,7 @@ def show_all_environment_variables() -> None:
     console.print(table)
 
 
-def show_api_app_info(app: BaseApiApplication) -> None:  # pragma: no cover
+def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
     """Display basic information about the application and its configuration."""
 
     table = Table(show_header=False)

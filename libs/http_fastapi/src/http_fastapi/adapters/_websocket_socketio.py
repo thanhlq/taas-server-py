@@ -29,13 +29,22 @@ def create_socketio_asgi_app(
     socketio_path: str = 'socket.io',
     **server_kwargs: Any,
 ) -> socketio.ASGIApp:
-    """Build (or reuse) a Socket.IO server, register ``controllers`` on it, and
-    wrap the FastAPI ``app`` so both are served from one ASGI app."""
+    """
+    Build (or reuse) a Socket.IO server, register ``controllers`` on it, and
+    wrap the FastAPI ``app`` so both are served from one ASGI app.
+    """
+
+    # how to setup redis pubsub for this socketio server? if we want to run multiple instances, we need to share state between them. the socketio docs recommend using a message queue like redis for this: https://python-socketio.readthedocs.io/en/latest/redis.html#redis-manager
+
     server = server or build_socketio_server(**server_kwargs)
     for controller in controllers:
         register_controller(server, controller)
-    return socketio.ASGIApp(
+
+    _socketio_app: socketio.ASGIApp = socketio.ASGIApp(
         server,
         other_asgi_app=app,
         socketio_path=socketio_path,
     )
+
+
+    return _socketio_app

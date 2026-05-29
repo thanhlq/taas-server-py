@@ -52,7 +52,6 @@ select = [
 ignore = [
     "I001", # sort imports
     "ARG001", # unused arguments in functions
-    "F401", # Remove unused imports
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "W191",  # indentation contains tabs

@@ -19,22 +19,19 @@ os.environ['APP_MODULE_NAME'] = 'ews_api'
 
 from .setup_env import setup_environment
 
+ASGI_APP_PACKAGE: str = 'ews_api.main:app'
+
+
 def main():
     from .app import app
 
-    # One instance per controller, shared by HTTP routes and Socket.IO events
-    # so handlers on the same controller can share state.
-    controllers = [cls() for cls in ews_conrrollers]
+    settings, _ = setup_environment()
 
-    for controller in controllers:
-        include_controller(app, controller)
+    if settings.server.RELOAD:
+        run_uvicorn(ASGI_APP_PACKAGE, reload=True)
 
-    # Socket.IO is the default real-time transport: it wraps the FastAPI app so
-    # Socket.IO traffic (default path /socket.io) and HTTP share one ASGI app.
-    # The raw-WebSocket route registered by include_controller still works too.
-    asgi_app = create_socketio_asgi_app(app, *controllers)
-
-    run_uvicorn(asgi_app)
+    else:
+        run_uvicorn(app)
 
 
 if __name__ == '__main__':

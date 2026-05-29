@@ -5,15 +5,8 @@ from logging import Logger
 from platform_core.cli import get_console
 from rich.console import Console
 from abc import abstractmethod, ABC
-from dataclasses import field
 
-from platform_core.config.allowed_hosts import AllowedHostsConfig
 from platform_core.config.app import AppConfig
-from platform_core.config.compression import CompressionConfig
-from platform_core.config.cors import CORSConfig
-from platform_core.config.csrf import CSRFConfig
-from platform_core.openapi.config import OpenAPIConfig
-from platform_core.utils.singleton import singleton
 
 
 __all__ = ('BaseApiApplication', 'AppConfig')
@@ -28,6 +21,7 @@ class BaseApiApplication[A](ABC):
 
     def __init__(self, settings: Settings, root_path: str) -> None:
         self._config = AppConfig(
+            app_name=settings.app.NAME,
             compression_config=settings.app.get_compression_config(),
             ratelimit_config=settings.app.get_ratelimit_config(),
             distributed_lock_config=settings.app.get_distributed_lock_config(),
@@ -45,6 +39,8 @@ class BaseApiApplication[A](ABC):
             )
 
         self.template_engine = None
+
+        self.show_app_info()
 
     @property
     def logger(self) -> Logger:
@@ -67,15 +63,16 @@ class BaseApiApplication[A](ABC):
         """Return a unique identifier for this application, used for things like caching."""
         raise NotImplementedError('Subclasses must implement this method.')
 
-    def build_app(self) -> A:
-        """Build the actual ASGI app instance, this is called during app initialization."""
-        raise NotImplementedError('Subclasses must implement this method.')
-
     def get_app(self) -> A:
         """Return the ASGI app instance, building it if it hasn't been built yet."""
         if not hasattr(self, '_app'):
-            self._app = self.build_app()
+            self._app = self.build_application()
         return self._app
+
+    @abstractmethod
+    def build_application(self) -> A:
+        """Build the actual ASGI app instance, this is called during app initialization."""
+        ...
 
     def show_app_info(self) -> None:
         from platform_core.cli._show_app_info import (
@@ -83,7 +80,12 @@ class BaseApiApplication[A](ABC):
             show_all_environment_variables,
         )
 
-        show_api_app_info(self)
+        # show_api_app_info(self)
 
         if self.config.debug:
             show_all_environment_variables()
+
+    @abstractmethod
+    def get_app_controllers(self) -> list:
+        """Return a list of controller instances to register on the app."""
+        ...

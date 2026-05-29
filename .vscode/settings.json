@@ -31,6 +31,12 @@
     "**/__pycache__"
   ],
   "python.analysis.importFormat": "absolute",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportUnusedImport": "warning",
+    "reportUnusedVariable": "warning",
+    "reportUnusedFunction": "warning",
+    "reportUnusedClass": "warning"
+  },
   "search.exclude": {
     "**/.ruff_cache": true,
     "**/.venv": true,

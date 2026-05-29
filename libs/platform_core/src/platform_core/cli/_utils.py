@@ -5,4 +5,3 @@ from rich import get_console
 from rich.table import Table
 
 console = get_console()
-
