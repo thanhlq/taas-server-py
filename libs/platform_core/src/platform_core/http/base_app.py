@@ -38,7 +38,7 @@ class BaseApiApplication[A](ABC):
         )
         self._root_path = root_path
         self.openapi_enabled = settings.app.OPENAPI_ENABLED
-        if (self.openapi_enabled):
+        if self.openapi_enabled:
             self._config.openapi_config = build_openapi_config(
                 title=f'{settings.app.NAME} API',
                 version=settings.app.VERSION,
@@ -78,6 +78,12 @@ class BaseApiApplication[A](ABC):
         return self._app
 
     def show_app_info(self) -> None:
-        from platform_core.cli._show_app_info import show_api_app_info
+        from platform_core.cli._show_app_info import (
+            show_api_app_info,
+            show_all_environment_variables,
+        )
 
         show_api_app_info(self)
+
+        if self.config.debug:
+            show_all_environment_variables()

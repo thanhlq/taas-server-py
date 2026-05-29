@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 _settings: Settings | None = None
 root_path: str
 
+
 def setup_environment() -> tuple[Settings, str]:
     global _settings
     global root_path
@@ -27,8 +28,8 @@ def setup_environment() -> tuple[Settings, str]:
     sys.path.append(str(current_path))
     from platform_core.config import get_settings
 
-    _settings = get_settings()
     root_path = current_path.as_posix()
+    _settings = get_settings(home_path=root_path)
 
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP', 'app.server.asgi:create_app')
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP_NAME', _settings.app.NAME)

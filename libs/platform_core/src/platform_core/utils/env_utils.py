@@ -9,7 +9,30 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # BASE_DIR: Final[Path] = Path(__file__).parent.parent
-TRUE_VALUES: Final[frozenset[str]] = frozenset({"True", "true", "1", "yes", "YES", "Y", "y", "T", "t"})
+# Compared against value.strip().lower() — accepts "TRUE"/"True"/"true"/etc.
+TRUE_VALUES: Final[frozenset[str]] = frozenset({"true", "1", "yes", "y", "t", "on", "True"})
+FALSE_VALUES: Final[frozenset[str]] = frozenset({"false", "0", "no", "n", "f", "off", "", "False"})
+
+
+def _parse_bool(key: str, value: str) -> bool:
+    """Parse a bool env var.
+
+    Accepts the conventional truthy/falsy spellings case-insensitively and
+    after stripping whitespace. An empty string counts as False (matches the
+    convention of unsetting a flag with ``EXPORT FLAG=``). Any other value
+    raises ValueError — silent ``False`` fallback used to hide typos like
+    ``DEBUG=truee``.
+    """
+    normalized = value.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+    allowed = sorted((TRUE_VALUES | FALSE_VALUES) - {""})
+    raise ValueError(
+        f"Cannot parse env var {key}={value!r} as bool. "
+        f"Use one of: {allowed} (case-insensitive), or unset."
+    )
 
 T = TypeVar("T")
 ParseTypes = bool | int | str | list[str] | Path | list[Path] | dict[str, Any]
@@ -186,7 +209,7 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
     if final_type is int:
         return int(value)
     if final_type is bool:
-        return value in TRUE_VALUES
+        return _parse_bool(key, value)
     if final_type is Path:
         return Path(value)
     if final_type is None or final_type is type(None):

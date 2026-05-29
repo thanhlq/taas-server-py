@@ -20,9 +20,6 @@ class WebSocketConfig:
     — same env vars work across frameworks.
     """
 
-    enabled: bool = field(
-        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_ENABLED', True)
-    )
     """Master switch. When False, adapters skip installing the pub-sub
     backend (single-process Socket.IO still works locally)."""
 
@@ -57,33 +54,25 @@ class WebSocketConfig:
 
     # ---- Socket.IO behaviour ------------------------------------------------
     socketio_path: str = field(
-        default_factory=get_env(
-            f'{CONFIG_PREFIX}_WEBSOCKET_SOCKETIO_PATH', 'socket.io'
-        )
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_SOCKETIO_PATH', 'socket.io')
     )
     """URL path where the Socket.IO server is mounted. Clients connect to
     ``ws://host/<socketio_path>/``. Must match the client's ``path`` option."""
 
     channel_prefix: str = field(
-        default_factory=get_env(
-            f'{CONFIG_PREFIX}_WEBSOCKET_CHANNEL_PREFIX', 'wss'
-        )
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_CHANNEL_PREFIX', 'wss')
     )
     """Prefix for pub-sub channel names — lets you share one Redis with
     other apps without collisions."""
 
     ping_interval: int = field(
-        default_factory=get_env(
-            f'{CONFIG_PREFIX}_WEBSOCKET_PING_INTERVAL', 25, int
-        )
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_PING_INTERVAL', 25, int)
     )
     """Server-initiated heartbeat interval, in seconds. Clients that miss
     a heartbeat are considered disconnected. Matches Socket.IO's default."""
 
     ping_timeout: int = field(
-        default_factory=get_env(
-            f'{CONFIG_PREFIX}_WEBSOCKET_PING_TIMEOUT', 20, int
-        )
+        default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_PING_TIMEOUT', 20, int)
     )
     """How long to wait for a pong before declaring the client gone, in
     seconds. Must be < :attr:`ping_interval` for reliable detection."""

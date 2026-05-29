@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, cast, Optional
 
 from advanced_alchemy.utils.text import slugify
 from dotenv import load_dotenv
@@ -407,22 +407,63 @@ class Settings:
     log: LogSettings = field(default_factory=LogSettings)
     email: EmailSettings = field(default_factory=EmailSettings)
 
+    def find_env_file(self, filename: str) -> Path | None:
+        """Search for the specified .env file in the current and parent directories.
+
+        Args:
+            filename: The name of the .env file to search for.
+
+        Returns:
+            The path to the .env file if found, otherwise None.
+        """
+        current_dir = Path.cwd()
+        while True:
+            potential_env_file = current_dir / filename
+            if potential_env_file.is_file():
+                return potential_env_file
+            if current_dir.parent == current_dir:
+                break  # Reached the root directory
+            current_dir = current_dir.parent
+        return None
+
+    def _find_app_home_path(self, default_path: Optional[str] = None) -> str:
+        if default_path:
+            return default_path
+
+        _home_path = os.environ.get(f'{CONFIG_PREFIX}_HOME_PATH', None)
+        if _home_path:
+            return _home_path
+
+        # print(f'Current working directory (Path.cwd()): {Path.cwd()}')  # noqa: T201
+        # print(f'Current working directory (os.curdir): {os.curdir} / {Path(os.curdir).resolve()}')  # noqa: T201
+
+        _home_path = str(Path(os.curdir).resolve())
+
+        return _home_path
+
+
     @classmethod
     @lru_cache(maxsize=1, typed=True)
-    def from_env(cls, dotenv_filename: str = '.env') -> Settings:
+    def from_env(cls, dotenv_filename: str = '.env', home_path: Optional[str] = None) -> Settings:
+        _app_home_path = cls()._find_app_home_path(home_path)
+
         logger = logging.getLogger()
         _secret_id = os.environ.get(
             'ENV_SECRETS', None
         )  # use this to load secrets in a container
-        env_file = Path(f'{os.curdir}/{dotenv_filename}')
+        env_file = Path(f'{_app_home_path}/{dotenv_filename}')
         env_file_exists = env_file.is_file()
         if env_file_exists:
             console.print(
-                f'[yellow]Loading environment configuration from {dotenv_filename}[/]'
+                f'[blue]Loading environment configuration from {dotenv_filename}[/]'
             )
             load_dotenv(
                 env_file, override=False
             )  # Env vars take precedence over .env file
+        else:
+            console.print(
+                f'[yellow]{env_file} not found. Skipping loading environment variables from file.[/]'
+            )
         try:
             db: DatabaseSettings = DatabaseSettings()
             server: ServerSettings = ServerSettings()
@@ -436,8 +477,8 @@ class Settings:
         return Settings(app=app, db=db, server=server, log=log)
 
 
-def get_settings(dotenv_filename: str = '.env') -> Settings:
-    return Settings.from_env(dotenv_filename)
+def get_settings(*, env_file: str = '.env', home_path: Optional[str] = None) -> Settings:
+    return Settings.from_env(env_file, home_path)
 
 
 def provide_app_settings() -> AppSettings:
