@@ -8,7 +8,6 @@ The module is responsible for setting up the FastAPI app, including:
 
 from platform_core.cli import cli_print_info
 from fastapi.concurrency import asynccontextmanager
-import asyncio
 from platform_core.config.wss import WebSocketConfig
 import socketio
 from platform_core.http.base_app import BaseApiApplication, AppConfig
@@ -16,7 +15,7 @@ from platform_core.http.base_app import BaseApiApplication, AppConfig
 from typing import Any, Optional
 from http_fastapi.fastapi_app import create_app
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from .setup_env import setup_environment
+from .setup_env import settings, root_path
 from platform_core.config import Settings
 from fastapi import FastAPI
 from logging import Logger
@@ -115,7 +114,6 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastA
     return app
 
 
-settings, root_path = setup_environment()
 _ews_app = EwsApplication(settings, root_path)
 
 app = (

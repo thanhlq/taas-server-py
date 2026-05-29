@@ -27,7 +27,7 @@ from platform_core.http import AppConfig
 from platform_core.http._socketio import verify_socketio_manager
 from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
 
-from .setup_env import setup_environment
+from .setup_env import settings, root_path
 
 
 def _build_app_config(settings) -> AppConfig:
@@ -49,7 +49,6 @@ def _build_app_config(settings) -> AppConfig:
 
 
 def main() -> None:
-    settings = setup_environment()
     app_config = _build_app_config(settings)
 
     _controller = ProjectController()

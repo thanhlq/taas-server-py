@@ -7,7 +7,7 @@ import os
 
 from http_fastapi.uvicorn import run_uvicorn
 
-from .setup_env import setup_environment
+from .setup_env import settings
 
 
 async def main():
@@ -15,8 +15,6 @@ async def main():
     os.environ['APP_MODULE_NAME'] = 'ews_api'
 
     from .app import app
-
-    settings, _ = setup_environment()
 
     if settings.server.RELOAD:
         run_uvicorn(ASGI_APP_PACKAGE, reload=True)
