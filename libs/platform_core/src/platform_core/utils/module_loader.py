@@ -34,7 +34,6 @@ def module_to_os_path(dotted_path: str = 'app') -> Path:
         Path: The path to the module.
     """
     try:
-        print(f'Finding module for dotted path: {dotted_path}')  # noqa: T201
         if (src := find_spec(dotted_path)) is None:  # pragma: no cover
             raise TypeError(f"Couldn't find the path for {dotted_path}")
     except ModuleNotFoundError as e:

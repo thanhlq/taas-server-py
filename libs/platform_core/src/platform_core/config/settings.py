@@ -1,6 +1,7 @@
 # .venv/lib/python3.13/site-packages/litestar_email/message.py
 
 from __future__ import annotations
+from platform_core.cli import cli_print_info_formal
 from platform_core.config.wss import WebSocketConfig
 import binascii
 import json
@@ -41,8 +42,10 @@ DEFAULT_MODULE_NAME = 'db'  # libs/db
 # TODO: to improve since deploying in evironemtn as cloudflare workers,
 # the file system is read only, we need to find a better way to handle static files in that case.
 BASE_DIR: Final[Path] = module_to_os_path(DEFAULT_MODULE_NAME)
-print(f'Base directory resolved to: {BASE_DIR}')  # noqa: T201
+# print(f'Base directory resolved to: {BASE_DIR}')  # noqa: T201
 STATIC_DIR = Path(BASE_DIR / 'server' / 'static' / 'web')
+
+# cli_print_info_formal('DB MIGRATIONS MODULE', str(BASE_DIR.resolve()))
 
 
 @dataclass
@@ -77,6 +80,11 @@ class DatabaseSettings:
         )
     )
     """SQLAlchemy Database URL."""
+
+    MIGRATION_ENABLED: bool = field(
+        default_factory=get_env('DATABASE_MIGRATION_ENABLED', True, bool)
+    )
+
     MIGRATION_CONFIG: str = field(
         default_factory=get_env(
             'DATABASE_MIGRATION_CONFIG', f'{BASE_DIR}/db/migrations/alembic.ini'

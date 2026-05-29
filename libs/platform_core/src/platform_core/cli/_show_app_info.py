@@ -60,6 +60,11 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
     table.add_row(
         'Python Debugger on exception', _format_is_enabled(app.config.pdb_on_exception)
     )
+    # db migration enabled?
+    table.add_row(
+        'DB MIGRATION',
+        f'{_format_is_enabled(app.all_settings.db.MIGRATION_ENABLED)} -> {app.all_settings.db.MIGRATION_PATH}',
+    )
     table.add_row(
         'CORS',
         f'{_format_is_enabled(app.config.cors_config)}, allow_origins={app.config.cors_config.allow_origins if app.config.cors_config else "None"}',

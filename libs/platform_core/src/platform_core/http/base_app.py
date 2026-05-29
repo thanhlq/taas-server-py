@@ -15,22 +15,27 @@ __all__ = ('BaseApiApplication', 'AppConfig')
 class BaseApiApplication[A](ABC):
     _app: A
     _config: AppConfig
+    _db_config: DatabaseSettings
+    _all_settings: Settings
     _console: Console
     _logger: Logger
     _root_path: str
 
     def __init__(self, settings: Settings, root_path: str) -> None:
+        self._all_settings = settings
         self._config = AppConfig(
             app_name=settings.app.NAME,
+            debug=settings.app.DEBUG,
             compression_config=settings.app.get_compression_config(),
             ratelimit_config=settings.app.get_ratelimit_config(),
             distributed_lock_config=settings.app.get_distributed_lock_config(),
             websocket_config=settings.app.get_websocket_config(),
             cors_config=settings.app.get_cors_config(),
-            debug=settings.app.DEBUG,
+
             # csrf_config=config.app.get_csrf_config(),
         )
         self._root_path = root_path
+        self._db_config = settings.db
         self.openapi_enabled = settings.app.OPENAPI_ENABLED
         if self.openapi_enabled:
             self._config.openapi_config = build_openapi_config(
@@ -41,6 +46,10 @@ class BaseApiApplication[A](ABC):
         self.template_engine = None
 
         self.show_app_info()
+
+    @property
+    def all_settings(self) -> Settings:
+        return self._all_settings
 
     @property
     def logger(self) -> Logger:
