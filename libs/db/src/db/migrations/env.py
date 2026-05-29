@@ -9,6 +9,12 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import AsyncEngine, async_engine_from_config
 from sqlalchemy.sql.schema import SchemaItem
 
+# Import all model modules so their tables register with
+# advanced_alchemy.metadata_registry before autogenerate inspects it.
+# Without this, `metadata_registry.get(bind_key)` returns an empty metadata
+# and every autogenerate revision is a no-op.
+import db.models  # noqa: F401
+
 if TYPE_CHECKING:
     from advanced_alchemy.alembic.commands import AlembicCommandConfig
     from sqlalchemy.engine import Connection
