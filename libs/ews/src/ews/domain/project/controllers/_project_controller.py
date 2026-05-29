@@ -69,7 +69,7 @@ class ProjectController(BaseController):
     def list_projects(self) -> list[Project]:
         return samples_project
 
-    @get('/p2')
+    @get(path='/p2', ratelimit='2/minute')
     def list_projects2(self) -> list[ProjectEntityPy]:
         return samples_project2
 

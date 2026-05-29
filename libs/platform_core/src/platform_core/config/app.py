@@ -44,6 +44,7 @@ class AppConfig:
     """
 
     app_name: str | None = field(default=None)
+    debug: bool = field(default=False)
 
     # Serialization:
     default_response_class: type[Response] | None = field(default=None)
@@ -64,7 +65,6 @@ class AppConfig:
     cache_config: CacheConfig | None = field(default=None)
     distributed_lock_config: DistributedLockConfig | None = field(default=None)
     websocket_config: WebSocketConfig | None = field(default=None)
-    debug: bool = field(default=False)
     """If ``True``, app errors rendered as HTML with a stack trace."""
     event_emitter_backend: type[BaseEventEmitterBackend] = field(
         default=SimpleEventEmitter

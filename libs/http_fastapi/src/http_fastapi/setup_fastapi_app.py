@@ -8,7 +8,7 @@ from platform_core.config import AppSettings
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, Request
 
-from http_fastapi.base_fastapi_app import build_app
+from http_fastapi.base_fastapi_app import create_app
 from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 
 

@@ -49,6 +49,8 @@ STATIC_DIR = Path(BASE_DIR / 'server' / 'static' / 'web')
 class DatabaseSettings:
     ECHO: bool = field(default_factory=get_env('DATABASE_ECHO', False))
     """Enable SQLAlchemy engine logs."""
+    DEBUG: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG_DATABASE', False, bool))
+
     ECHO_POOL: bool = field(default_factory=get_env('DATABASE_ECHO_POOL', False))
     """Enable SQLAlchemy connection pool logs."""
     POOL_DISABLED: bool = field(
@@ -229,8 +231,9 @@ class AppSettings:
     """Application contact email"""
     URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8191'))
     """The frontend base URL"""
-    DEBUG: bool = field(default_factory=get_env('DEBUG', False, bool))
-    """Run `Litestar` with `debug=True`."""
+
+    DEBUG: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG', False, bool))
+
     SECRET_KEY: str = field(
         default_factory=get_env(
             'SECRET_KEY', binascii.hexlify(os.urandom(32)).decode(encoding='utf-8')

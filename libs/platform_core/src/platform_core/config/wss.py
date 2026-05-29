@@ -23,6 +23,8 @@ class WebSocketConfig:
     """Master switch. When False, adapters skip installing the pub-sub
     backend (single-process Socket.IO still works locally)."""
 
+    debug: bool = field(default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_DEBUG', False, bool))
+
     provider: str = field(
         default_factory=get_env(f'{CONFIG_PREFIX}_WEBSOCKET_PROVIDER', 'redis')
     )

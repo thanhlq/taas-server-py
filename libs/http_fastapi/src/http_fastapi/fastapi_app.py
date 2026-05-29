@@ -1,10 +1,15 @@
+from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
+from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from fastapi.responses import JSONResponse
 from platform_core.http import AppConfig
 from fastapi import FastAPI
 
 
-def build_app(config: AppConfig) -> FastAPI:
+def create_app(config: AppConfig, **kwargs) -> FastAPI:
+    # 1. Important
+    config.default_response_class = MsgSpecJSONResponse
 
+    # 2. Create FastAPI app with custom settings
     app = FastAPI(
         default_response_class=config.default_response_class or JSONResponse,
         swagger_ui_parameters={
@@ -22,10 +27,15 @@ def build_app(config: AppConfig) -> FastAPI:
             'scopes': 'openid profile email',
             'usePkceWithAuthorizationCodeGrant': True,
         },
+        **kwargs,
     )
 
+    # 3. Install MsgSpec OpenAPI support (must be after app creation)
+    install_msgspec_openapi(app)
+
+    # 4. Add a simple root endpoint for testing
     app.add_api_route(
-        '/hello', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
+        '/', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
     )
 
     return app

@@ -137,12 +137,27 @@ async def verify_socketio_manager(
         cli_print_info(f'Socket.IO manager: {info}')
         return info
 
-    redis_client = getattr(manager, 'redis', None)
     channel = getattr(manager, 'channel', 'socketio')
     info['channel'] = channel
+    info['redis_url'] = getattr(manager, 'redis_url', None)
 
+    # AsyncRedisManager populates self.redis lazily — call the same connect
+    # method the manager itself uses on first publish so we test the real path.
+    if getattr(manager, 'redis', None) is None:
+        try:
+            manager._redis_connect()
+        except Exception as exc:
+            raise RuntimeError(
+                f'AsyncRedisManager could not connect to {info["redis_url"]!r}: {exc!r}'
+            ) from exc
+
+    redis_client = manager.redis
     if redis_client is None:
-        raise RuntimeError('AsyncRedisManager has no .redis client attached')
+        raise RuntimeError(
+            f'AsyncRedisManager has no .redis client attached after _redis_connect() '
+            f'(url={info["redis_url"]!r})'
+        )
+    info['connected'] = bool(getattr(manager, 'connected', False))
 
     try:
         pong = await asyncio.wait_for(redis_client.ping(), timeout=timeout)

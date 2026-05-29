@@ -2,6 +2,7 @@
 #
 # uv run --package ews_api python main.py
 
+import asyncio
 import os
 
 from http_fastapi.uvicorn import run_uvicorn
@@ -9,7 +10,7 @@ from http_fastapi.uvicorn import run_uvicorn
 from .setup_env import setup_environment
 
 
-def main():
+async def main():
     ASGI_APP_PACKAGE: str = 'ews_api.app:app'
     os.environ['APP_MODULE_NAME'] = 'ews_api'
 
@@ -25,4 +26,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

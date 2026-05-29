@@ -5,14 +5,16 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
+
+from platform_core.cli import cli_print_info
+from fastapi.concurrency import asynccontextmanager
 import asyncio
 from platform_core.config.wss import WebSocketConfig
 import socketio
 from platform_core.http.base_app import BaseApiApplication, AppConfig
 
 from typing import Any, Optional
-from http_fastapi.base_fastapi_app import build_app
-from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
+from http_fastapi.fastapi_app import create_app
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 from .setup_env import setup_environment
 from platform_core.config import Settings
@@ -21,6 +23,7 @@ from logging import Logger
 from ews import ews_conrrollers
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
+
 
 class EwsApplication(BaseApiApplication[FastAPI]):
     _socketio_app: Optional[socketio.ASGIApp] = None
@@ -34,34 +37,50 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
     def get_websocket_app(self) -> socketio.ASGIApp:
         if self._socketio_app is None:
-            raise RuntimeError('WebSocket app has not been built yet. Call get_app() first to build the app.')
+            raise RuntimeError(
+                'WebSocket app has not been built yet. Call get_app() first to build the app.'
+            )
         return self._socketio_app
 
     def is_websocket_enabled(self) -> bool:
         return True
 
     def build_application(self) -> 'FastAPI':
-        _fastapi_app: FastAPI = _setup_fastapi_app(logger=self.logger, app_config=self.config)
-        _controllers = self.get_app_controllers()
 
+        @asynccontextmanager
+        async def lifespan(application: FastAPI):
+
+
+            # Validate the manager is what we configured. Blocks startup if not.
+            if self.config.websocket_config and self.config.websocket_config.debug:
+                from platform_core.http._socketio import verify_socketio_manager
+
+                await verify_socketio_manager(
+                    server,  # the AsyncServer instance
+                    expect_redis=True,  # only require Redis when we asked for it
+                    roundtrip=True,  # set False to skip the pub/sub probe
+                    timeout=2.0,
+                )
+
+            yield  # Startup complete, now run the app
+
+            cli_print_info('Shutting down application...')
+
+        _fastapi_app: FastAPI = _setup_fastapi_app(
+            logger=self.logger, app_config=self.config, lifespan=lifespan
+        )
+        _controllers = self.get_app_controllers()
         for controller in _controllers:
             include_controller(_fastapi_app, controller)
-
         if self.is_websocket_enabled():
-            websocket_config: WebSocketConfig = self.config.websocket_config # type: ignore
+            websocket_config: WebSocketConfig = self.config.websocket_config  # type: ignore
             self._socketio_app, server = create_socketio_asgi_app(
                 _fastapi_app,
                 *_controllers,
-                client_manager=build_websocket_redis_manager(websocket_config))
+                client_manager=build_websocket_redis_manager(websocket_config),
+            )
 
-            # Validate the manager is what we configured. Blocks startup if not.
-            from platform_core.http._socketio import verify_socketio_manager
-            asyncio.run(verify_socketio_manager(
-                server,            # the AsyncServer instance
-                expect_redis=True,         # only require Redis when we asked for it
-                roundtrip=True,                     # set False to skip the pub/sub probe
-                timeout=2.0,
-            ))
+
 
         return _fastapi_app
 
@@ -69,10 +88,8 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         return ews_conrrollers
 
 
-def _setup_fastapi_app(logger: Logger, app_config: AppConfig) -> FastAPI:
-    app_config.default_response_class = MsgSpecJSONResponse
-    app: FastAPI = build_app(app_config)
-    install_msgspec_openapi(app)
+def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastAPI:
+    app: FastAPI = create_app(app_config, **kwargs)
 
     @app.exception_handler(exc_class_or_status_code=Exception)
     async def global_exception_handler(request: Any, exc: Exception):
@@ -101,6 +118,10 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig) -> FastAPI:
 settings, root_path = setup_environment()
 _ews_app = EwsApplication(settings, root_path)
 
-app = _ews_app.get_websocket_app() if _ews_app.is_websocket_enabled() else _ews_app.get_app()
+app = (
+    _ews_app.get_websocket_app()
+    if _ews_app.is_websocket_enabled()
+    else _ews_app.get_app()
+)
 
 __all__ = ('app',)

@@ -24,6 +24,7 @@ def run_uvicorn(
     log_config: Optional[dict] = None,
     log_level: Optional[str] = None,
     reload: bool = False,
+    workers: int = 1,
 ):
     """
     Args:
@@ -41,6 +42,7 @@ def run_uvicorn(
         port=port,
         reload=reload,
         log_config=log_config,
-        log_level=log_level
+        log_level=log_level,
+        workers=workers,
         # loop='auto',
     )

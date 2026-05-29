@@ -17,9 +17,9 @@ def build_websocket_redis_manager(
     # For single-mode this is `redis://host:port/db`. For sentinel you'll need
     # a custom resolver — see "Sentinel notes" below.
     from platform_core.config.redis_config import RedisConfig
-    from store_redis.redis_client import build_redis_config_from_env
+    # from platform_core.config.redis_client import build_redis_config_from_env
 
-    rc: RedisConfig = build_redis_config_from_env(
+    rc: RedisConfig = RedisConfig(
         host=config.redis_host,
         sentinel_master_name=config.redis_master_name,
         password=config.redis_password,

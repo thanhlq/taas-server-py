@@ -27,16 +27,23 @@ def create_socketio_asgi_app(
     *controllers: BaseController,
     server: socketio.AsyncServer | None = None,
     socketio_path: str = 'socket.io',
+    client_manager: socketio.AsyncManager | None = None,
     app_context: BaseApiApplication | None = None,
     **server_kwargs: Any,
-) -> socketio.ASGIApp:
+) -> tuple[socketio.ASGIApp, socketio.AsyncServer]:
     """Build (or reuse) a Socket.IO server, register ``controllers`` on it, and
-    wrap the Litestar ``app`` so both are served from one ASGI app."""
-    server = server or build_socketio_server(**server_kwargs)
+    wrap the Litestar ``app`` so both are served from one ASGI app.
+
+    Returns ``(asgi_app, server)`` — the ASGI app for uvicorn, and the
+    underlying ``AsyncServer`` so the caller can attach a verify-on-startup
+    hook or otherwise inspect the manager.
+    """
+    server = server or build_socketio_server(client_manager=client_manager, **server_kwargs)
     for controller in controllers:
         register_controller(server, controller)
-    return socketio.ASGIApp(
+    asgi_app = socketio.ASGIApp(
         server,
         other_asgi_app=app,
         socketio_path=socketio_path,
     )
+    return asgi_app, server
