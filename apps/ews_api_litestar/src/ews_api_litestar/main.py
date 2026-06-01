@@ -13,7 +13,7 @@ from typing import Optional
 import socketio
 from litestar import Litestar
 
-from ews.domain.project import ProjectController
+from ews.domain.ppm import ProjectController
 from http_litestar.adapters import (
     build_router_for_controller,
     create_socketio_asgi_app,

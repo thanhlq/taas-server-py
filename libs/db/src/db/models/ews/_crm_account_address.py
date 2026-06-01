@@ -4,9 +4,11 @@ from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
-from db.models.types import CRM_ACCOUNTS_ADDRESSES_TABLE, CRM_ACCOUNTS_TABLE
-from sqlalchemy import UUID, Boolean, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from db.models.base import ID_COLUMN_TYPE
+from db.models.types import CRM_ACCOUNTS_ADDRESSES_TABLE, CRM_ACCOUNTS_TABLE
 
 if TYPE_CHECKING:
     pass
@@ -34,8 +36,7 @@ class CrmAccountAddress(UUIDv7AuditBase, SlugKey):
         String(30), index=True, default='office', nullable=False
     )
 
-    # account_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
-    account_id: Mapped[UUID] = mapped_column(
+    account_id: Mapped[ID_COLUMN_TYPE] = mapped_column(
         ForeignKey(f'{CRM_ACCOUNTS_TABLE}.id', ondelete='cascade'),
         nullable=False,
     )

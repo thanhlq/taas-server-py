@@ -5,24 +5,56 @@ IMPORTANT:
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
 
-from ._audit_log import AuditLog
-from ._email_verification_token import EmailVerificationToken
-from ._oauth_account import UserOAuthAccount
-from ._password_reset_token import PasswordResetToken
-from ._refresh_token import RefreshToken
-from ._role import Role
-from ._tag import Tag
-from ._team import Team
-from ._team_invitation import TeamInvitation
-from ._team_member import TeamMember
-from ._team_roles import TeamRoles
-from ._team_tag import team_tag
-from ._user import User
-from ._user_role import UserRole
+# Audit Trails
+from .core._audit_log import AuditLog
 
-# CRM
-from .ews._crm_account import CrmAccount
-from .ews._crm_account_address import CrmAccountAddress
+# Authorization
+from .core._casbin_rule import CasbinRule
+
+# IAM
+from .core._email_verification_token import EmailVerificationToken
+from .core._oauth_account import UserOAuthAccount
+from .core._password_reset_token import PasswordResetToken
+from .core._refresh_token import RefreshToken
+from .core._role import Role
+from .core._tag import Tag
+from .core._team import Team
+from .core._team_invitation import TeamInvitation
+from .core._team_member import TeamMember
+from .core._team_roles import TeamRoles
+from .core._team_tag import team_tag
+from .core._user import User
+from .core._user_role import UserRole
+
+# PPM (Project / Portfolio Management)
+from .ews import (
+    Category,
+    ChecklistTemplate,
+    ChecklistTemplateItem,
+    CrmAccount,
+    CrmAccountAddress,
+    Payrate,
+    PayrateAdjustment,
+    Payroll,
+    Payrun,
+    PpmTag,
+    PpmTagMapping,
+    Project,
+    ProjectAction,
+    ProjectComment,
+    ProjectRisk,
+    ProjectTeam,
+    ProjectUpdate,
+    ProjectUser,
+    ProjectWorkflowAssignment,
+    ProjectWorkflowStageItem,
+    Task,
+    TaskChecklistItem,
+    TaskUser,
+    Timelog,
+    Workflow,
+    WorkflowStage,
+)
 
 # from sqlalchemy.orm import DeclarativeBase
 
@@ -42,7 +74,33 @@ __all__ = [
     'UserOAuthAccount',
     'UserRole',
     'team_tag',
+    'CasbinRule',
     # CRM
     'CrmAccount',
     'CrmAccountAddress',
+    # PPM
+    'Category',
+    'ChecklistTemplate',
+    'ChecklistTemplateItem',
+    'Payrate',
+    'PayrateAdjustment',
+    'Payroll',
+    'Payrun',
+    'PpmTag',
+    'PpmTagMapping',
+    'Project',
+    'ProjectAction',
+    'ProjectComment',
+    'ProjectRisk',
+    'ProjectTeam',
+    'ProjectUpdate',
+    'ProjectUser',
+    'ProjectWorkflowAssignment',
+    'ProjectWorkflowStageItem',
+    'Task',
+    'TaskChecklistItem',
+    'TaskUser',
+    'Timelog',
+    'Workflow',
+    'WorkflowStage',
 ]

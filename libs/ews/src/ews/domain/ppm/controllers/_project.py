@@ -1,4 +1,4 @@
-from ews.domain.project.schemas import Project
+from ews.domain.ppm.schemas import Project
 
 from platform_core.utils.datetime_utils import now_in_utc
 

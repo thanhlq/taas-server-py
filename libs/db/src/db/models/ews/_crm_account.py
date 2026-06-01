@@ -6,6 +6,7 @@ from typing import Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
+from db.models.base import ID_COLUMN_TYPE
 from db.models.ews._crm_account_address import CrmAccountAddress
 from db.models.types import CRM_ACCOUNTS_TABLE, JSONB
 from sqlalchemy import (
@@ -42,9 +43,9 @@ class CrmAccount(UUIDv7AuditBase, SlugKey):
     account_type: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
 
     # Relationships
-    parent_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
-    user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
-    # group_id: Mapped[Optional[str]] = mapped_column(
+    parent_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(TEXT, nullable=True, index=True)
+    user_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(TEXT, nullable=True, index=True)
+    # group_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
     #     TEXT, nullable=True
     # )
 

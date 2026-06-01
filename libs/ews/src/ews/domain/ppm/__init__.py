@@ -1,5 +1,5 @@
 from platform_core.http import BaseController
-from .controllers._project_controller import ProjectController
+from .controllers._project_controller_demo import ProjectController
 
 project_controllers: list[BaseController] = [
     ProjectController(),

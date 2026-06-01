@@ -15,7 +15,7 @@ import pytest
 import socketio
 import uvicorn
 
-from ews.domain.project import ProjectController
+from ews.domain.ppm import ProjectController
 
 EXPECTED_EVENTS = {'connected', 'subscribed', 'task.created', 'task.assigned', 'pong'}
 
