@@ -20,6 +20,10 @@ from ._team_tag import team_tag
 from ._user import User
 from ._user_role import UserRole
 
+# CRM
+from .ews._crm_account import CrmAccount
+from .ews._crm_account_address import CrmAccountAddress
+
 # from sqlalchemy.orm import DeclarativeBase
 
 __all__ = [
@@ -38,4 +42,7 @@ __all__ = [
     'UserOAuthAccount',
     'UserRole',
     'team_tag',
+    # CRM
+    'CrmAccount',
+    'CrmAccountAddress',
 ]

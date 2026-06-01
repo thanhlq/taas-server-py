@@ -1,8 +1,8 @@
-"""init first version
+"""crm accounts
 
-Revision ID: 3d992a5553c4
+Revision ID: 0ff8f20c14cc
 Revises: 
-Create Date: 2026-06-01 11:12:43.794681
+Create Date: 2026-06-01 12:02:14.729993
 
 """
 
@@ -47,7 +47,7 @@ sa.FernetBackend = FernetBackend
 sa.PGCryptoBackend = PGCryptoBackend
 
 # revision identifiers, used by Alembic.
-revision = '3d992a5553c4'
+revision = '0ff8f20c14cc'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -84,6 +84,75 @@ def schema_upgrades() -> None:
     )
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.create_index('ix_role_slug_unique', ['slug'], unique=True)
+
+    op.create_table('taas_crm_accounts',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('org_id', sa.TEXT(), nullable=True),
+    sa.Column('name', sa.TEXT(), nullable=True),
+    sa.Column('code', sa.TEXT(), nullable=True),
+    sa.Column('commercial_name', sa.TEXT(), nullable=True),
+    sa.Column('description', sa.TEXT(), nullable=True),
+    sa.Column('notes', sa.TEXT(), nullable=True),
+    sa.Column('alias_id', sa.TEXT(), nullable=True),
+    sa.Column('display_name', sa.TEXT(), nullable=True),
+    sa.Column('title', sa.TEXT(), nullable=True),
+    sa.Column('account_type', sa.TEXT(), nullable=True),
+    sa.Column('parent_id', sa.TEXT(), nullable=True),
+    sa.Column('user_id', sa.TEXT(), nullable=True),
+    sa.Column('privacy', sa.TEXT(), nullable=True),
+    sa.Column('email', sa.TEXT(), nullable=True),
+    sa.Column('email_alt1', sa.TEXT(), nullable=True),
+    sa.Column('email_alt2', sa.TEXT(), nullable=True),
+    sa.Column('email_alt3', sa.TEXT(), nullable=True),
+    sa.Column('phone_office', sa.TEXT(), nullable=True),
+    sa.Column('phone_alternate', sa.TEXT(), nullable=True),
+    sa.Column('phone_sanitized', sa.TEXT(), nullable=True),
+    sa.Column('website', sa.TEXT(), nullable=True),
+    sa.Column('ownership', sa.TEXT(), nullable=True),
+    sa.Column('sic_code', sa.TEXT(), nullable=True),
+    sa.Column('commercial_id', sa.TEXT(), nullable=True),
+    sa.Column('account_function', sa.TEXT(), nullable=True),
+    sa.Column('employees', sa.Integer(), nullable=True),
+    sa.Column('industry_id', sa.TEXT(), nullable=True),
+    sa.Column('annual_revenue', sa.TEXT(), nullable=True),
+    sa.Column('account_rank', sa.TEXT(), nullable=True),
+    sa.Column('status', sa.TEXT(), server_default=sa.text("'active'"), nullable=True),
+    sa.Column('is_individual', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('starred', sa.Boolean(), server_default=sa.text('false'), nullable=True),
+    sa.Column('starred_at', sa.TIMESTAMP(), nullable=True),
+    sa.Column('invoice_warn', sa.Boolean(), nullable=True),
+    sa.Column('invoice_warn_message', sa.TEXT(), nullable=True),
+    sa.Column('sale_warn', sa.Boolean(), nullable=True),
+    sa.Column('sale_warn_message', sa.TEXT(), nullable=True),
+    sa.Column('debit_limit', sa.Numeric(precision=15, scale=6), nullable=True),
+    sa.Column('currency_id', sa.TEXT(), server_default=sa.text("'USD'"), nullable=True),
+    sa.Column('campaign_id', sa.TEXT(), nullable=True),
+    sa.Column('avatar_url', sa.TEXT(), nullable=True),
+    sa.Column('color', sa.TEXT(), nullable=True),
+    sa.Column('analytics', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('account_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('last_time_entries_checked', sa.TIMESTAMP(), nullable=True),
+    sa.Column('slug', sa.String(length=100), nullable=False),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_crm_accounts')),
+    sa.UniqueConstraint('slug', name='uq_taas_crm_accounts_slug')
+    )
+    with op.batch_alter_table('taas_crm_accounts', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_account_type'), ['account_type'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_code'), ['code'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_email'), ['email'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_is_individual'), ['is_individual'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_name'), ['name'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_org_id'), ['org_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_parent_id'), ['parent_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_privacy'), ['privacy'], unique=False)
+        batch_op.create_index('ix_taas_crm_accounts_slug_unique', ['slug'], unique=True)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_starred'), ['starred'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_status'), ['status'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_user_id'), ['user_id'], unique=False)
 
     op.create_table('tag',
     sa.Column('id', sa.GUID(length=16), nullable=False),
@@ -225,6 +294,29 @@ def schema_upgrades() -> None:
         batch_op.create_index(batch_op.f('ix_refresh_token_token_hash'), ['token_hash'], unique=True)
         batch_op.create_index(batch_op.f('ix_refresh_token_user_id'), ['user_id'], unique=False)
 
+    op.create_table('taas_crm_accounts_addresses',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('address_street', sa.String(length=255), nullable=True),
+    sa.Column('address_city', sa.String(length=100), nullable=True),
+    sa.Column('address_state', sa.String(length=100), nullable=True),
+    sa.Column('address_postal_code', sa.String(length=20), nullable=True),
+    sa.Column('address_country_id', sa.String(length=50), nullable=True),
+    sa.Column('address_country_name', sa.String(length=100), nullable=True),
+    sa.Column('is_default', sa.Boolean(), nullable=False),
+    sa.Column('address_type', sa.String(length=30), nullable=False),
+    sa.Column('account_id', sa.GUID(length=16), nullable=False),
+    sa.Column('slug', sa.String(length=100), nullable=False),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['account_id'], ['taas_crm_accounts.id'], name=op.f('fk_taas_crm_accounts_addresses_account_id_taas_crm_accounts'), ondelete='cascade'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_crm_accounts_addresses')),
+    sa.UniqueConstraint('slug', name='uq_taas_crm_accounts_addresses_slug')
+    )
+    with op.batch_alter_table('taas_crm_accounts_addresses', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_crm_accounts_addresses_address_type'), ['address_type'], unique=False)
+        batch_op.create_index('ix_taas_crm_accounts_addresses_slug_unique', ['slug'], unique=True)
+
     op.create_table('team_invitation',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('team_id', sa.GUID(length=16), nullable=False),
@@ -328,6 +420,11 @@ def schema_downgrades() -> None:
         batch_op.drop_index(batch_op.f('ix_team_invitation_email'))
 
     op.drop_table('team_invitation')
+    with op.batch_alter_table('taas_crm_accounts_addresses', schema=None) as batch_op:
+        batch_op.drop_index('ix_taas_crm_accounts_addresses_slug_unique')
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_addresses_address_type'))
+
+    op.drop_table('taas_crm_accounts_addresses')
     with op.batch_alter_table('refresh_token', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_refresh_token_user_id'))
         batch_op.drop_index(batch_op.f('ix_refresh_token_token_hash'))
@@ -368,6 +465,21 @@ def schema_downgrades() -> None:
         batch_op.drop_index('ix_tag_slug_unique')
 
     op.drop_table('tag')
+    with op.batch_alter_table('taas_crm_accounts', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_user_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_status'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_starred'))
+        batch_op.drop_index('ix_taas_crm_accounts_slug_unique')
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_privacy'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_parent_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_org_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_name'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_is_individual'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_email'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_code'))
+        batch_op.drop_index(batch_op.f('ix_taas_crm_accounts_account_type'))
+
+    op.drop_table('taas_crm_accounts')
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.drop_index('ix_role_slug_unique')
 

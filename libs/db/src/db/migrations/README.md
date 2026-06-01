@@ -11,7 +11,7 @@ uv run python -m db.migrations current        # show DB's current revision
 uv run python -m db.migrations history        # full revision history
 
 # Create revisions
-uv run python -m db.migrations revision --autogenerate -m "init users"
+uv run python -m db.migrations revision --autogenerate -m "init database"
 uv run python -m db.migrations revision -m "manual fix" # empty template
 
 # Apply / roll back
