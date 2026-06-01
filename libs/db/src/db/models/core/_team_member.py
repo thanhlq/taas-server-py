@@ -9,6 +9,7 @@ from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._team_roles import TeamRoles
+from .constants import TEAM_MEMBER_TABLE, TEAM_TABLE, USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
     from ._team import Team
@@ -18,13 +19,13 @@ if TYPE_CHECKING:
 class TeamMember(UUIDv7AuditBase):
     """Team Membership."""
 
-    __tablename__ = 'team_member'
+    __tablename__ = TEAM_MEMBER_TABLE
     __table_args__ = (UniqueConstraint('user_id', 'team_id'),)
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey('user_account.id', ondelete='cascade'), nullable=False
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='cascade'), nullable=False
     )
     team_id: Mapped[UUID] = mapped_column(
-        ForeignKey('team.id', ondelete='cascade'), nullable=False
+        ForeignKey(f'{TEAM_TABLE}.id', ondelete='cascade'), nullable=False
     )
     role: Mapped[TeamRoles] = mapped_column(
         String(length=50),

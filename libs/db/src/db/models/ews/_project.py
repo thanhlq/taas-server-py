@@ -16,8 +16,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import JSONB, PROJECTS_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import PROJECTS_TABLE
 
 if TYPE_CHECKING:
     from ._project_user import ProjectUser

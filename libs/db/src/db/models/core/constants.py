@@ -1,0 +1,27 @@
+TABLE_PREFIX = 'taas_'
+# Core tables
+TENANT_TABLE = f'{TABLE_PREFIX}tenants'
+ORGANIZATION_TABLE = f'{TABLE_PREFIX}organizations'
+PERMISSIONS_TABLE = f'{TABLE_PREFIX}permissions'
+ROLES_TABLE = f'{TABLE_PREFIX}roles'
+POLICIES_TABLE = f'{TABLE_PREFIX}policies'
+
+# Identity / auth tables
+USER_ACCOUNT_TABLE = f'{TABLE_PREFIX}user_account'
+USER_ACCOUNT_OAUTH_TABLE = f'{TABLE_PREFIX}user_account_oauth'
+USER_ACCOUNT_ROLE_TABLE = f'{TABLE_PREFIX}user_account_role'
+ROLE_TABLE = f'{TABLE_PREFIX}role'
+REFRESH_TOKEN_TABLE = f'{TABLE_PREFIX}refresh_token'
+PASSWORD_RESET_TOKEN_TABLE = f'{TABLE_PREFIX}password_reset_token'
+EMAIL_VERIFICATION_TOKEN_TABLE = f'{TABLE_PREFIX}email_verification_token'
+
+# Team tables
+TEAM_TABLE = f'{TABLE_PREFIX}team'
+TEAM_MEMBER_TABLE = f'{TABLE_PREFIX}team_member'
+TEAM_INVITATION_TABLE = f'{TABLE_PREFIX}team_invitation'
+TEAM_TAG_TABLE = f'{TABLE_PREFIX}team_tag'
+
+# Misc
+TAG_TABLE = f'{TABLE_PREFIX}tag'
+CASBIN_RULE_TABLE = f'{TABLE_PREFIX}casbin_rule'
+AUDIT_LOG_TABLE = f'{TABLE_PREFIX}audit_log'

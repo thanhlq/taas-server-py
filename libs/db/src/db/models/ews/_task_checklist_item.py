@@ -8,7 +8,7 @@ from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE
-from ..types import TASK_CHECKLIST_ITEMS_TABLE, TASKS_TABLE
+from .constants import TASK_CHECKLIST_ITEMS_TABLE, TASKS_TABLE
 
 
 class TaskChecklistItem(UUIDv7AuditBase):

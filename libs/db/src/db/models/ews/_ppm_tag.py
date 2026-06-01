@@ -8,13 +8,13 @@ from sqlalchemy import TEXT, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import SoftDeleteColumns
-from ..types import TAGS_TABLE
+from .constants import TAG_TABLE
 
 
 class PpmTag(UUIDv7Base, SoftDeleteColumns):
     """Tag (PPM domain — generic object tagging)."""
 
-    __tablename__ = TAGS_TABLE
+    __tablename__ = TAG_TABLE
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)

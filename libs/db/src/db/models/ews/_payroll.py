@@ -9,18 +9,18 @@ from sqlalchemy import TEXT, TIMESTAMP, ForeignKey, Integer, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import PAYROLLS_TABLE, TIMELOGS_TABLE
+from .constants import PAYROLL_TABLE, TIMELOG_TABLE
 
 
 class Payroll(UUIDv7Base, SoftDeleteColumns):
     """Payroll"""
 
-    __tablename__ = PAYROLLS_TABLE
+    __tablename__ = PAYROLL_TABLE
 
     user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     user_code: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     timelog_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
-        ForeignKey(f'{TIMELOGS_TABLE}.id'), nullable=True
+        ForeignKey(f'{TIMELOG_TABLE}.id'), nullable=True
     )
     timelog_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     period_from: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

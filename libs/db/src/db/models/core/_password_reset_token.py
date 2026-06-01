@@ -9,6 +9,8 @@ from sqlalchemy import ForeignKey, String, Text, case, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import PASSWORD_RESET_TOKEN_TABLE, USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
 
@@ -18,11 +20,13 @@ if TYPE_CHECKING:
 class PasswordResetToken(UUIDv7AuditBase):
     """Password reset tokens for secure password recovery."""
 
-    __tablename__ = 'password_reset_token'
+    __tablename__ = PASSWORD_RESET_TOKEN_TABLE
     __table_args__ = {'comment': 'Password reset tokens for secure password recovery'}
 
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey('user_account.id', ondelete='CASCADE'), nullable=False, index=True
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
     )
     token_hash: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True, index=True

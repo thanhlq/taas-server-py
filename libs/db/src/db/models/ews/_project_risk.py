@@ -7,7 +7,7 @@ from sqlalchemy import TEXT, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import PROJECTS_RISKS_TABLE, PROJECTS_TABLE
+from .constants import PROJECTS_RISKS_TABLE, PROJECTS_TABLE
 
 
 class ProjectRisk(UUIDv7Base, SoftDeleteColumns):

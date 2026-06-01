@@ -7,7 +7,7 @@ from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import CHECKLIST_ITEMS_TABLE, CHECKLIST_TEMPLATES_TABLE
+from .constants import CHECKLIST_ITEMS_TABLE, CHECKLIST_TEMPLATES_TABLE
 
 if TYPE_CHECKING:
     from ._checklist_template import ChecklistTemplate

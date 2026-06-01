@@ -11,6 +11,8 @@ from sqlalchemy import ForeignKey, String, case, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import REFRESH_TOKEN_TABLE, USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
 
@@ -25,11 +27,11 @@ class RefreshToken(UUIDv7AuditBase):
     token is presented, the entire family is revoked for security.
     """
 
-    __tablename__ = "refresh_token"
-    __table_args__ = {"comment": "JWT refresh tokens with rotation tracking"}
+    __tablename__ = REFRESH_TOKEN_TABLE
+    __table_args__ = {'comment': 'JWT refresh tokens with rotation tracking'}
 
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("user_account.id", ondelete="CASCADE"),
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='CASCADE'),
         nullable=False,
         index=True,
     )
@@ -44,10 +46,12 @@ class RefreshToken(UUIDv7AuditBase):
 
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
-    device_info: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    device_info: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, default=None
+    )
     """Optional device fingerprint (user agent, etc.)"""
 
-    user: Mapped[User] = relationship(lazy="selectin", back_populates="refresh_tokens")
+    user: Mapped[User] = relationship(lazy='selectin', back_populates='refresh_tokens')
 
     @hybrid_property
     def is_expired(self) -> bool:
@@ -75,7 +79,11 @@ class RefreshToken(UUIDv7AuditBase):
     @is_valid.expression
     def _is_valid_expr(cls) -> ColumnElement[bool]:  # noqa: N805
         return case(
-            ((cls.__table__.c.expires_at > func.now()) & (cls.__table__.c.revoked_at.is_(None)), True),
+            (
+                (cls.__table__.c.expires_at > func.now())
+                & (cls.__table__.c.revoked_at.is_(None)),
+                True,
+            ),
             else_=False,
         )
 

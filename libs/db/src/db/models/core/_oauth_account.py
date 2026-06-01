@@ -11,6 +11,8 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import USER_ACCOUNT_OAUTH_TABLE, USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     from ._user import User
 
@@ -21,7 +23,7 @@ settings = get_settings()
 class UserOAuthAccount(UUIDv7AuditBase):
     """User Oauth Account"""
 
-    __tablename__ = 'user_account_oauth'
+    __tablename__ = USER_ACCOUNT_OAUTH_TABLE
     __table_args__ = (
         Index('ix_oauth_provider_oauth_id', 'oauth_name', 'account_id'),
         Index('ix_oauth_user_provider', 'user_id', 'oauth_name'),
@@ -36,7 +38,7 @@ class UserOAuthAccount(UUIDv7AuditBase):
     }
 
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey('user_account.id', ondelete='cascade'),
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='cascade'),
         nullable=False,
     )
     oauth_name: Mapped[str] = mapped_column(

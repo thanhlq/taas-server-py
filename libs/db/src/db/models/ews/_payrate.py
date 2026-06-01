@@ -9,13 +9,13 @@ from sqlalchemy import TEXT, TIMESTAMP, Boolean, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import SoftDeleteColumns
-from ..types import PAYRATES_TABLE
+from .constants import PAYRATE_TABLE
 
 
 class Payrate(UUIDv7Base, SoftDeleteColumns):
     """Payrate"""
 
-    __tablename__ = PAYRATES_TABLE
+    __tablename__ = PAYRATE_TABLE
 
     user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     is_initial: Mapped[Optional[bool]] = mapped_column(

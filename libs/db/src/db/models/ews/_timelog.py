@@ -7,8 +7,8 @@ from advanced_alchemy.base import UUIDv7Base
 from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import JSONB, PROJECTS_TABLE, TASKS_TABLE, TIMELOGS_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import PROJECTS_TABLE, TASKS_TABLE, TIMELOG_TABLE
 
 if TYPE_CHECKING:
     from ._project import Project
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class Timelog(UUIDv7Base, SoftDeleteColumns):
     """Timelog"""
 
-    __tablename__ = TIMELOGS_TABLE
+    __tablename__ = TIMELOG_TABLE
 
     project_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
         ForeignKey(f'{PROJECTS_TABLE}.id'), nullable=True

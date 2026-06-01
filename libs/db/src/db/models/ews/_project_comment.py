@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import Index
 
 from ..base import SoftDeleteColumns
-from ..types import PROJECTS_COMMENTS_TABLE
+from .constants import PROJECTS_COMMENTS_TABLE
 
 
 class ProjectComment(UUIDv7Base, SoftDeleteColumns):

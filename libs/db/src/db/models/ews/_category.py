@@ -8,13 +8,13 @@ from sqlalchemy import TEXT, TIMESTAMP, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import CATEGORIES_TABLE
+from .constants import CATEGORY_TABLE
 
 
 class Category(UUIDv7Base, SoftDeleteColumns):
-    """Category"""
+    """Project Category - for grouping and filtering projects (e.g. product A, product B)."""
 
-    __tablename__ = CATEGORIES_TABLE
+    __tablename__ = CATEGORY_TABLE
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
@@ -25,7 +25,7 @@ class Category(UUIDv7Base, SoftDeleteColumns):
     object_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     object_type: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     parent_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
-        ForeignKey(f'{CATEGORIES_TABLE}.id'), nullable=True
+        ForeignKey(f'{CATEGORY_TABLE}.id'), nullable=True
     )
     color: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     last_used_time: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

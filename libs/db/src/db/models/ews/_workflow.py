@@ -6,8 +6,8 @@ from advanced_alchemy.base import UUIDv7AuditBase
 from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE
-from ..types import JSONB, PROJECTS_TABLE, WORKFLOWS_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB
+from .constants import PROJECTS_TABLE, WORKFLOWS_TABLE
 
 if TYPE_CHECKING:
     from ._project import Project

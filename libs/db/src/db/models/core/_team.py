@@ -8,6 +8,7 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._team_tag import team_tag
+from .constants import TEAM_TABLE
 
 if TYPE_CHECKING:
     from ._tag import Tag
@@ -20,13 +21,18 @@ class Team(UUIDv7AuditBase, SlugKey):
     Users can create and invite users to a team.
     """
 
-    __tablename__ = 'team'
+    __tablename__ = TEAM_TABLE
     __pii_columns__ = {'name', 'description'}
+
     name: Mapped[str] = mapped_column(nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(
         String(length=500), nullable=True, default=None
     )
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    team_type: Mapped[str] = mapped_column(
+        String(length=50), nullable=False, default='general', index=True
+    )
+    """ team_type can be 'general', 'department', 'project', etc."""
     members: Mapped[list[TeamMember]] = relationship(
         back_populates='team',
         cascade='all, delete',

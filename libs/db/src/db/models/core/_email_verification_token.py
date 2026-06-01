@@ -9,6 +9,8 @@ from sqlalchemy import ForeignKey, String, case, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import EMAIL_VERIFICATION_TOKEN_TABLE, USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
 
@@ -18,13 +20,15 @@ if TYPE_CHECKING:
 class EmailVerificationToken(UUIDv7AuditBase):
     """Email verification tokens for user account verification."""
 
-    __tablename__ = 'email_verification_token'
+    __tablename__ = EMAIL_VERIFICATION_TOKEN_TABLE
     __table_args__ = {
         'comment': 'Email verification tokens for user account verification'
     }
 
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey('user_account.id', ondelete='CASCADE'), nullable=False, index=True
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
     )
     token_hash: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True, index=True

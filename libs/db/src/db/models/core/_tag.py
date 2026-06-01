@@ -12,6 +12,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import TAG_TABLE
+
 if TYPE_CHECKING:
     from collections.abc import Hashable
 
@@ -21,8 +23,11 @@ if TYPE_CHECKING:
 class Tag(UUIDv7AuditBase, SlugKey, UniqueMixin):
     """Tag."""
 
-    __tablename__ = 'tag'
+    __tablename__ = TAG_TABLE
     name: Mapped[str] = mapped_column(index=False)
+    color: Mapped[str | None] = mapped_column(
+        String(length=30), index=False, nullable=True
+    )
     description: Mapped[str | None] = mapped_column(
         String(length=255), index=False, nullable=True
     )

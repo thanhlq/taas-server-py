@@ -7,8 +7,8 @@ from advanced_alchemy.base import UUIDv7Base
 from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import JSONB, PROJECTS_TABLE, PROJECTS_USERS_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import PROJECTS_TABLE, PROJECTS_USERS_TABLE
 
 if TYPE_CHECKING:
     from ._project import Project

@@ -10,6 +10,8 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import AUDIT_LOG_TABLE, USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     from ._user import User
 
@@ -20,11 +22,11 @@ class AuditLog(UUIDv7AuditBase):
     Records who did what, when, and to what entity.
     """
 
-    __tablename__ = 'audit_log'
+    __tablename__ = AUDIT_LOG_TABLE
     __table_args__ = {'comment': 'Audit trail for system events and admin actions'}
 
     actor_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey('user_account.id', ondelete='SET NULL'),
+        ForeignKey(f'{USER_ACCOUNT_TABLE}.id', ondelete='SET NULL'),
         nullable=True,
         index=True,
     )

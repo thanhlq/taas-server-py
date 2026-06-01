@@ -9,21 +9,21 @@ from sqlalchemy import TEXT, TIMESTAMP, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import PAYROLLS_TABLE, PAYRUNS_TABLE, TIMELOGS_TABLE
+from .constants import PAYROLL_TABLE, PAYRUN_TABLE, TIMELOG_TABLE
 
 
 class Payrun(UUIDv7Base, SoftDeleteColumns):
     """Payrun"""
 
-    __tablename__ = PAYRUNS_TABLE
+    __tablename__ = PAYRUN_TABLE
 
     payroll_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
-        ForeignKey(f'{PAYROLLS_TABLE}.id'), nullable=True
+        ForeignKey(f'{PAYROLL_TABLE}.id'), nullable=True
     )
     sequence_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     timelog_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
-        ForeignKey(f'{TIMELOGS_TABLE}.id'), nullable=True
+        ForeignKey(f'{TIMELOG_TABLE}.id'), nullable=True
     )
     timelog_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     period_from: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

@@ -9,7 +9,7 @@ team_tag = Table(
     TEAM_TAG_TABLE,
     orm_registry.metadata,
     Column(
-        'team_id',
+        'org_id',
         UUID(as_uuid=True),
         ForeignKey(f'{TEAM_TABLE}.id', ondelete='CASCADE'),
         primary_key=True,

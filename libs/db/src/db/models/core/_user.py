@@ -8,6 +8,9 @@ from platform_core.config import Settings, get_settings
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from db.models.base import ID_COLUMN_TYPE
+from db.models.core.constants import USER_ACCOUNT_TABLE
+
 if TYPE_CHECKING:
     # from app.db.models._email_verification_token import EmailVerificationToken
     # from app.db.models._oauth_account import UserOAuthAccount
@@ -22,7 +25,7 @@ settings: Settings = get_settings()
 
 
 class User(UUIDv7AuditBase):
-    __tablename__ = 'user_account'
+    __tablename__ = USER_ACCOUNT_TABLE
     email: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     username: Mapped[str | None] = mapped_column(
@@ -50,9 +53,9 @@ class User(UUIDv7AuditBase):
     status: Mapped[str | None] = mapped_column(
         String(length=30), index=True, nullable=True, default=None
     )
-    tenant_id: Mapped[str | None] = mapped_column(
+    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None
     )
-    org_id: Mapped[str | None] = mapped_column(
+    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None
     )

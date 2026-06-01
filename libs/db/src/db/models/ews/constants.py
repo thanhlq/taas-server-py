@@ -1,9 +1,6 @@
-from sqlalchemy.dialects.postgresql import JSONB
-
 TABLE_PREFIX = 'taas_'
 
-# Core tables
-TENANTS_TABLE = f'{TABLE_PREFIX}tenants'
+
 CRM_ACCOUNTS_TABLE = f'{TABLE_PREFIX}crm_accounts'
 CRM_ACCOUNTS_ADDRESSES_TABLE = f'{TABLE_PREFIX}crm_accounts_addresses'
 # USERS_TABLE = f"{TABLE_PREFIX}users"
@@ -36,24 +33,16 @@ CHECKLIST_ITEMS_TABLE = f'{TABLE_PREFIX}checklist_items'
 TASK_CHECKLIST_ITEMS_TABLE = f'{TABLE_PREFIX}task_checklist_items'
 
 # Time tracking tables
-TIMELOGS_TABLE = f'{TABLE_PREFIX}timelogs'
-PAYRATES_TABLE = f'{TABLE_PREFIX}payrates'
-PAYRATES_ADJUSTMENTS_TABLE = f'{TABLE_PREFIX}payrates_adjustments'
-PAYROLLS_TABLE = f'{TABLE_PREFIX}payrolls'
-PAYRUNS_TABLE = f'{TABLE_PREFIX}payruns'
+TIMELOG_TABLE = f'{TABLE_PREFIX}timelogs'
+PAYRATE_TABLE = f'{TABLE_PREFIX}payrates'
+PAYRATE_ADJUSTMENTS_TABLE = f'{TABLE_PREFIX}payrates_adjustments'
+PAYROLL_TABLE = f'{TABLE_PREFIX}payrolls'
+PAYRUN_TABLE = f'{TABLE_PREFIX}payruns'
 
 # Tags and categories
-TAGS_TABLE = f'{TABLE_PREFIX}tags'
-TAGS_MAPPING_TABLE = f'{TABLE_PREFIX}tags_mapping'
-CATEGORIES_TABLE = f'{TABLE_PREFIX}categories'
+TAG_TABLE = f'{TABLE_PREFIX}tags'
+TAG_MAPPING_TABLE = f'{TABLE_PREFIX}tags_mapping'
+CATEGORY_TABLE = f'{TABLE_PREFIX}categories'
 
 # Auth and permissions
-AUTH_TOKENS_TABLE = f'{TABLE_PREFIX}auth_tokens'
-PERMISSIONS_TABLE = f'{TABLE_PREFIX}permissions'
-ROLES_TABLE = f'{TABLE_PREFIX}roles'
-POLICIES_TABLE = f'{TABLE_PREFIX}policies'
 
-
-__all__ = [
-    'JSONB',
-]

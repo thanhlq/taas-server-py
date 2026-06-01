@@ -6,8 +6,8 @@ from advanced_alchemy.base import UUIDv7Base
 from sqlalchemy import TEXT, Boolean, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import CHECKLIST_TEMPLATES_TABLE, JSONB, PROJECTS_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import CHECKLIST_TEMPLATES_TABLE, PROJECTS_TABLE
 
 if TYPE_CHECKING:
     from ._checklist_template_item import ChecklistTemplateItem

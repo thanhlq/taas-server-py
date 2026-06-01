@@ -8,7 +8,7 @@ from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import (
+from .constants import (
     PROJECTS_TABLE,
     PROJECTS_WORKFLOWS_STAGES_ITEMS_TABLE,
     TASKS_TABLE,

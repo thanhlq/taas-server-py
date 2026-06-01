@@ -7,7 +7,7 @@ from sqlalchemy import TEXT, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import TASKS_TABLE, TASKS_USERS_TABLE
+from .constants import TASKS_TABLE, TASKS_USERS_TABLE
 
 
 class TaskUser(UUIDv7Base, SoftDeleteColumns):

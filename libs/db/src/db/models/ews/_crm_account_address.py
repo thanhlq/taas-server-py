@@ -8,7 +8,7 @@ from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.models.base import ID_COLUMN_TYPE
-from db.models.types import CRM_ACCOUNTS_ADDRESSES_TABLE, CRM_ACCOUNTS_TABLE
+from db.models.ews.constants import CRM_ACCOUNTS_ADDRESSES_TABLE, CRM_ACCOUNTS_TABLE
 
 if TYPE_CHECKING:
     pass

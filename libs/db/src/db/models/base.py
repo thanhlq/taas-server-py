@@ -3,6 +3,7 @@ from uuid import UUID
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
 from advanced_alchemy.types import DateTimeUTC
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column
 
 type ID_COLUMN_TYPE = UUID
@@ -24,4 +25,6 @@ class SoftDeleteColumns:
 __all__ = [
     'SoftDeleteColumns',
     'AdvancedDeclarativeBase',
+    'ID_COLUMN_TYPE',
+    'JSONB',
 ]

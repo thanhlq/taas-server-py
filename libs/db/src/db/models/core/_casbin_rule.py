@@ -7,10 +7,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import AdvancedDeclarativeBase
+from .constants import CASBIN_RULE_TABLE
 
 
 class CasbinRule(AdvancedDeclarativeBase):
-    __tablename__ = 'casbin_rule'
+    __tablename__ = CASBIN_RULE_TABLE
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ptype = mapped_column(String(255))

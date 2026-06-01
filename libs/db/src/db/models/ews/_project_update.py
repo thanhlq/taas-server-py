@@ -6,8 +6,8 @@ from advanced_alchemy.base import UUIDv7Base
 from sqlalchemy import TEXT, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import JSONB, PROJECTS_TABLE, PROJECTS_UPDATES_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import PROJECTS_TABLE, PROJECTS_UPDATES_TABLE
 
 
 class ProjectUpdate(UUIDv7Base, SoftDeleteColumns):

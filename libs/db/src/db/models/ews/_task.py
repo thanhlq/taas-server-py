@@ -17,9 +17,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
-from ..types import (
-    JSONB,
+from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from .constants import (
     PROJECTS_TABLE,
     TASKS_TABLE,
     WORKFLOWS_STAGES_TABLE,

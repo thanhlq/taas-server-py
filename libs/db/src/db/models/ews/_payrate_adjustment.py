@@ -9,13 +9,13 @@ from sqlalchemy import TEXT, TIMESTAMP, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import SoftDeleteColumns
-from ..types import PAYRATES_ADJUSTMENTS_TABLE
+from .constants import PAYRATE_ADJUSTMENTS_TABLE
 
 
 class PayrateAdjustment(UUIDv7Base, SoftDeleteColumns):
     """Payrate Adjustment"""
 
-    __tablename__ = PAYRATES_ADJUSTMENTS_TABLE
+    __tablename__ = PAYRATE_ADJUSTMENTS_TABLE
 
     user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     effective_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
