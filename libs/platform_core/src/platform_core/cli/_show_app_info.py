@@ -1,17 +1,15 @@
 import os
+from typing import TYPE_CHECKING, Any
 
-from typing import Any, TYPE_CHECKING
-
-from platform_core.utils.version import get_version
 from rich import get_console
 from rich.table import Table
+
+from platform_core.utils.version import get_version
 
 if TYPE_CHECKING:
     from platform_core.http.base_app import BaseApiApplication
 
 console = get_console()
-
-__version__ = get_version()
 
 console = get_console()
 
@@ -42,6 +40,7 @@ def show_all_environment_variables() -> None:
 
 def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
     """Display basic information about the application and its configuration."""
+    __version__ = get_version()
 
     table = Table(show_header=False)
     table.add_column('title', style='cyan')
@@ -52,7 +51,7 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
         f'{app.get_app_id()}, type={type(app.get_app()).__name__}',
     )
     table.add_row(
-        'App version',
+        'VERSION',
         f'{__version__.major}.{__version__.minor}.{__version__.patch}',
     )
     table.add_row('Debug mode', _format_is_enabled(app.config.debug))

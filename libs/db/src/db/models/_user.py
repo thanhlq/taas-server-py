@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from advanced_alchemy.types import EncryptedString
+from platform_core.config import Settings, get_settings
 from sqlalchemy import String
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from platform_core.config import get_settings, Settings
+from sqlalchemy.orm import Mapped, mapped_column
 
 if TYPE_CHECKING:
     # from app.db.models._email_verification_token import EmailVerificationToken
@@ -52,3 +47,12 @@ class User(UUIDv7AuditBase):
     verified_at: Mapped[date] = mapped_column(nullable=True, default=None)
     joined_at: Mapped[date] = mapped_column(default=lambda: datetime.now(UTC).date())
     login_count: Mapped[int] = mapped_column(default=0)
+    status: Mapped[str | None] = mapped_column(
+        String(length=30), index=True, nullable=True, default=None
+    )
+    tenant_id: Mapped[str | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )
+    org_id: Mapped[str | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )

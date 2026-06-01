@@ -18,6 +18,7 @@ uv run python -m db.migrations revision -m "manual fix" # empty template
 uv run python -m db.migrations upgrade head
 uv run python -m db.migrations upgrade +1
 uv run python -m db.migrations downgrade -1
+# Reset to beginning -> clear all tables
 uv run python -m db.migrations downgrade base
 
 # Inspect SQL without running it

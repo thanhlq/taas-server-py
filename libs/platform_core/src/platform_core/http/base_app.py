@@ -1,13 +1,15 @@
-from platform_core.config.openapi import build_openapi_config
-from platform_core.config import Settings
 import logging
+import os
+from abc import ABC, abstractmethod
 from logging import Logger
-from platform_core.cli import get_console
+from typing import Optional
+
 from rich.console import Console
-from abc import abstractmethod, ABC
 
+from platform_core.cli import get_console
+from platform_core.config import Settings
 from platform_core.config.app import AppConfig
-
+from platform_core.config.openapi import build_openapi_config
 
 __all__ = ('BaseApiApplication', 'AppConfig')
 
@@ -31,7 +33,6 @@ class BaseApiApplication[A](ABC):
             distributed_lock_config=settings.app.get_distributed_lock_config(),
             websocket_config=settings.app.get_websocket_config(),
             cors_config=settings.app.get_cors_config(),
-
             # csrf_config=config.app.get_csrf_config(),
         )
         self._root_path = root_path
@@ -50,6 +51,13 @@ class BaseApiApplication[A](ABC):
     @property
     def all_settings(self) -> Settings:
         return self._all_settings
+
+    def root_app_path(self, *subpaths: Optional[str]) -> str:
+        """Construct a path relative to the app's root path."""
+        if not subpaths:
+            return self._root_path
+        else:
+            return os.path.join(self._root_path, *subpaths)
 
     @property
     def logger(self) -> Logger:
@@ -86,7 +94,6 @@ class BaseApiApplication[A](ABC):
     def show_app_info(self) -> None:
         from platform_core.cli._show_app_info import (
             show_api_app_info,
-            show_all_environment_variables,
         )
 
         show_api_app_info(self)
