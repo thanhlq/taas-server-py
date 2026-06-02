@@ -64,16 +64,16 @@ class AdvancedSessionManager:
                 await connection.rollback()
                 raise
 
-    @contextlib.asynccontextmanager
-    async def get_session_generator(self) -> AsyncIterator[AsyncSession]:
-        session = self.get_session()
-        try:
-            yield session
-        except Exception as e:
-            await session.rollback()
-            raise e
-        finally:
-            await session.close()
+    # @contextlib.asynccontextmanager
+    # async def get_session_generator(self) -> AsyncIterator[AsyncSession]:
+    #     session = self.get_session()
+    #     try:
+    #         yield session
+    #     except Exception as e:
+    #         await session.rollback()
+    #         raise e
+    #     finally:
+    #         await session.close()
 
     def is_transaction_context(self) -> bool:
         """Returns True if currently within a db_transaction context."""
@@ -84,7 +84,7 @@ class AdvancedSessionManager:
         return _current_context_session.get()
 
     @contextlib.asynccontextmanager
-    async def get_context_session_generator(
+    async def get_session_generator(
         self, auto_commit: bool = True
     ) -> AsyncIterator[AsyncSession]:
         """
@@ -104,7 +104,7 @@ class AdvancedSessionManager:
                 try:
                     yield session
                     if auto_commit:
-                        print('🐬 [get_context_session_generator] Committing session')
+                        logger.debug('🐬 [get_session_generator] Committing session')
                         await session.commit()
                 except Exception as e:
                     await session.rollback()
@@ -249,11 +249,9 @@ def db_context_session(
                 # Increment call depth to track we're the root caller
                 depth_token = _call_depth.set(current_depth + 1)
                 try:
-                    async with (
-                        MainDatabase.get_instance().get_context_session_generator(
-                            transaction
-                        ) as new_session
-                    ):
+                    async with MainDatabase.get_instance().get_session_generator(
+                        transaction
+                    ) as new_session:
                         global count
                         print(
                             f'🐬 [db_session] New session created: {count} (depth: {current_depth + 1})'

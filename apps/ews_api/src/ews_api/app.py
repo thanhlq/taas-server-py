@@ -6,22 +6,24 @@ The module is responsible for setting up the FastAPI app, including:
   - routes
 """
 
-from platform_core.cli import cli_print_info
-from fastapi.concurrency import asynccontextmanager
-from platform_core.config.wss import WebSocketConfig
-import socketio
-from platform_core.http.base_app import BaseApiApplication, AppConfig
-
+from logging import Logger
 from typing import Any, Optional
+
+import socketio
+from ews import ews_conrrollers
+from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
+from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.fastapi_app import create_app
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from .setup_env import settings, root_path
+from iam import iam_controllers
+from platform_core.cli import cli_print_info
 from platform_core.config import Settings
-from fastapi import FastAPI
-from logging import Logger
-from ews import ews_conrrollers
-from http_fastapi.adapters import create_socketio_asgi_app, include_controller
+from platform_core.config.wss import WebSocketConfig
 from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
+from platform_core.http.base_app import AppConfig, BaseApiApplication
+
+from .setup_env import root_path, settings
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):
@@ -48,7 +50,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
         @asynccontextmanager
         async def lifespan(application: FastAPI):
-
 
             # Validate the manager is what we configured. Blocks startup if not.
             if self.config.websocket_config and self.config.websocket_config.debug:
@@ -79,12 +80,10 @@ class EwsApplication(BaseApiApplication[FastAPI]):
                 client_manager=build_websocket_redis_manager(websocket_config),
             )
 
-
-
         return _fastapi_app
 
     def get_app_controllers(self) -> list[Any]:
-        return ews_conrrollers
+        return [*iam_controllers, *ews_conrrollers]
 
 
 def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastAPI:

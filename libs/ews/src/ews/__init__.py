@@ -1,7 +1,7 @@
 from platform_core.http import BaseController
 from .domain.ppm import project_controllers
 
-ews_conrrollers: list[type[BaseController]] = [
+ews_conrrollers: list[type[BaseController] | BaseController] = [
     *project_controllers,
 ]
 

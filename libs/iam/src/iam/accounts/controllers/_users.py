@@ -1,19 +1,67 @@
-from platform_core.http import BaseController, get, post
+from __future__ import annotations
+
+from typing import Annotated
+from uuid import UUID
+
+from advanced_alchemy.service.pagination import OffsetPagination
+from fastapi import Depends, status
+from iam.accounts.schemas._user import User, UserCreate, UserUpdate
+from iam.accounts.services._users import UserService
+from platform_core.db.advanced_session_manager import get_db_async_generator
+from platform_core.http import BaseController, delete, get, patch, post
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def provide_users_service(
+    db_session: Annotated[AsyncSession, Depends(get_db_async_generator)],
+) -> UserService:
+    """Provide a ``UserService`` bound to a request-scoped session."""
+    return UserService(session=db_session)
+
+
+UsersServiceDep = Annotated[UserService, Depends(provide_users_service)]
 
 
 class UserController(BaseController):
     """User Account Controller."""
 
-    path = '/api/v1/users'
-    tags = ['Users']
+    api_prefix = '/api/v1/users'
+    tags = ('Users',)
 
-    # Define your endpoints here, for example:
     @get('/')
-    def list_users(self):
+    async def list_users(
+        self, users_service: UsersServiceDep
+    ) -> OffsetPagination[User]:
         """List all users."""
-        pass
+        results, total = await users_service.list_and_count()
+        return users_service.to_schema(results, total, schema_type=User)
 
-    @post('/')
-    def create_user(self):
+    @get('/{user_id}')
+    async def get_user(self, user_id: UUID, users_service: UsersServiceDep) -> User:
+        """Get a user by ID."""
+        db_obj = await users_service.get(user_id)
+        return users_service.to_schema(db_obj, schema_type=User)
+
+    @post('/', status_code=status.HTTP_201_CREATED)
+    async def create_user(
+        self, data: UserCreate, users_service: UsersServiceDep
+    ) -> User:
         """Create a new user."""
-        pass
+        db_obj = await users_service.create(data.as_dict())
+        return users_service.to_schema(db_obj, schema_type=User)
+
+    @patch('/{user_id}')
+    async def update_user(
+        self,
+        user_id: UUID,
+        data: UserUpdate,
+        users_service: UsersServiceDep,
+    ) -> User:
+        """Update an existing user."""
+        db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
+        return users_service.to_schema(db_obj, schema_type=User)
+
+    @delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_user(self, user_id: UUID, users_service: UsersServiceDep) -> None:
+        """Delete a user by ID."""
+        await users_service.delete(user_id)

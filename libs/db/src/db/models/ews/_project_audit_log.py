@@ -19,12 +19,6 @@ from .constants import PROJECT_AUDIT_LOG_TABLE
 
 
 class ProjectAuditLog(UUIDv7AuditBase):
-    """Project Updates"""
-
-    __tablename__ = PROJECT_AUDIT_LOG_TABLE
-
-
-class AuditLog(UUIDv7AuditBase):
     """Audit log for tracking system events and admin actions.
 
     Records who did what, when, and to what entity.
