@@ -4,15 +4,24 @@ from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
 from advanced_alchemy.base import UUIDv7AuditBase
+from advanced_alchemy.types import EncryptedString
 from platform_core.config import Settings, get_settings
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.models.base import ID_COLUMN_TYPE
+from db.models.base import ID_COLUMN_TYPE, JSONB
 from db.models.core.constants import USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
-    # from app.db.models._email_verification_token import EmailVerificationToken
+    from db.models import (
+        PasswordResetToken,
+        RefreshToken,
+        TeamMember,
+        UserOAuthAccount,
+        UserRole,
+    )
+    from db.models.core import EmailVerificationToken
     # from app.db.models._oauth_account import UserOAuthAccount
     # from app.db.models._password_reset_token import PasswordResetToken
     # from app.db.models._refresh_token import RefreshToken
@@ -53,9 +62,81 @@ class User(UUIDv7AuditBase):
     status: Mapped[str | None] = mapped_column(
         String(length=30), index=True, nullable=True, default=None
     )
+    password_reset_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    failed_reset_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
+    reset_locked_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+
+    totp_secret: Mapped[str | None] = mapped_column(
+        EncryptedString(key=settings.app.SECRET_KEY),
+        nullable=True,
+        default=None,
+        deferred=True,
+        deferred_group="security_sensitive",
+    )
+    """Encrypted TOTP secret for authenticator apps."""
+    is_two_factor_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    """Whether two-factor authentication is enabled for this user."""
+    two_factor_confirmed_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    """When MFA was confirmed/enabled."""
+    backup_codes: Mapped[list[str | None] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        default=None,
+        deferred=True,
+        deferred_group="security_sensitive",
+    )
+    """Hashed backup codes for MFA recovery."""
     tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None
     )
     org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None
     )
+
+    # Relationships
+
+    roles: Mapped[list[UserRole]] = relationship(
+        back_populates="user",
+        lazy="selectin",
+        uselist=True,
+        cascade="all, delete",
+    )
+    teams: Mapped[list[TeamMember]] = relationship(
+        back_populates="user",
+        lazy="selectin",
+        uselist=True,
+        cascade="all, delete",
+        viewonly=True,
+    )
+    oauth_accounts: Mapped[list[UserOAuthAccount]] = relationship(
+        back_populates="user",
+        lazy="noload",
+        cascade="all, delete",
+        uselist=True,
+    )
+    verification_tokens: Mapped[list[EmailVerificationToken]] = relationship(
+        back_populates="user",
+        lazy="noload",
+        cascade="all, delete",
+        uselist=True,
+    )
+    reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
+        back_populates="user",
+        lazy="noload",
+        cascade="all, delete",
+        uselist=True,
+    )
+    refresh_tokens: Mapped[list[RefreshToken]] = relationship(
+        back_populates="user",
+        lazy="noload",
+        cascade="all, delete-orphan",
+        uselist=True,
+    )
+
+    @hybrid_property
+    def has_password(self) -> bool:
+        return self.hashed_password is not None
+
+    @hybrid_property
+    def has_mfa(self) -> bool:
+        return self.is_two_factor_enabled

@@ -17,8 +17,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.base import ID_COLUMN_TYPE, JSONB
-from db.models.ews.constants import CRM_ACCOUNTS_TABLE
 from db.models.ews._crm_account_address import CrmAccountAddress
+from db.models.ews.constants import CRM_ACCOUNTS_TABLE
 
 
 class CrmAccount(UUIDv7AuditBase, SlugKey):
@@ -120,7 +120,7 @@ class CrmAccount(UUIDv7AuditBase, SlugKey):
 
     # addresses:
     addresses: Mapped[list[CrmAccountAddress]] = relationship(
-        back_populates='user',
+        back_populates='account',
         lazy='noload',
         cascade='all, delete',
         uselist=True,

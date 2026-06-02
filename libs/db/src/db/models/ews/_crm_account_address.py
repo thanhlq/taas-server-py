@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Optional
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
 from sqlalchemy import Boolean, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.base import ID_COLUMN_TYPE
 from db.models.ews.constants import CRM_ACCOUNTS_ADDRESSES_TABLE, CRM_ACCOUNTS_TABLE
 
 if TYPE_CHECKING:
-    pass
+    from db.models import CrmAccount
 
 
 class CrmAccountAddress(UUIDv7AuditBase, SlugKey):
@@ -39,6 +39,14 @@ class CrmAccountAddress(UUIDv7AuditBase, SlugKey):
     account_id: Mapped[ID_COLUMN_TYPE] = mapped_column(
         ForeignKey(f'{CRM_ACCOUNTS_TABLE}.id', ondelete='cascade'),
         nullable=False,
+    )
+
+    # Relationships
+    account: Mapped[CrmAccount] = relationship(
+        back_populates='addresses',
+        lazy='noload',
+        cascade='all, delete',
+        uselist=False,
     )
 
     # Billing address
