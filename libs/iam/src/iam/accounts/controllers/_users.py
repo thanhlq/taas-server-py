@@ -28,6 +28,7 @@ class UserController(BaseController):
 
     api_prefix = '/api/v1/users'
     tags = ('Users',)
+    count = 0
 
     @get('/')
     async def list_users(
@@ -47,6 +48,8 @@ class UserController(BaseController):
     async def create_user(
         self, data: UserCreate, users_service: UsersServiceDep
     ) -> User:
+        self.count += 1
+        # cli_print_info(f"{os.getpid()} Creating user #{self.count}")
         """Create a new user."""
         db_obj = await users_service.create(data.as_dict())
         return users_service.to_schema(db_obj, schema_type=User)

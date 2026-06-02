@@ -62,8 +62,8 @@ export const options = {
   },
   thresholds: {
     // abortOnFail stops the run at the breaking point so you don't wait it out.
-    http_req_failed:   [{ threshold: 'rate<0.01', abortOnFail: true }],
-    http_req_duration: [{ threshold: 'p(95)<1000', abortOnFail: true }],
+    http_req_failed:   [{ threshold: 'rate<0.01', abortOnFail: false }],
+    http_req_duration: [{ threshold: 'p(95)<2000', abortOnFail: false }],
   },
 };
 

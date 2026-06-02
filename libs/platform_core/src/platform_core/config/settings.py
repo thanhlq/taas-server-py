@@ -66,11 +66,11 @@ class DatabaseSettings:
         default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 20)
     )
     """Max overflow for SQLAlchemy connection pool"""
-    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 20))
+    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 15))
     """Pool size for SQLAlchemy connection pool"""
     POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
     """Time in seconds for timing connections out of the connection pool."""
-    POOL_RECYCLE: int = field(default_factory=get_env('DATABASE_POOL_RECYCLE', 300))
+    POOL_RECYCLE: int = field(default_factory=get_env('DATABASE_POOL_RECYCLE', default=1800)) # 1800: 30 minutes, 300: 5 minutes
     """Amount of time to wait before recycling connections."""
     POOL_PRE_PING: bool = field(
         default_factory=get_env('DATABASE_PRE_POOL_PING', False)
