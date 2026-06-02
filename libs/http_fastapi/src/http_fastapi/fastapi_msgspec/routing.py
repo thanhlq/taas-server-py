@@ -8,6 +8,7 @@ from typing import Annotated, Any, Callable, get_args
 import msgspec
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRoute
+from platform_core.http.exceptions import ApplicationError
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -41,6 +42,13 @@ def _make_struct_body_dependency(struct_type: type) -> Callable[..., Any]:
         try:
             return msgspec.json.decode(body, type=struct_type)
         except msgspec.ValidationError as exc:
+            # When `__post_init__` raises an ApplicationError (e.g.
+            # ValidationError, PasswordValidationError), msgspec wraps it as a
+            # msgspec.ValidationError. Re-raise the original so FastAPI's
+            # exception dispatcher can route it to the correct handler.
+            cause = exc.__cause__ or exc.__context__
+            if isinstance(cause, ApplicationError):
+                raise cause from exc
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except msgspec.DecodeError as exc:
             raise HTTPException(status_code=400, detail=f'Invalid JSON: {exc}') from exc

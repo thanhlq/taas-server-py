@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.fastapi_app import create_app
-from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
+from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import iam_controllers
 from platform_core.cli import cli_print_info
 from platform_core.config import Settings
@@ -89,17 +89,10 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastAPI:
     app: FastAPI = create_app(app_config, **kwargs)
 
-    @app.exception_handler(exc_class_or_status_code=Exception)
-    async def global_exception_handler(request: Any, exc: Exception):
-        # Print full traceback to console
-        print('Unhandled exception occurred:')
-        import traceback
-
-        traceback.print_exc()
-        return MsgSpecJSONResponse(
-            status_code=500,
-            content={'detail': 'Internal Server Error'},
-        )
+    # Register typed exception handlers (ApplicationClientError -> 400,
+    # ApplicationError -> 500, plus a catch-all 500). Registered first so
+    # FastAPI's dispatcher picks the most specific class for any exception.
+    setup_fastapi_app(app, app_config)
 
     if app_config.ratelimit_config and app_config.ratelimit_config.enabled:
         from http_fastapi.middewares.slowapi_ratelimit import (
