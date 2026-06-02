@@ -25,27 +25,45 @@ import { check, sleep } from 'k6';
 //   },
 // };
 
-/* This is max options to test max performance of create user API. You can adjust the stages and thresholds as needed for your testing goals.
- */
+/*
+  MAX-CAPACITY (staircase stress) test.
+
+  Goal: find the highest request rate the API can sustain with low errors and
+  acceptable latency. We step the *arrival rate* up and hold each level for 1m
+  so the metrics stabilize. The test auto-aborts the moment the API breaks
+  (error rate > 1% OR p95 latency > 1s) -- the last level it held cleanly,
+  *with dropped_iterations ~ 0*, is your max capacity.
+
+  ramping-arrival-rate = open model: k6 injects N req/s no matter how slow the
+  server is. When the server saturates you'll see http_req_failed climb, p(95)
+  spike, and dropped_iterations appear (k6 ran out of VUs to fire requests).
+*/
 export const options = {
   scenarios: {
-    // Push as many requests as possible and measure real server capacity
     capacity: {
       executor: 'ramping-arrival-rate',
-      startRate: 50,
+      startRate: 100,
       timeUnit: '1s',
-      preAllocatedVUs: 200,
-      maxVUs: 500,
+      // Must be high enough that VU starvation never limits the rate.
+      // Rule of thumb: maxVUs >= target_rps * expected_latency_seconds, with
+      // headroom for latency growth near saturation.
+      preAllocatedVUs: 500,
+      maxVUs: 3000,
       stages: [
-        { duration: '30s', target: 200 },   // 200 req/s
-        { duration: '1m',  target: 500 },    // push to 500 req/s
+        { duration: '30s', target: 200 },
+        { duration: '1m',  target: 500 },   // hold 500/s
+        { duration: '1m',  target: 1000 },  // hold 1000/s
+        { duration: '1m',  target: 2000 },  // hold 2000/s
+        { duration: '1m',  target: 3000 },  // hold 3000/s
+        { duration: '1m',  target: 5000 },  // hold 5000/s
         { duration: '30s', target: 0 },
       ],
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.01'],
+    // abortOnFail stops the run at the breaking point so you don't wait it out.
+    http_req_failed:   [{ threshold: 'rate<0.01', abortOnFail: true }],
+    http_req_duration: [{ threshold: 'p(95)<1000', abortOnFail: true }],
   },
 };
 

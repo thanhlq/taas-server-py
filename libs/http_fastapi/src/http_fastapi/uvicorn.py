@@ -1,9 +1,8 @@
-from collections.abc import Callable
-from typing import Optional, Any
 import logging
+from collections.abc import Callable
+from typing import Any, Optional
 
 import uvicorn
-
 
 # Map Python logging levels to Uvicorn log level strings
 UVICORN_LOG_LEVEL_MAP = {
@@ -44,5 +43,6 @@ def run_uvicorn(
         log_config=log_config,
         log_level=log_level,
         workers=workers,
+        access_log=False,  # Disable Uvicorn's default access log to reduce noise; use custom logging in the app instead
         # loop='auto',
     )

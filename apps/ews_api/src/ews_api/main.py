@@ -2,7 +2,6 @@
 #
 # uv run --package ews_api python main.py
 
-import asyncio
 import os
 
 from http_fastapi.uvicorn import run_uvicorn
@@ -10,18 +9,18 @@ from http_fastapi.uvicorn import run_uvicorn
 from .setup_env import settings
 
 
-async def main():
+def main():
     ASGI_APP_PACKAGE: str = 'ews_api.app:app'
     os.environ['APP_MODULE_NAME'] = 'ews_api'
 
     from .app import app
 
-    if settings.server.RELOAD:
-        run_uvicorn(ASGI_APP_PACKAGE, reload=True)
+    if settings.server.RELOAD or settings.server.WORKERS > 1:
+        run_uvicorn(ASGI_APP_PACKAGE, reload=settings.server.RELOAD, workers=settings.server.WORKERS)
 
     else:
-        run_uvicorn(app)
+        run_uvicorn(app, reload=settings.server.RELOAD, workers=settings.server.WORKERS)
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

@@ -63,10 +63,10 @@ class DatabaseSettings:
     )
     """Disable SQLAlchemy pool configuration."""
     POOL_MAX_OVERFLOW: int = field(
-        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 10)
+        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 20)
     )
     """Max overflow for SQLAlchemy connection pool"""
-    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 5))
+    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 20))
     """Pool size for SQLAlchemy connection pool"""
     POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
     """Time in seconds for timing connections out of the connection pool."""
@@ -156,7 +156,8 @@ class ServerSettings:
     RELOAD_DIRS: list[str] = field(
         default_factory=get_env(f'{CONFIG_PREFIX}_RELOAD_DIRS', [f'{BASE_DIR}'])
     )
-    """Directories to watch for reloading."""
+    WORKERS: int = field(default_factory=get_env(f'{CONFIG_PREFIX}_WORKERS', 1))
+    """Number of worker processes."""
 
 
 @dataclass

@@ -25,7 +25,7 @@ def setup_fastapi_rate_limiting(app: FastAPI, config: RateLimitConfig) -> None:
     ).get_all_in_one_redis_url()
 
     limiter = Limiter(
-        key_func=get_remote_address, storage_uri=url, default_limits=['6000/minute']
+        key_func=get_remote_address, storage_uri=url, default_limits=['60000/minute']
     )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
