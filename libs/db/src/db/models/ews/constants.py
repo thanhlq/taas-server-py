@@ -14,6 +14,7 @@ PROJECTS_COMMENTS_TABLE = f'{TABLE_PREFIX}projects_comments'
 PROJECTS_RESOURCES_TABLE = f'{TABLE_PREFIX}projects_resources'
 PROJECTS_RISKS_TABLE = f'{TABLE_PREFIX}projects_risks'
 PROJECTS_UPDATES_TABLE = f'{TABLE_PREFIX}projects_updates'
+PROJECT_AUDIT_LOG_TABLE = f'{TABLE_PREFIX}projects_audit_log'
 PROJECTS_USERS_TABLE = f'{TABLE_PREFIX}projects_users'
 
 # Workflow tables
@@ -45,4 +46,3 @@ TAG_MAPPING_TABLE = f'{TABLE_PREFIX}tags_mapping'
 CATEGORY_TABLE = f'{TABLE_PREFIX}categories'
 
 # Auth and permissions
-

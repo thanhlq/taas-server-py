@@ -5,26 +5,24 @@ IMPORTANT:
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
 
-# Audit Trails
-from .core._audit_log import AuditLog
-
-# Authorization
-from .core._casbin_rule import CasbinRule
-
-# IAM
-from .core._email_verification_token import EmailVerificationToken
-from .core._oauth_account import UserOAuthAccount
-from .core._password_reset_token import PasswordResetToken
-from .core._refresh_token import RefreshToken
-from .core._role import Role
-from .core._tag import Tag
-from .core._team import Team
-from .core._team_invitation import TeamInvitation
-from .core._team_member import TeamMember
-from .core._team_roles import TeamRoles
-from .core._team_tag import team_tag
-from .core._user import User
-from .core._user_role import UserRole
+# Core models (IAM, Auth, etc.)
+from .core import (
+    AuditLog,
+    CasbinRule,
+    EmailVerificationToken,
+    PasswordResetToken,
+    RefreshToken,
+    Role,
+    Tag,
+    Team,
+    TeamInvitation,
+    TeamMember,
+    TeamRoles,
+    User,
+    UserOAuthAccount,
+    UserRole,
+    team_tag,
+)
 
 # PPM (Project / Portfolio Management)
 from .ews import (

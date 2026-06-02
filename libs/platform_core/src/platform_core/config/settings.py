@@ -1,8 +1,7 @@
 # .venv/lib/python3.13/site-packages/litestar_email/message.py
 
 from __future__ import annotations
-from platform_core.cli import cli_print_info_formal
-from platform_core.config.wss import WebSocketConfig
+
 import binascii
 import json
 import logging
@@ -11,15 +10,20 @@ import sys
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast, Optional
+from typing import TYPE_CHECKING, Final, Optional, cast
 
 from advanced_alchemy.utils.text import slugify
 from dotenv import load_dotenv
 
 from platform_core.__metadata__ import __version__ as current_version
 from platform_core.cli._utils import console
+from platform_core.config.cache import CacheConfig
 from platform_core.config.compression import CompressionConfig
 from platform_core.config.cors import CORSConfig
+from platform_core.config.csrf import CSRFConfig
+from platform_core.config.lock import DistributedLockConfig
+from platform_core.config.ratelimit import RateLimitConfig
+from platform_core.config.wss import WebSocketConfig
 from platform_core.db.db_config import (
     AlembicAsyncConfig,
     AsyncSessionConfig,
@@ -28,10 +32,6 @@ from platform_core.db.db_config import (
 from platform_core.email import EmailConfig, ResendConfig, SMTPConfig
 from platform_core.utils.env_utils import get_env
 from platform_core.utils.module_loader import module_to_os_path
-from platform_core.config.csrf import CSRFConfig
-from platform_core.config.cache import CacheConfig
-from platform_core.config.lock import DistributedLockConfig
-from platform_core.config.ratelimit import RateLimitConfig
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -78,7 +78,8 @@ class DatabaseSettings:
     """Optionally ping database before fetching a session from the connection pool."""
     URL: str = field(
         default_factory=get_env(
-            'DATABASE_URL', 'postgresql+psycopg://app:app@localhost:15432/app'
+            'DATABASE_URL',
+            'postgresql+psycopg://postgres:Pa55w0rd@localhost:15432/ews_db',
         )
     )
     """SQLAlchemy Database URL."""
@@ -115,10 +116,9 @@ class DatabaseSettings:
     def get_engine(self) -> AsyncEngine:
         if self._engine_instance is not None:
             return self._engine_instance
-        from platform_core.db.engine_factory import create_sqlalchemy_engine
+        from platform_core.db.engine_factory import EngineFactory
 
-        self._engine_instance = create_sqlalchemy_engine(self)
-        return self._engine_instance
+        return EngineFactory.get_sqlalchemy_engine(self)
 
     def get_config(self) -> SQLAlchemyAsyncConfig:
         """Get SQLAlchemy configuration.
@@ -420,6 +420,7 @@ class Settings:
     server: ServerSettings = field(default_factory=ServerSettings)
     # saq: SaqSettings = field(default_factory=SaqSettings)
     log: LogSettings = field(default_factory=LogSettings)
+    alchemy: SQLAlchemyAsyncConfig = field(default_factory=SQLAlchemyAsyncConfig)
     email: EmailSettings = field(default_factory=EmailSettings)
 
     def find_env_file(self, filename: str) -> Path | None:

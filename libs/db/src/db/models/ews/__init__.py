@@ -13,6 +13,7 @@ from ._ppm_tag import PpmTag
 from ._ppm_tag_mapping import PpmTagMapping
 from ._project import Project
 from ._project_action import ProjectAction
+from ._project_audit_log import ProjectAuditLog
 from ._project_comment import ProjectComment
 from ._project_risk import ProjectRisk
 from ._project_team import ProjectTeam
@@ -56,4 +57,5 @@ __all__ = [
     'Timelog',
     'Workflow',
     'WorkflowStage',
+    'ProjectAuditLog',
 ]

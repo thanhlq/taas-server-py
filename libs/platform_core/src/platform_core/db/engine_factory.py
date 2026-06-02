@@ -1,38 +1,60 @@
+import logging
 from typing import TYPE_CHECKING, Any
 
-
+from platform_core.serialization import decode_json, encode_json
 from sqlalchemy import NullPool, event
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-
-from platform_core.serialization import decode_json, encode_json
 
 if TYPE_CHECKING:
     from platform_core.config import DatabaseSettings
 
+logger = logging.getLogger('EngineFactory')
 
-def create_sqlalchemy_engine(settings: "DatabaseSettings") -> "AsyncEngine":
-    url = settings.URL.replace("postgresql://", "postgresql+psycopg://")
-    if url.startswith("postgresql+asyncpg"):
+
+class EngineFactory:
+    _engine: dict[str, AsyncEngine] = {}
+
+    @staticmethod
+    def get_sqlalchemy_engine(settings: 'DatabaseSettings') -> AsyncEngine:
+        eng = EngineFactory._engine.get(settings.URL)
+        if eng is None:
+            eng = _create_sqlalchemy_engine(settings)
+            EngineFactory._engine[settings.URL] = eng
+            logger.info(
+                msg=f'🐬 Created new SQLAlchemy engine for URL: {eng.url.render_as_string(hide_password=True)}'
+            )
+        return eng
+
+
+def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
+    """
+    The entry point for creating the SQLAlchemy engine. This function is used by the `SQLAlchemyAsyncConfig`
+    dataclass to create the engine based on the provided settings.
+
+    Should be cached?
+    """
+    url = db_settings.URL.replace('postgresql://', 'postgresql+psycopg://')
+    if url.startswith('postgresql+asyncpg'):
         # Build engine kwargs - pool args are invalid with NullPool
         engine_kwargs: dict[str, Any] = {
-            "url": url,
-            "future": True,
-            "json_serializer": encode_json,
-            "json_deserializer": decode_json,
-            "echo": settings.ECHO,
-            "echo_pool": settings.ECHO_POOL,
-            "pool_recycle": settings.POOL_RECYCLE,
-            "pool_pre_ping": settings.POOL_PRE_PING,
+            'url': url,
+            'future': True,
+            'json_serializer': encode_json,
+            'json_deserializer': decode_json,
+            'echo': db_settings.ECHO,
+            'echo_pool': db_settings.ECHO_POOL,
+            'pool_recycle': db_settings.POOL_RECYCLE,
+            'pool_pre_ping': db_settings.POOL_PRE_PING,
         }
-        if settings.POOL_DISABLED:
-            engine_kwargs["poolclass"] = NullPool
+        if db_settings.POOL_DISABLED:
+            engine_kwargs['poolclass'] = NullPool
         else:
             engine_kwargs.update(
                 {
-                    "max_overflow": settings.POOL_MAX_OVERFLOW,
-                    "pool_size": settings.POOL_SIZE,
-                    "pool_timeout": settings.POOL_TIMEOUT,
-                    "pool_use_lifo": True,
+                    'max_overflow': db_settings.POOL_MAX_OVERFLOW,
+                    'pool_size': db_settings.POOL_SIZE,
+                    'pool_timeout': db_settings.POOL_TIMEOUT,
+                    'pool_use_lifo': True,
                 }
             )
         engine = create_async_engine(**engine_kwargs)
@@ -41,7 +63,7 @@ def create_sqlalchemy_engine(settings: "DatabaseSettings") -> "AsyncEngine":
         See [`async_sessionmaker()`][sqlalchemy.ext.asyncio.async_sessionmaker].
         """
 
-        @event.listens_for(engine.sync_engine, "connect")
+        @event.listens_for(engine.sync_engine, 'connect')
         def _sqla_on_connect(  # pragma: no cover # pyright: ignore[reportUnusedFunction]
             dbapi_connection: Any,
             _: Any,
@@ -56,7 +78,7 @@ def create_sqlalchemy_engine(settings: "DatabaseSettings") -> "AsyncEngine":
             """
 
             def encoder(bin_value: bytes) -> bytes:
-                return b"\x01" + bin_value
+                return b'\x01' + bin_value
 
             def decoder(bin_value: bytes) -> Any:
                 # the byte is the \x01 prefix for jsonb used by PostgreSQL.
@@ -65,40 +87,40 @@ def create_sqlalchemy_engine(settings: "DatabaseSettings") -> "AsyncEngine":
 
             dbapi_connection.await_(
                 dbapi_connection.driver_connection.set_type_codec(
-                    "jsonb",
+                    'jsonb',
                     encoder=encoder,
                     decoder=decoder,
-                    schema="pg_catalog",
-                    format="binary",
+                    schema='pg_catalog',
+                    format='binary',
                 ),
             )
             dbapi_connection.await_(
                 dbapi_connection.driver_connection.set_type_codec(
-                    "json",
+                    'json',
                     encoder=encoder,
                     decoder=decoder,
-                    schema="pg_catalog",
-                    format="binary",
+                    schema='pg_catalog',
+                    format='binary',
                 ),
             )
 
-    elif url.startswith("sqlite+aiosqlite"):
+    elif url.startswith('sqlite+aiosqlite'):
         engine = create_async_engine(
             url=url,
             future=True,
             json_serializer=encode_json,
             json_deserializer=decode_json,
-            echo=settings.ECHO,
-            echo_pool=settings.ECHO_POOL,
-            pool_recycle=settings.POOL_RECYCLE,
-            pool_pre_ping=settings.POOL_PRE_PING,
+            echo=db_settings.ECHO,
+            echo_pool=db_settings.ECHO_POOL,
+            pool_recycle=db_settings.POOL_RECYCLE,
+            pool_pre_ping=db_settings.POOL_PRE_PING,
         )
         """Database session factory.
 
         See [`async_sessionmaker()`][sqlalchemy.ext.asyncio.async_sessionmaker].
         """
 
-        @event.listens_for(engine.sync_engine, "connect")
+        @event.listens_for(engine.sync_engine, 'connect')
         def _sqla_on_connect(  # pragma: no cover # pyright: ignore[reportUnusedFunction]
             dbapi_connection: Any,
             _: Any,
@@ -106,34 +128,34 @@ def create_sqlalchemy_engine(settings: "DatabaseSettings") -> "AsyncEngine":
             """Override the default begin statement.  The disables the built in begin execution."""
             dbapi_connection.isolation_level = None
 
-        @event.listens_for(engine.sync_engine, "begin")
+        @event.listens_for(engine.sync_engine, 'begin')
         def _sqla_on_begin(  # pragma: no cover # pyright: ignore[reportUnusedFunction]
             dbapi_connection: Any,
         ) -> Any:
             """Emits a custom begin"""
-            dbapi_connection.exec_driver_sql("BEGIN")
+            dbapi_connection.exec_driver_sql('BEGIN')
 
     else:
         # Build engine kwargs - pool args are invalid with NullPool
         engine_kwargs = {
-            "url": url,
-            "future": True,
-            "json_serializer": encode_json,
-            "json_deserializer": decode_json,
-            "echo": settings.ECHO,
-            "echo_pool": settings.ECHO_POOL,
-            "pool_recycle": settings.POOL_RECYCLE,
-            "pool_pre_ping": settings.POOL_PRE_PING,
+            'url': url,
+            'future': True,
+            'json_serializer': encode_json,
+            'json_deserializer': decode_json,
+            'echo': db_settings.ECHO,
+            'echo_pool': db_settings.ECHO_POOL,
+            'pool_recycle': db_settings.POOL_RECYCLE,
+            'pool_pre_ping': db_settings.POOL_PRE_PING,
         }
-        if settings.POOL_DISABLED:
-            engine_kwargs["poolclass"] = NullPool
+        if db_settings.POOL_DISABLED:
+            engine_kwargs['poolclass'] = NullPool
         else:
             engine_kwargs.update(
                 {
-                    "max_overflow": settings.POOL_MAX_OVERFLOW,
-                    "pool_size": settings.POOL_SIZE,
-                    "pool_timeout": settings.POOL_TIMEOUT,
-                    "pool_use_lifo": True,
+                    'max_overflow': db_settings.POOL_MAX_OVERFLOW,
+                    'pool_size': db_settings.POOL_SIZE,
+                    'pool_timeout': db_settings.POOL_TIMEOUT,
+                    'pool_use_lifo': True,
                 }
             )
         engine = create_async_engine(**engine_kwargs)

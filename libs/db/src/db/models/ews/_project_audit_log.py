@@ -8,13 +8,20 @@ from uuid import UUID
 from advanced_alchemy.base import UUIDv7AuditBase
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_mixin
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .constants import AUDIT_LOG_TABLE, USER_ACCOUNT_TABLE
+from db.models.core.constants import USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
-    from ._user import User
+    from ..core._user import User
 
+from .constants import PROJECT_AUDIT_LOG_TABLE
+
+
+class ProjectAuditLog(UUIDv7AuditBase):
+    """Project Updates"""
+
+    __tablename__ = PROJECT_AUDIT_LOG_TABLE
 
 
 class AuditLog(UUIDv7AuditBase):
@@ -23,7 +30,7 @@ class AuditLog(UUIDv7AuditBase):
     Records who did what, when, and to what entity.
     """
 
-    __tablename__ = AUDIT_LOG_TABLE
+    __tablename__ = PROJECT_AUDIT_LOG_TABLE
     __table_args__ = {'comment': 'Audit trail for system events and admin actions'}
 
     actor_id: Mapped[UUID | None] = mapped_column(

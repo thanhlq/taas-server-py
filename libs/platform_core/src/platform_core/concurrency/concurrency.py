@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+from asyncio import current_task
 from functools import partial
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 # This is a tiny package whose only purpose is to let you detect which async library your code is running under.
 import sniffio
-
 from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
@@ -16,17 +16,23 @@ if TYPE_CHECKING:
     import trio
 
 
-T = TypeVar("T")
-P = ParamSpec("P")
+T = TypeVar('T')
+P = ParamSpec('P')
 
 
 __all__ = (
-    "get_asyncio_executor",
-    "get_trio_capacity_limiter",
-    "set_asyncio_executor",
-    "set_trio_capacity_limiter",
-    "sync_to_thread",
+    'get_asyncio_executor',
+    'get_trio_capacity_limiter',
+    'set_asyncio_executor',
+    'set_trio_capacity_limiter',
+    'sync_to_thread',
+    'get_current_task_id',
 )
+
+
+def get_current_task_id() -> int:
+    """Get the ID of the current asyncio task."""
+    return id(current_task())
 
 
 class _State:
@@ -37,13 +43,17 @@ class _State:
 async def _run_sync_asyncio(fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
     ctx = contextvars.copy_context()
     bound_fn = partial(ctx.run, fn, *args, **kwargs)
-    return await asyncio.get_running_loop().run_in_executor(get_asyncio_executor(), bound_fn)  # pyright: ignore
+    return await asyncio.get_running_loop().run_in_executor(
+        get_asyncio_executor(), bound_fn
+    )  # pyright: ignore
 
 
 async def _run_sync_trio(fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
     import trio
 
-    return await trio.to_thread.run_sync(partial(fn, *args, **kwargs), limiter=get_trio_capacity_limiter())
+    return await trio.to_thread.run_sync(
+        partial(fn, *args, **kwargs), limiter=get_trio_capacity_limiter()
+    )
 
 
 async def sync_to_thread(fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
@@ -60,13 +70,13 @@ async def sync_to_thread(fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) 
     :func:`~litestar.concurrency.set_trio_capacity_limiter`. This does not affect trio's
     default capacity limiter.
     """
-    if (library := sniffio.current_async_library()) == "asyncio":
+    if (library := sniffio.current_async_library()) == 'asyncio':
         return await _run_sync_asyncio(fn, *args, **kwargs)
 
-    if library == "trio":
+    if library == 'trio':
         return await _run_sync_trio(fn, *args, **kwargs)
 
-    raise RuntimeError("Unsupported async library or not in async context")
+    raise RuntimeError('Unsupported async library or not in async context')
 
 
 def set_asyncio_executor(executor: ThreadPoolExecutor | None) -> None:
@@ -78,7 +88,7 @@ def set_asyncio_executor(executor: ThreadPoolExecutor | None) -> None:
     except sniffio.AsyncLibraryNotFoundError:
         pass
     else:
-        raise RuntimeError("Cannot set executor from running loop")
+        raise RuntimeError('Cannot set executor from running loop')
 
     _State.EXECUTOR = executor
 
@@ -99,7 +109,7 @@ def set_trio_capacity_limiter(limiter: trio.CapacityLimiter | None) -> None:
     except sniffio.AsyncLibraryNotFoundError:
         pass
     else:
-        raise RuntimeError("Cannot set limiter while in async context")
+        raise RuntimeError('Cannot set limiter while in async context')
 
     _State.LIMITER = limiter
 

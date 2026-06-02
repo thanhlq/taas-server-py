@@ -22,6 +22,7 @@ members = [
     "libs/store_redis",
     "libs/store_memcached",
     "libs/slowapi_advanced",
+    "libs/iam",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -38,6 +39,8 @@ ews_worker = { workspace = true }
 store_redis = { workspace = true }
 store_memcached = { workspace = true }
 slowapi_advanced = { workspace = true }
+iam = { workspace = true }
+
 
 [dependency-groups]
 dev = [
