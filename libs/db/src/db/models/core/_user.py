@@ -35,10 +35,10 @@ settings: Settings = get_settings()
 
 class User(UUIDv7AuditBase):
     __tablename__ = USER_ACCOUNT_TABLE
-    email: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(unique=False, index=True, nullable=False)
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     username: Mapped[str | None] = mapped_column(
-        String(length=30), unique=True, index=True, nullable=True, default=None
+        String(length=30), unique=False, index=True, nullable=True, default=None
     )
     phone: Mapped[str | None] = mapped_column(
         String(length=20), nullable=True, default=None

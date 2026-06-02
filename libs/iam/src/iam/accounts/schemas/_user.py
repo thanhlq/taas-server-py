@@ -5,6 +5,7 @@ from uuid import UUID
 
 import msgspec
 from db.models import TeamRoles
+from platform_core.serialization._msgspec_model import CamelizedBaseStruct
 from platform_core.utils.validation import (
     validate_email,
     validate_name,
@@ -12,7 +13,6 @@ from platform_core.utils.validation import (
     validate_phone,
     validate_username,
 )
-from platform_core.serialization._msgspec_model import CamelizedBaseStruct
 
 
 class UserTeam(CamelizedBaseStruct):
@@ -91,7 +91,6 @@ class UserCreate(CamelizedBaseStruct):
 
     def __post_init__(self) -> None:
         """Additional validation after field validation."""
-
         self.email = validate_email(self.email)
         self.password = validate_password(self.password)
         if self.name is not None:

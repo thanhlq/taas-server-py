@@ -460,9 +460,10 @@ def validate_name(v: str) -> str:
         msg = f'Name must not exceed {NAME_MAX_LENGTH} characters'
         raise ValidationError(msg)
 
-    if not NAME_VALID_PATTERN.match(name):
-        msg = 'Name contains invalid characters'
-        raise ValidationError(msg)
+    # FIXME: to uncomment this
+    # if not NAME_VALID_PATTERN.match(name):
+    #     msg = 'Name contains invalid characters'
+    #     raise ValidationError(msg)
 
     if NAME_REPEATED_PATTERN.search(name):
         msg = 'Name contains suspicious patterns'
