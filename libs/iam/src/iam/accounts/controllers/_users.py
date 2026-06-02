@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from advanced_alchemy.service.pagination import OffsetPagination
-from fastapi import Depends, status
+from advanced_alchemy.service import OffsetPagination
+from fastapi import Depends
+from platform_core.db.advanced_session_manager import get_db_async_generator
+from platform_core.http import BaseController, delete, get, patch, post, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from iam.accounts.schemas._user import User, UserCreate, UserUpdate
 from iam.accounts.services._users import UserService
-from platform_core.db.advanced_session_manager import get_db_async_generator
-from platform_core.http import BaseController, delete, get, patch, post
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def provide_users_service(

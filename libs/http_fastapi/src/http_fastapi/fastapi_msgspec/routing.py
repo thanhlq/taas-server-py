@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any, Callable, get_args
+import typing
+from typing import Annotated, Any, Callable, get_args
 
 import msgspec
+from fastapi import Depends, HTTPException
 from fastapi.routing import APIRoute
 from starlette.requests import Request
 from starlette.responses import Response
@@ -25,6 +27,79 @@ def _contains_struct(tp: Any) -> bool:
     if isinstance(tp, type) and issubclass(tp, msgspec.Struct):
         return True
     return any(_contains_struct(arg) for arg in get_args(tp))
+
+
+def _make_struct_body_dependency(struct_type: type) -> Callable[..., Any]:
+    """Build a FastAPI dependency that decodes the request body into *struct_type*.
+
+    Lets endpoints declare ``data: SomeStruct`` parameters without FastAPI
+    trying to introspect the ``msgspec.Struct`` as a Pydantic body field.
+    """
+
+    async def _decode_body(request: Request) -> Any:
+        body = await request.body()
+        try:
+            return msgspec.json.decode(body, type=struct_type)
+        except msgspec.ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except msgspec.DecodeError as exc:
+            raise HTTPException(status_code=400, detail=f'Invalid JSON: {exc}') from exc
+
+    _decode_body.__name__ = f'_decode_{struct_type.__name__}_body'
+    return _decode_body
+
+
+def _rewrite_struct_params(
+    endpoint: Callable[..., Any], type_hints: dict[str, Any]
+) -> Callable[..., Any]:
+    """Wrap *endpoint* so msgspec.Struct parameters become body dependencies.
+
+    FastAPI cannot build a request model field from a ``msgspec.Struct``. To
+    keep ergonomic ``data: MyStruct`` signatures on controller methods, we
+    rewrite the wrapper's signature so each such parameter is annotated as
+    ``Annotated[MyStruct, Depends(<body decoder>)]``. FastAPI then resolves
+    the value via the dependency, and the original handler is called with
+    the decoded ``Struct`` instance.
+
+    Non-Struct parameters are left untouched.
+    """
+    sig = inspect.signature(endpoint)
+    new_params: list[inspect.Parameter] = []
+    rewrote = False
+    for param in sig.parameters.values():
+        ann = type_hints.get(param.name, param.annotation)
+        if (
+            ann is not inspect.Parameter.empty
+            and isinstance(ann, type)
+            and issubclass(ann, msgspec.Struct)
+        ):
+            dep = _make_struct_body_dependency(ann)
+            new_ann = Annotated[ann, Depends(dep)]
+            new_params.append(param.replace(annotation=new_ann))
+            rewrote = True
+        else:
+            new_params.append(param)
+
+    if not rewrote:
+        return endpoint
+
+    new_sig = sig.replace(parameters=new_params)
+
+    if inspect.iscoroutinefunction(endpoint):
+
+        @functools.wraps(endpoint)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await endpoint(*args, **kwargs)
+
+        async_wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
+        return async_wrapper
+
+    @functools.wraps(endpoint)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        return endpoint(*args, **kwargs)
+
+    sync_wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
+    return sync_wrapper
 
 
 def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
@@ -83,27 +158,41 @@ class MsgSpecRoute(APIRoute):
         endpoint: Callable[..., Any],
         **kwargs: Any,
     ) -> None:
+        # Resolve stringified annotations (e.g. from `from __future__ import
+        # annotations`) so msgspec.Struct types are detected on both
+        # parameters and return.
+        try:
+            type_hints = typing.get_type_hints(endpoint)
+        except Exception:
+            type_hints = {}
+
+        # Rewrite msgspec.Struct request-body parameters into FastAPI
+        # dependencies so FastAPI does not try to build a Pydantic field
+        # from a Struct type.
+        endpoint = _rewrite_struct_params(endpoint, type_hints)
+
         return_type = inspect.signature(endpoint).return_annotation
+        if isinstance(return_type, str):
+            return_type = type_hints.get('return', return_type)
         is_msgspec_endpoint = (
-            return_type is not inspect.Signature.empty
-            and _contains_struct(return_type)
+            return_type is not inspect.Signature.empty and _contains_struct(return_type)
         )
 
         if is_msgspec_endpoint:
-            kwargs["response_model"] = None
+            kwargs['response_model'] = None
 
             schema_extra = msgspec_response(return_type)
-            user_extra = kwargs.get("openapi_extra") or {}
+            user_extra = kwargs.get('openapi_extra') or {}
             # User-supplied keys win, except 'responses' which are merged
             # status-code-by-status-code (user wins per status code).
             merged: dict[str, Any] = {**schema_extra, **user_extra}
-            user_responses = user_extra.get("responses")
+            user_responses = user_extra.get('responses')
             if user_responses:
-                merged["responses"] = {
-                    **schema_extra["responses"],
+                merged['responses'] = {
+                    **schema_extra['responses'],
                     **user_responses,
                 }
-            kwargs["openapi_extra"] = merged
+            kwargs['openapi_extra'] = merged
 
             endpoint = _wrap_endpoint(endpoint)
 

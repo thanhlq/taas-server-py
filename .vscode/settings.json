@@ -1,6 +1,6 @@
 {
   "[python]": {
-    "editor.formatOnSave": true,
+    // "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file",
     "editor.insertSpaces": true,
     "editor.tabSize": 4,

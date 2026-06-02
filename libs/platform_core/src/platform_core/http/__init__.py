@@ -7,8 +7,11 @@ register the resulting routes with a concrete framework, so callers in ``ews``
 and other business libraries stay framework-free.
 """
 
+from __future__ import annotations
+
+from platform_core.http._websocket import WebSocketSession
+from platform_core.http.base_app import AppConfig, BaseApiApplication
 from platform_core.http.controller import BaseController
-from platform_core.http.base_app import BaseApiApplication, AppConfig
 from platform_core.http.decorator import (
     delete,
     get,
@@ -25,7 +28,8 @@ from platform_core.http.route import (
     SocketIOHandler,
     WebSocketRoute,
 )
-from platform_core.http._websocket import WebSocketSession
+
+from . import status
 
 __all__ = [
     'BaseController',
@@ -44,4 +48,5 @@ __all__ = [
     'route',
     'socketio_event',
     'websocket',
+    'status',
 ]
