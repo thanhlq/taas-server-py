@@ -11,7 +11,7 @@ from fastapi.routing import APIRoute
 from starlette.requests import Request
 from starlette.responses import Response
 
-from http_fastapi.fastapi_msgspec.openapi import msgspec_response
+from http_fastapi.fastapi_msgspec.openapi import msgspec_request_body, msgspec_response
 from http_fastapi.fastapi_msgspec.requests import MSGSpecJSONRequest
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 
@@ -51,7 +51,7 @@ def _make_struct_body_dependency(struct_type: type) -> Callable[..., Any]:
 
 def _rewrite_struct_params(
     endpoint: Callable[..., Any], type_hints: dict[str, Any]
-) -> Callable[..., Any]:
+) -> tuple[Callable[..., Any], type | None]:
     """Wrap *endpoint* so msgspec.Struct parameters become body dependencies.
 
     FastAPI cannot build a request model field from a ``msgspec.Struct``. To
@@ -62,10 +62,13 @@ def _rewrite_struct_params(
     the decoded ``Struct`` instance.
 
     Non-Struct parameters are left untouched.
+
+    Returns the (possibly wrapped) endpoint along with the first Struct type
+    that was rewritten — used to advertise the request body in OpenAPI.
     """
     sig = inspect.signature(endpoint)
     new_params: list[inspect.Parameter] = []
-    rewrote = False
+    body_type: type | None = None
     for param in sig.parameters.values():
         ann = type_hints.get(param.name, param.annotation)
         if (
@@ -76,12 +79,13 @@ def _rewrite_struct_params(
             dep = _make_struct_body_dependency(ann)
             new_ann = Annotated[ann, Depends(dep)]
             new_params.append(param.replace(annotation=new_ann))
-            rewrote = True
+            if body_type is None:
+                body_type = ann
         else:
             new_params.append(param)
 
-    if not rewrote:
-        return endpoint
+    if body_type is None:
+        return endpoint, None
 
     new_sig = sig.replace(parameters=new_params)
 
@@ -92,14 +96,14 @@ def _rewrite_struct_params(
             return await endpoint(*args, **kwargs)
 
         async_wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
-        return async_wrapper
+        return async_wrapper, body_type
 
     @functools.wraps(endpoint)
     def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
         return endpoint(*args, **kwargs)
 
     sync_wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
-    return sync_wrapper
+    return sync_wrapper, body_type
 
 
 def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
@@ -169,7 +173,7 @@ class MsgSpecRoute(APIRoute):
         # Rewrite msgspec.Struct request-body parameters into FastAPI
         # dependencies so FastAPI does not try to build a Pydantic field
         # from a Struct type.
-        endpoint = _rewrite_struct_params(endpoint, type_hints)
+        endpoint, body_type = _rewrite_struct_params(endpoint, type_hints)
 
         return_type = inspect.signature(endpoint).return_annotation
         if isinstance(return_type, str):
@@ -195,6 +199,19 @@ class MsgSpecRoute(APIRoute):
             kwargs['openapi_extra'] = merged
 
             endpoint = _wrap_endpoint(endpoint)
+
+        if body_type is not None:
+            body_extra = msgspec_request_body(body_type)
+            current_extra = kwargs.get('openapi_extra') or {}
+            # User-supplied requestBody wins; merge components from both sides.
+            merged_components = {
+                **(body_extra.get('x-msgspec-components') or {}),
+                **(current_extra.get('x-msgspec-components') or {}),
+            }
+            combined: dict[str, Any] = {**body_extra, **current_extra}
+            if merged_components:
+                combined['x-msgspec-components'] = merged_components
+            kwargs['openapi_extra'] = combined
 
         super().__init__(path, endpoint, **kwargs)
 

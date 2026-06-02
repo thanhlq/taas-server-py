@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from urllib.parse import urlparse
 
 import msgspec
-from iam.libs.exceptions import ApplicationClientError
+from platform_core.http.exceptions import ApplicationClientError
 
 EMAIL_BASIC_PATTERN = re.compile(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$'

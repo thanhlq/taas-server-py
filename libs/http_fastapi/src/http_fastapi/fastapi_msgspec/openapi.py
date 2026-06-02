@@ -42,6 +42,29 @@ def msgspec_response(
     }
 
 
+def msgspec_request_body(
+    body_type: Any,
+    *,
+    required: bool = True,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Build an ``openapi_extra`` dict describing a msgspec request body."""
+    (schema,), components = msgspec.json.schema_components(
+        [body_type],
+        ref_template="#/components/schemas/{name}",
+    )
+    body: dict[str, Any] = {
+        "required": required,
+        "content": {"application/json": {"schema": schema}},
+    }
+    if description:
+        body["description"] = description
+    return {
+        "requestBody": body,
+        _COMPONENTS_KEY: components,
+    }
+
+
 def install_msgspec_openapi(app: FastAPI) -> None:
     """Install a custom ``app.openapi`` that merges msgspec component schemas."""
 

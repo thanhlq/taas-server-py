@@ -5,7 +5,7 @@ from uuid import UUID
 
 import msgspec
 from db.models import TeamRoles
-from iam.libs.validation import (
+from platform_core.utils.validation import (
     validate_email,
     validate_name,
     validate_password,
