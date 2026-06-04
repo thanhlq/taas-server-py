@@ -3,14 +3,16 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
-from redis.asyncio import Redis
-from redis.asyncio.connection import ConnectionPool
-
 from platform_core.exceptions import ImproperlyConfiguredException
+from platform_core.facade.cache import ICacheService
+from platform_core.stores.base import NamespacedStore
 from platform_core.types import Empty, EmptyType
 from platform_core.utils.empty import value_or_default
+from redis import RedisCluster
 
-from platform_core.stores.base import NamespacedStore
+# from redis.asyncio import Redis
+from redis.asyncio.client import Redis
+from redis.asyncio.connection import ConnectionPool
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
 __all__ = ("RedisStore",)
 
 
-class RedisStore(NamespacedStore):
+class RedisStore(NamespacedStore, ICacheService):
     """Redis based, thread and process safe asynchronous key/value store."""
 
     __slots__ = (
@@ -78,7 +80,25 @@ class RedisStore(NamespacedStore):
         """
         )
 
-    async def _shutdown(self) -> None:
+    @property
+    def redis(self) -> Redis:
+        """Get the underlying :class:`redis.asyncio.Redis` instance."""
+        return self._redis
+
+    def is_cluster(self) -> bool:
+        """Check if the connected Redis instance is a cluster."""
+        # return self._redis.connection_pool.__class__.__name__ == "ClusterConnectionPool"
+        return isinstance(self._redis, RedisCluster)
+
+    async def ping(self) -> bool:
+        """Ping the Redis server to check if it's available."""
+        try:
+            self._redis.ping()
+            return True
+        except Exception:
+            return False
+
+    async def shutdown(self) -> None:
         if self.handle_client_shutdown:
             await self._redis.aclose(close_connection_pool=True)  # type: ignore[attr-defined]
 
@@ -88,7 +108,7 @@ class RedisStore(NamespacedStore):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        await self._shutdown()
+        await self.shutdown()
 
     @classmethod
     def with_client(

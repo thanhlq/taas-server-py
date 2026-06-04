@@ -74,6 +74,7 @@ class ProjectController(BaseController):
     tags = ('Project API',)
 
     @get('/', ratelimit='60/minute')
+    # @cache(expire=30)  # Cache this endpoint for 30 seconds
     async def list_projects(self) -> list[Project]:
         return await get_sample_projects()
 

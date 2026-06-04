@@ -15,7 +15,7 @@ def main():
 
     from .app import app
 
-    if settings.server.RELOAD or settings.server.WORKERS > 1:
+    if settings.server.RELOAD or settings.server.WORKERS > 1 or os.getenv('WEB_CONCURRENCY') is not None:
         run_uvicorn(ASGI_APP_PACKAGE, reload=settings.server.RELOAD, workers=settings.server.WORKERS)
 
     else:

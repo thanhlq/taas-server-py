@@ -48,7 +48,7 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
 
     table.add_row(
         'App id',
-        f'{app.get_app_id()}, type={type(app.get_app()).__name__}',
+        f'{app.get_app_id()}, type={type(app.get_app()).__name__}, pid={os.getpid()}',
     )
     table.add_row(
         'VERSION',

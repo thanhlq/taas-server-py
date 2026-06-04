@@ -42,7 +42,7 @@ def run_uvicorn(
         reload=reload,
         log_config=log_config,
         log_level=log_level,
-        workers=workers,
+        # workers=workers,
         access_log=False,  # Disable Uvicorn's default access log to reduce noise; use custom logging in the app instead
         # loop='auto',
     )

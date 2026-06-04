@@ -291,6 +291,8 @@ class AppSettings:
     ENV_SECRETS: str = field(default_factory=get_env('ENV_SECRETS', 'runtime-secrets'))
     """Path to environment secrets."""
 
+    CACHE_ENABLED: bool = field(default_factory=get_env('CACHE_ENABLED', True, bool))
+    API_CACHE_PREFIX: str = field(default_factory=get_env('API_CACHE_PREFIX', 'api_cache'))
     CACHE_LRU_SIZE: int = 10000 # Default max size for LRU cache (number of entries)
     CACHE_EXPIRES_AFTER: int = 300 # 5 minutes
 

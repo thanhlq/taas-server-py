@@ -1,6 +1,5 @@
-from typing import Literal, Optional, List, Tuple, Callable
 from dataclasses import dataclass
-from typing_extensions import TypeAlias
+from typing import List, Literal, Optional, Tuple
 
 # Simple / fallback defaults for Redis connection parameters.
 REDIS_HOST_DEFAULT = 'redis'
@@ -24,6 +23,8 @@ class RedisConfig:
     port: Optional[int] = None
     password: Optional[str] = None
     socket_timeout: float = 0.5
+    ttl: int = 60
+    key_prefix: str = 'api-cache'
     db: Optional[int] = 0
     sentinel_master_name: Optional[str] = None
     # others

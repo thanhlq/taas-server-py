@@ -13,8 +13,8 @@ import socketio
 from ews import ews_conrrollers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+from http_fastapi import create_app, initFastapiCache
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
-from http_fastapi.fastapi_app import create_app
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import iam_controllers
 from platform_core.cli import cli_print_info
@@ -50,6 +50,8 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
         @asynccontextmanager
         async def lifespan(application: FastAPI):
+
+            await initFastapiCache()
 
             # Validate the manager is what we configured. Blocks startup if not.
             if self.config.websocket_config and self.config.websocket_config.debug:

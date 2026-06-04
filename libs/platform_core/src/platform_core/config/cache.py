@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from platform_core.config.redis_config import RedisConfig
 from platform_core.utils.env_utils import get_env
 
 __all__ = ('CacheConfig',)
@@ -65,3 +66,13 @@ class CacheConfig:
     )
     """Prefix for keys written to the storage backend — lets you share one
     Redis with other apps without collisions."""
+
+    def get_redis_config(self) -> RedisConfig:
+        """Return a RedisConfig object built from the Redis-related fields of this config."""
+        return RedisConfig(
+            host=self.redis_host,
+            password=self.redis_password,
+            ttl=self.ttl,
+            key_prefix=self.key_prefix,
+            sentinel_master_name=self.redis_master_name,
+        )

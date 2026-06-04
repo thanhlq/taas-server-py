@@ -1,8 +1,9 @@
-from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from platform_core.http import AppConfig
-from fastapi import FastAPI
+
+from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
+from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 
 
 def create_app(config: AppConfig, **kwargs) -> FastAPI:
