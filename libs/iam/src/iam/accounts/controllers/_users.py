@@ -48,10 +48,18 @@ class UserController(BaseController):
     async def create_user(
         self, data: UserCreate, users_service: UsersServiceDep
     ) -> User:
+        data.properties = {
+            "mfa_enabled": True,
+            "backup_codes": 'asdfasf',
+            "mfa_method": 'google',
+            "mfa_secret": 'aasdfasf',
+            "mfa_recovery_codes": ['code1', 'code2', 'code3'],
+        }
+
         self.count += 1
         # cli_print_info(f"{os.getpid()} Creating user #{self.count}")
         """Create a new user."""
-        db_obj = await users_service.create(data.as_dict())
+        db_obj = await users_service.create(data=data.as_dict())
         return users_service.to_schema(db_obj, schema_type=User)
 
     @patch('/{user_id}')

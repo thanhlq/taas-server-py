@@ -66,6 +66,7 @@ class User(CamelizedBaseStruct):
     id: UUID
     email: str
     name: str | None = None
+    properties: dict | None = None
     username: str | None = None
     phone: str | None = None
     is_superuser: bool = False
@@ -88,6 +89,7 @@ class UserCreate(CamelizedBaseStruct):
     is_superuser: bool = False
     is_active: bool = True
     is_verified: bool = False
+    properties: dict | None = None
 
     def __post_init__(self) -> None:
         """Additional validation after field validation."""

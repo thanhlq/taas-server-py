@@ -12,6 +12,7 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
+from platform_core.utils.cache import async_cache_ttl_ignore_first_arg
 from platform_core.utils.datetime_utils import now_in_utc
 
 if TYPE_CHECKING:
@@ -31,6 +32,12 @@ samples_project2: list[ProjectEntityPy] = [
     ProjectEntityPy(id=1, name='Sample Project', created_at=now_in_utc()),
     ProjectEntityPy(id=2, name='Another Project', created_at=now_in_utc()),
 ]
+
+@async_cache_ttl_ignore_first_arg()
+async def get_sample_projects() -> list[Project]:
+    """Demo feed of projects."""
+    print("✅ Fetching projects from the database...")  # To show when the cache is hit/missed.
+    return samples_project
 
 
 def _sample_task_notifications(project_id: int) -> list[TaskNotification]:
@@ -66,9 +73,9 @@ class ProjectController(BaseController):
     api_prefix = '/api/v1/projects'
     tags = ('Project API',)
 
-    @get('/', ratelimit='3/minute')
-    def list_projects(self) -> list[Project]:
-        return samples_project
+    @get('/', ratelimit='60/minute')
+    async def list_projects(self) -> list[Project]:
+        return await get_sample_projects()
 
     @get(path='/p2', ratelimit='2/minute')
     def list_projects2(self) -> list[ProjectEntityPy]:

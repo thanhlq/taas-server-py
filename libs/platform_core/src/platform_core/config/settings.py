@@ -291,6 +291,9 @@ class AppSettings:
     ENV_SECRETS: str = field(default_factory=get_env('ENV_SECRETS', 'runtime-secrets'))
     """Path to environment secrets."""
 
+    CACHE_LRU_SIZE: int = 10000 # Default max size for LRU cache (number of entries)
+    CACHE_EXPIRES_AFTER: int = 300 # 5 minutes
+
     @property
     def google_oauth_enabled(self) -> bool:
         """Check if Google OAuth is configured.

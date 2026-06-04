@@ -35,6 +35,13 @@ settings: Settings = get_settings()
 
 class User(UUIDv7AuditBase):
     __tablename__ = USER_ACCOUNT_TABLE
+    """Hashed backup codes for MFA recovery."""
+    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )
+    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )
     email: Mapped[str] = mapped_column(unique=False, index=True, nullable=False)
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     username: Mapped[str | None] = mapped_column(
@@ -62,6 +69,7 @@ class User(UUIDv7AuditBase):
     status: Mapped[str | None] = mapped_column(
         String(length=30), index=True, nullable=True, default=None
     )
+    properties: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     password_reset_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     failed_reset_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
     reset_locked_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
@@ -85,14 +93,6 @@ class User(UUIDv7AuditBase):
         deferred=True,
         deferred_group="security_sensitive",
     )
-    """Hashed backup codes for MFA recovery."""
-    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
-    )
-    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
-    )
-
     # Relationships
 
     roles: Mapped[list[UserRole]] = relationship(

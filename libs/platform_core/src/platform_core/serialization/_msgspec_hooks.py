@@ -14,16 +14,16 @@ from ipaddress import (
 )
 from pathlib import Path, PurePath
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, Mapping, TypeVar, overload
+from typing import Any, Callable, Mapping, TypeVar, overload
 from uuid import UUID
 
 import msgspec
 
 from platform_core.datastructures.secret_values import SecretBytes, SecretString
 from platform_core.exceptions.base_exceptions import SerializationException
+from platform_core.types.composite_types import TypeDecodersSequence, TypeEncodersMap
 from platform_core.types.empty import Empty, EmptyType
 from platform_core.utils.typing import get_origin_or_inner_type
-from platform_core.types.composite_types import TypeDecodersSequence, TypeEncodersMap
 
 T = TypeVar("T")
 
@@ -146,6 +146,8 @@ def encode_json(value: Any, serializer: Callable[[Any], Any] | None = None) -> b
         SerializationException: If error encoding ``obj``.
     """
     try:
+        print(f"🔄 Serializing value of type {type(value)} with {serializer=}")
+        print(f"🔄 Serializing value: {value}")
         return msgspec.json.encode(value, enc_hook=serializer) if serializer else _msgspec_json_encoder.encode(value)
     except (TypeError, msgspec.EncodeError) as msgspec_error:
         raise SerializationException(str(msgspec_error)) from msgspec_error
@@ -191,6 +193,7 @@ def decode_json(  # type: ignore[misc]
         SerializationException: If error decoding ``value``.
     """
     try:
+        print(f"🔄 Decoding value of type {type(value)} with {target_type=}, {type_decoders=}, {strict=}")
         if target_type is Empty:
             return _msgspec_json_decoder.decode(value)
         return msgspec.json.decode(

@@ -8,6 +8,9 @@ From the repo root:
 
 ```bash
 uv run --package platform_core pytest -v libs/platform_core/tests/unit_local
+
+# single file
+uv run --package platform_core pytest -v libs/platform_core/tests/unit_local/test_async_cache_ttl_ignore_all_arg.py
 ```
 
 Or from this package:

@@ -23,6 +23,7 @@ dependencies = [
     "python-socketio==5.16.2",
     # To check if needed
     # "trio==0.33.0",
+    "cachetools==7.1.4",
 ]
 
 [build-system]
