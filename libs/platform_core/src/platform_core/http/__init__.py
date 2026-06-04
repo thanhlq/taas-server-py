@@ -30,6 +30,7 @@ from platform_core.http.route import (
 )
 
 from . import status
+from .cache import cache
 
 __all__ = [
     'BaseController',
@@ -48,5 +49,6 @@ __all__ = [
     'route',
     'socketio_event',
     'websocket',
+    'cache',
     'status',
 ]

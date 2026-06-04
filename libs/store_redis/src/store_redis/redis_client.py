@@ -1,14 +1,10 @@
-from typing import Literal, Optional, List, Tuple, Callable
-from dataclasses import dataclass
-from typing_extensions import TypeAlias
+from typing import Callable, Optional
 
 import redis.asyncio as aioredis
-import redis.asyncio.sentinel as sentinel
 import redis.asyncio.cluster as redis_cluster
-from redis.asyncio.cluster import ClusterNode
-
-
+import redis.asyncio.sentinel as sentinel
 from platform_core.config.redis_config import RedisConfig
+from redis.asyncio.cluster import ClusterNode
 
 type GET_ENV = Callable[[str, Optional[str]], str]
 
@@ -18,7 +14,8 @@ def create_single_redis_client(
 ) -> aioredis.Redis:
     """Direct Redis connection — use against a standalone instance."""
 
-    if 'redis://' not in config.get_host():
+    host = config.get_host()
+    if 'redis://' not in host:
         host = f'redis://{config.host}:{config.port}'
 
     return aioredis.from_url(

@@ -6,6 +6,7 @@ from fastapi_cache.coder import PickleCoder
 from http_fastapi.middewares.cache_key_builer import custom_cache_key_builder
 from http_fastapi.middewares.redis_backend import FastapiCacheBackend
 from platform_core.config import get_settings
+from platform_core.exceptions.report_error import report_error
 from platform_core.facade.cache import ICacheService
 from platform_core.state.service_registry import register_service
 
@@ -53,9 +54,11 @@ async def initFastapiCache():
             )
             logger.info('🌐 🧰  Fast API Cache initialized with Redis backend')
         except Exception as redis_error:
+            report_error(redis_error, title='Error initializing FastAPI Cache', extra_context={'redis_host': _cache_config.redis_host})
             logger.warning(
                 f'Failed to connect to Redis: {redis_error}. Falling back to in-memory cache.'
             )
+
             # Fallback to in-memory cache if Redis is not available
             FastAPICache.init(
                 backend=InMemoryBackend(),

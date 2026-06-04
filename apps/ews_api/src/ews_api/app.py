@@ -53,6 +53,10 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
             await initFastapiCache()
 
+            _controllers = self.get_app_controllers()
+            for controller in _controllers:
+                include_controller(_fastapi_app, controller)
+
             # Validate the manager is what we configured. Blocks startup if not.
             if self.config.websocket_config and self.config.websocket_config.debug:
                 from platform_core.http._socketio import verify_socketio_manager
@@ -72,8 +76,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
             logger=self.logger, app_config=self.config, lifespan=lifespan
         )
         _controllers = self.get_app_controllers()
-        for controller in _controllers:
-            include_controller(_fastapi_app, controller)
         if self.is_websocket_enabled():
             websocket_config: WebSocketConfig = self.config.websocket_config  # type: ignore
             self._socketio_app, server = create_socketio_asgi_app(

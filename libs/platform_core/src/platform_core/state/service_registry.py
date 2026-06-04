@@ -51,6 +51,10 @@ class ServiceRegistry:
         # If singleton and already an instance, cache it immediately — no lazy init needed
         if singleton and not callable(implementation):
             self._singletons[interface_type] = implementation
+
+        print(
+            f'{"Registered" if singleton else "Registered transient"} service: {interface_type.__name__} -> {implementation if callable(implementation) else type(implementation).__name__}'
+        )
         return cast(T, implementation)
 
     def get[T](self, interface_type: Type[T], raise_if_not_found: bool = True) -> T:

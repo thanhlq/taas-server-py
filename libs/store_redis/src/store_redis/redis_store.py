@@ -93,7 +93,7 @@ class RedisStore(NamespacedStore, ICacheService):
     async def ping(self) -> bool:
         """Ping the Redis server to check if it's available."""
         try:
-            self._redis.ping()
+            await self._redis.ping() # type: ignore
             return True
         except Exception:
             return False

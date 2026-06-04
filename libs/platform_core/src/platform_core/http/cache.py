@@ -110,14 +110,12 @@ def _locate_param(
     annotation identity. If not found, the injectable placeholder is appended
     to ``to_inject`` so callers know to add it to the public signature.
     """
-    # 1. exact name match (framework-agnostic — looks for `request` / `response`)
-    for candidate_name in (dep.name, dep.name.replace(f"{dep.name.rsplit('_', 1)[0]}_", "")):
-        if candidate_name in sig.parameters:
-            return sig.parameters[candidate_name]
-    # also try plain "request" / "response"
+    # 1. exact name match — look for plain ``request`` / ``response`` first
     short = "request" if "request" in dep.name else "response"
     if short in sig.parameters:
         return sig.parameters[short]
+    if dep.name in sig.parameters:
+        return sig.parameters[dep.name]
     # 2. annotation identity match
     param = next(
         (p for p in sig.parameters.values() if p.annotation is dep.annotation),
@@ -190,12 +188,12 @@ def cache(
     """
 
     injected_request = Parameter(
-        name=f"{injected_dependency_namespace}_request",
+        name="request",
         annotation=RequestLike,
         kind=Parameter.KEYWORD_ONLY,
     )
     injected_response = Parameter(
-        name=f"{injected_dependency_namespace}_response",
+        name="response",
         annotation=ResponseLike,
         kind=Parameter.KEYWORD_ONLY,
     )
@@ -219,10 +217,17 @@ def cache(
             nonlocal expire
             nonlocal key_builder
 
+            # Only strip request/response from the forwarded kwargs when WE
+            # injected them — if the user already declared those params we
+            # must pass them through.
+            _strip_request = injected_request in to_inject
+            _strip_response = injected_response in to_inject
+
             async def _call(*a: P.args, **kw: P.kwargs) -> R:
-                # Don't leak our injected helpers into the user's function.
-                kw.pop(injected_request.name, None)
-                kw.pop(injected_response.name, None)
+                if _strip_request:
+                    kw.pop(request_param.name, None)
+                if _strip_response:
+                    kw.pop(response_param.name, None)
                 if iscoroutinefunction(func):
                     return await func(*a, **kw)
                 return cast(R, func(*a, **kw))

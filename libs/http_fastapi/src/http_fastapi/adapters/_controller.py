@@ -8,7 +8,9 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, FastAPI
 from platform_core.http import BaseController, Route, WebSocketRoute
+from platform_core.http.cache import RequestLike, ResponseLike
 from starlette.requests import Request
+from starlette.responses import Response
 from starlette.websockets import WebSocket
 
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
@@ -80,12 +82,68 @@ def _add_route(router: APIRouter, route: Route, limiter: Any = None) -> None:
     if route.rate_limit and limiter is not None:
         endpoint = _apply_rate_limit(endpoint, route.rate_limit, limiter)
 
+    endpoint = _retarget_cache_injected_params(endpoint)
+
     router.add_api_route(
         path=route.path,
         endpoint=endpoint,
         methods=list(route.methods),
         **kwargs,
     )
+
+
+def _retarget_cache_injected_params(handler: Callable[..., Any]) -> Callable[..., Any]:
+    """Rewrite ``RequestLike``/``ResponseLike`` annotations on a handler.
+
+    The framework-agnostic ``@cache`` decorator injects extra keyword-only
+    parameters typed as ``RequestLike`` / ``ResponseLike`` (``Protocol``\\s)
+    when the wrapped endpoint doesn't already declare ``request`` /
+    ``response``. FastAPI can't build a dependant from a ``Protocol``
+    annotation, so we substitute the concrete Starlette types here. The
+    handler still receives the same objects under the same parameter names
+    — only the public signature is updated.
+    """
+    sig = inspect.signature(handler)
+    params = list(sig.parameters.values())
+    # ``@functools.wraps`` (used by slowapi_advanced and others) sets
+    # ``__wrapped__`` on the wrapper, which causes ``inspect.signature`` to
+    # follow through to the underlying function — re-introducing ``self``
+    # even when the caller passed us a bound method. Strip it explicitly.
+    strip_self = bool(params) and params[0].name == 'self'
+    if strip_self:
+        params = params[1:]
+    new_params: list[inspect.Parameter] = []
+    changed = strip_self
+    for p in params:
+        if p.annotation is RequestLike:
+            new_params.append(p.replace(annotation=Request))
+            changed = True
+        elif p.annotation is ResponseLike:
+            new_params.append(p.replace(annotation=Response))
+            changed = True
+        else:
+            new_params.append(p)
+    if not changed:
+        return handler
+    new_sig = sig.replace(parameters=new_params)
+
+    # Wrap in a fresh function so we can attach ``__signature__`` without
+    # mutating the underlying ``__func__`` (which would re-introduce
+    # ``self`` on every other call site).
+    if asyncio.iscoroutinefunction(handler):
+        async def wrapped(*args: Any, **kwargs: Any) -> Any:
+            return await handler(*args, **kwargs)
+    else:
+        def wrapped(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+            return handler(*args, **kwargs)
+
+    wrapped.__name__ = getattr(handler, '__name__', 'cache_endpoint')
+    wrapped.__qualname__ = getattr(handler, '__qualname__', wrapped.__name__)
+    wrapped.__module__ = getattr(handler, '__module__', __name__)
+    wrapped.__doc__ = getattr(handler, '__doc__', None)
+    from typing import cast as _cast
+    _cast(Any, wrapped).__signature__ = new_sig
+    return wrapped
 
 
 def _apply_rate_limit(
