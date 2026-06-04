@@ -12,7 +12,7 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
-from platform_core.utils.cache import async_cache_ttl_ignore_first_arg
+from platform_core.utils.cache import a_ttl_cache_ignore_1st_arg
 from platform_core.utils.datetime_utils import now_in_utc
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ samples_project2: list[ProjectEntityPy] = [
     ProjectEntityPy(id=2, name='Another Project', created_at=now_in_utc()),
 ]
 
-@async_cache_ttl_ignore_first_arg()
+@a_ttl_cache_ignore_1st_arg()
 async def get_sample_projects() -> list[Project]:
     """Demo feed of projects."""
     print("✅ Fetching projects from the database...")  # To show when the cache is hit/missed.

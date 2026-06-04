@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from platform_core.utils.cache import async_cache_ttl_ignore_all_arg
+from platform_core.utils.cache import a_ttl_cache_ignore_all_args
 
 pytestmark = pytest.mark.asyncio
 
@@ -27,8 +27,8 @@ pytestmark = pytest.mark.asyncio
 #   - "bare":   @async_cache_ttl_ignore_all_arg
 #   - "called": @async_cache_ttl_ignore_all_arg()
 DECORATOR_STYLES = [
-    pytest.param(lambda: async_cache_ttl_ignore_all_arg, id="bare"),
-    pytest.param(lambda: async_cache_ttl_ignore_all_arg(), id="called"),
+    pytest.param(lambda: a_ttl_cache_ignore_all_args, id="bare"),
+    pytest.param(lambda: a_ttl_cache_ignore_all_args(), id="called"),
 ]
 
 
@@ -156,7 +156,7 @@ class TestAsyncCacheTtlIgnoreAllArg:
         # This behaviour is TTL-specific, so drive it through an explicit ttl.
         calls = 0
 
-        @async_cache_ttl_ignore_all_arg(ttl=1)
+        @a_ttl_cache_ignore_all_args(ttl=1)
         async def fetch() -> int:
             nonlocal calls
             calls += 1
