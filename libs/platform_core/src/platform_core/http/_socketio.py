@@ -11,13 +11,13 @@ Business handlers never import ``socketio`` directly; they accept a
 :class:`SocketIOSession` and rely on the ``@socketio_event`` decorator.
 """
 from __future__ import annotations
-from platform_core.cli import cli_print_info, cli_print_debug
-from logging import Logger
 
+from logging import Logger
 from typing import Any
 
 import socketio
 
+from platform_core.cli import cli_print_debug, cli_print_info
 from platform_core.http.controller import BaseController
 
 

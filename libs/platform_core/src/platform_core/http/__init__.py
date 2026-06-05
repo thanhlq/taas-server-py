@@ -32,6 +32,8 @@ from platform_core.http.route import (
 from . import status
 from .cache import cache
 
+from ._socketio import verify_socketio_manager
+
 __all__ = [
     'BaseController',
     'BaseApiApplication',
@@ -51,4 +53,5 @@ __all__ = [
     'websocket',
     'cache',
     'status',
+    'verify_socketio_manager',
 ]
