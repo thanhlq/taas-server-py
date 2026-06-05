@@ -1,4 +1,9 @@
-from .base_exceptions import BaseException, MissingDependencyException, TaasWarning
+from .base_exceptions import (
+    BaseException,
+    MissingDependencyException,
+    SerializationException,
+    TaasWarning,
+)
 from .exceptions import (
     EmailAuthenticationError,
     EmailBackendError,
@@ -28,6 +33,7 @@ __all__ = [
     'BaseException',
     'MissingDependencyException',
     'TaasWarning',
+    'SerializationException',
     'HTTPException',
     'ClientException',
     'ImproperlyConfiguredException',

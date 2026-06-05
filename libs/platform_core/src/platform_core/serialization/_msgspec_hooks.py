@@ -20,7 +20,7 @@ from uuid import UUID
 import msgspec
 
 from platform_core.datastructures.secret_values import SecretBytes, SecretString
-from platform_core.exceptions.base_exceptions import SerializationException
+from platform_core.exceptions import SerializationException
 from platform_core.types.composite_types import TypeDecodersSequence, TypeEncodersMap
 from platform_core.types.empty import Empty, EmptyType
 from platform_core.utils.typing import get_origin_or_inner_type

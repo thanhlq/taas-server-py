@@ -4,10 +4,21 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
+
 dependencies = [
     'msgspec==0.21.1',
     'pydantic==2.13.4',
 ]
+
+[tool.ty.environment]
+# Explicitly point ty to a specific Python virtual environment interpreter
+python = ".venv/bin/python"
+
+# Tell ty where your primary code is located if using custom structures
+root = ["./app", "./packages"]
+
+# Provide extra lookup locations for module resolution
+extra-paths = ["./submodules/external-lib"]
 
 [tool.uv.workspace]
 members = [

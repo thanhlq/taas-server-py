@@ -2,52 +2,31 @@
 
 from __future__ import annotations
 
-import re
 from collections import abc, defaultdict, deque
 from typing import (
     AbstractSet,
     Any,
-    AsyncGenerator,
-    AsyncIterable,
-    AsyncIterator,
-    Awaitable,
-    Collection,
-    Container,
-    Coroutine,
     DefaultDict,
     Deque,
     Dict,
     FrozenSet,
-    Generator,
-    ItemsView,
-    Iterable,
-    Iterator,
-    KeysView,
     List,
     Mapping,
-    MappingView,
     MutableMapping,
     MutableSequence,
     MutableSet,
-    Reversible,
     Sequence,
     Set,
     Tuple,
-    TypeVar,
-    Union,
-    ValuesView,
-    cast,
 )
 
 from typing_extensions import (
     Annotated,
-    NewType,
     NotRequired,
     ReadOnly,
     Required,
     get_args,
     get_origin,
-    get_type_hints,
 )
 
 wrapper_type_set = {Annotated, Required, NotRequired, ReadOnly}

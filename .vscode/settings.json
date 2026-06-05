@@ -18,7 +18,7 @@
   },
   "ruff.configuration": "./ruff.toml",
   "python.languageServer": "Pylance",
-  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   // "python.analysis.autoSearchPaths": true,
   "python.analysis.autoImportCompletions": true,
   "python.analysis.includeInSetting": [
