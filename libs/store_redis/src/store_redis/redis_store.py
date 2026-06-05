@@ -45,7 +45,7 @@ class RedisStore(NamespacedStore, ICacheService):
             handle_client_shutdown: If ``True``, handle the shutdown of the `redis` instance automatically during the store's lifespan. Should be set to `True` unless the shutdown is handled externally
         """
         self._redis = redis
-        self.namespace: str | None = value_or_default(namespace, "LITESTAR")
+        self.namespace: str | None = value_or_default(namespace, "TAAS")
         self.handle_client_shutdown = handle_client_shutdown
 
         # script to get and renew a key in one atomic step

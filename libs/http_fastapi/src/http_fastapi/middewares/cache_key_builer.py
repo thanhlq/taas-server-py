@@ -16,11 +16,12 @@
 #         request.url.path,
 #         repr(sorted(request.query_params.items()))
 #     ])
-from fastapi import Request, Response
+# from fastapi import Request, Response
 
 
 # Based on request url, method, path
 # Not working
+from starlette.requests import Request
 def request_key_builder(
     func,
     namespace: str = '',

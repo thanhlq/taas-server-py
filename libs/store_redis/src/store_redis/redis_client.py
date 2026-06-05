@@ -18,6 +18,8 @@ def create_single_redis_client(
     if 'redis://' not in host:
         host = f'redis://{config.host}:{config.port}'
 
+    print(f'Creating single Redis client with host: {host}')
+
     return aioredis.from_url(
         f'{host}',
         password=config.password,

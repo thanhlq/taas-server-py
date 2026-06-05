@@ -4,7 +4,7 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.coder import PickleCoder
 from http_fastapi.middewares.cache_key_builer import custom_cache_key_builder
-from http_fastapi.middewares.redis_backend import FastapiCacheBackend
+from http_fastapi.middewares.fastapi_cache_backend import FastapiCacheBackend
 from platform_core.config import get_settings
 from platform_core.exceptions.report_error import report_error
 from platform_core.facade.cache import ICacheService

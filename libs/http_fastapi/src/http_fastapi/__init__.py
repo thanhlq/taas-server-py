@@ -1,4 +1,4 @@
-from .fastapi_app import create_app
+from .create_app import create_app
 from .middewares.fastapi_cache import initFastapiCache
 
 __all__ = [

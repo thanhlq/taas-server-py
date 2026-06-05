@@ -20,7 +20,7 @@ class RedisConfig:
 
     mode: Optional[Literal['single', 'sentinel', 'cluster']] = None
     host: Optional[str] = None
-    port: Optional[int] = None
+    port: Optional[int] = 6379
     password: Optional[str] = None
     socket_timeout: float = 0.5
     ttl: int = 60

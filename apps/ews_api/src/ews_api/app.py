@@ -5,7 +5,6 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
-
 from logging import Logger
 from typing import Any, Optional
 
@@ -13,15 +12,18 @@ import socketio
 from ews import ews_conrrollers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
-from http_fastapi import create_app, initFastapiCache
+from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import iam_controllers
 from platform_core.cli import cli_print_info
 from platform_core.config import Settings
 from platform_core.config.wss import WebSocketConfig
+from platform_core.facade.cache import ICacheService
 from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
 from platform_core.http.base_app import AppConfig, BaseApiApplication
+from platform_core.state.service_registry import register_service
+from store_redis import RedisStore, create_redis_client
 
 from .setup_env import root_path, settings
 
@@ -51,7 +53,11 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         @asynccontextmanager
         async def lifespan(application: FastAPI):
 
-            await initFastapiCache()
+            # await initFastapiCache()
+            _cache_config = settings.app.get_cache_config()
+            _redis_client = create_redis_client(_cache_config.get_redis_config())
+            _redis_store = RedisStore(_redis_client)
+            register_service(ICacheService, _redis_store)
 
             _controllers = self.get_app_controllers()
             for controller in _controllers:

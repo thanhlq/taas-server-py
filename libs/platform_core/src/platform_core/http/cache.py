@@ -39,6 +39,8 @@ from platform_core.facade.cache import ICacheService
 from platform_core.serialization import decode_json, encode_json
 from platform_core.state.service_registry import get_service
 
+from .cache_key_builer import custom_cache_key_builder
+
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -173,7 +175,7 @@ def _default_key_builder(
 # ---------------------------------------------------------------------------
 def cache(
     expire: Optional[int] = None,
-    key_builder: Optional[KeyBuilder] = None,
+    key_builder: Optional[KeyBuilder] = custom_cache_key_builder,
     namespace: str = "",
     injected_dependency_namespace: str = "__platform_cache",
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[Union[R, ResponseLike]]]]:
