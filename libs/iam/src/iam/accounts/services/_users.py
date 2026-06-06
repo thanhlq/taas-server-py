@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import db.models.core as m
-from advanced_alchemy.extensions.litestar import repository, service
+from advanced_alchemy.extensions.fastapi import repository, service
 from iam.constants import Roles
 
 

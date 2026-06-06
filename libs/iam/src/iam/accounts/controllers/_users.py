@@ -6,6 +6,7 @@ from uuid import UUID
 from advanced_alchemy.service import OffsetPagination
 from fastapi import Depends
 from platform_core.db.advanced_session_manager import get_db_async_generator
+from platform_core.exceptions.report_error import report_error
 from platform_core.http import BaseController, delete, get, patch, post, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,10 +58,13 @@ class UserController(BaseController):
         }
 
         self.count += 1
-        # cli_print_info(f"{os.getpid()} Creating user #{self.count}")
-        """Create a new user."""
-        db_obj = await users_service.create(data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=User)
+
+        try:
+
+            db_obj = await users_service.create(data=data.as_dict())
+            return users_service.to_schema(db_obj, schema_type=User)
+        except Exception as e:
+            report_error(e)
 
     @patch('/{user_id}')
     async def update_user(
