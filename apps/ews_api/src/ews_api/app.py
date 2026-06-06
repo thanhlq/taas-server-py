@@ -65,14 +65,14 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
             # Validate the manager is what we configured. Blocks startup if not.
             if self.config.websocket_config and self.config.websocket_config.debug:
-                from platform_core.http._socketio import verify_socketio_manager
+                pass
 
-                await verify_socketio_manager(
-                    server,  # the AsyncServer instance
-                    expect_redis=True,  # only require Redis when we asked for it
-                    roundtrip=True,  # set False to skip the pub/sub probe
-                    timeout=2.0,
-                )
+                # await verify_socketio_manager(
+                #     server,  # the AsyncServer instance
+                #     expect_redis=True,  # only require Redis when we asked for it
+                #     roundtrip=True,  # set False to skip the pub/sub probe
+                #     timeout=2.0,
+                # )
 
             yield  # Startup complete, now run the app
 

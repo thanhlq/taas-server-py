@@ -18,8 +18,8 @@ class RedisConfig:
       The mode is used to determine which client to create and test against.
     """
 
-    mode: Optional[Literal['single', 'sentinel', 'cluster']] = None
-    host: Optional[str] = None
+    mode: Optional[Literal['single', 'sentinel', 'cluster']] = 'single'
+    host: Optional[str] = 'redis'
     port: Optional[int] = 6379
     password: Optional[str] = None
     socket_timeout: float = 0.5
@@ -32,41 +32,11 @@ class RedisConfig:
     decode_responses: bool = True
 
     def __post_init__(self):
-        if not self.mode:
-            self.mode = 'single'  # Default to single mode if not specified
-        if self.mode == 'single':
-            if not self.host:
-                self.host = REDIS_HOST_DEFAULT
-            # For single mode, we expect a single host:port pair.
-            if ',' in self.host:
-                raise ValueError(
-                    'For single mode, hosts should be a single host:port pair.'
-                )
-        elif self.mode == 'sentinel':
-            # For sentinel and cluster modes, we expect multiple host:port pairs.
-            if not self.host:
-                raise ValueError(
-                    'For sentinel mode, hosts should be provided as a comma-separated list of host:port pairs.'
-                )
-            if ',' not in self.host:
-                raise ValueError(
-                    'For sentinel mode, hosts should be a comma-separated list of host:port pairs.'
-                )
-        elif self.mode == 'cluster':
-            if not self.host:
-                raise ValueError(
-                    'For cluster mode, hosts should be provided as a comma-separated list of host:port pairs.'
-                )
-            if self.password is None:
-                self.password = REDIS_CLUSTER_PASSWORD_DEFAULT
-            if ',' not in self.host:
-                raise ValueError(
-                    'For cluster mode, hosts should be a comma-separated list of host:port pairs.'
-                )
-        else:
-            raise ValueError(
-                "Invalid mode. Expected 'single', 'sentinel', or 'cluster'."
-            )
+
+        if ',' in self.host:
+            # does not support cluster yet
+            self.mode = 'sentinel'  # auto-detect sentinel mode if multiple hosts are provided
+
 
     def get_sentinel_master_name(self) -> str:
         if not self.sentinel_master_name:
@@ -97,10 +67,12 @@ class RedisConfig:
                 return f'redis://:{self.password}@{self.get_host()}:{self.get_port()}/{self.db}'
             return f'redis://{self.get_host()}:{self.get_port()}/{self.db}'
         elif self.mode in ['sentinel', 'cluster']:
-            # For sentinel and cluster modes, we can return a comma-separated list of hosts.
+            # Notes:
+            # - ⚠️ limits (lib): url format: sentinel_url="redis+sentinel://:redis-password@localhost:26379/mymaster",
             if self.password:
-                return f'redis+{self.mode}://:{self.password}@{self.get_host()}/?db={self.db}'
-            return f'redis+{self.mode}://{self.get_host()}/?db={self.db}'
+                return f'redis+{self.mode}://:{self.password}@{self.get_host()}/{self.get_sentinel_master_name()}'
+            else:
+                return f'redis+{self.mode}://{self.get_host()}/{self.get_sentinel_master_name()}'
         else:
             raise ValueError(
                 "Invalid mode. Expected 'single', 'sentinel', or 'cluster'."

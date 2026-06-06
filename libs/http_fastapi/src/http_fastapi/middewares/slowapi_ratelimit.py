@@ -1,6 +1,7 @@
 # Integration of slowapi_advanced for rate limiting in FastAPI
 
 from fastapi import FastAPI
+from platform_core.cli import cli_print_info
 from platform_core.config.ratelimit import RateLimitConfig
 from platform_core.config.redis_config import RedisConfig
 from slowapi_advanced import Limiter, _rate_limit_exceeded_handler
@@ -23,6 +24,8 @@ def setup_fastapi_rate_limiting(app: FastAPI, config: RateLimitConfig) -> None:
         sentinel_master_name=config.redis_master_name,
         password=config.redis_password,
     ).get_all_in_one_redis_url()
+
+    cli_print_info(f'Setting up rate limiting with provider={config.provider}, url={url}, requests_per_minute={config.request_per_minute}')
 
     limiter = Limiter(
         key_func=get_remote_address, storage_uri=url, default_limits=[f'{config.request_per_minute}/minute']
