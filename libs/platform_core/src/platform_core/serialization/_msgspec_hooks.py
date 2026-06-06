@@ -146,8 +146,8 @@ def encode_json(value: Any, serializer: Callable[[Any], Any] | None = None) -> b
         SerializationException: If error encoding ``obj``.
     """
     try:
-        print(f"🔄 Serializing value of type {type(value)} with {serializer=}")
-        print(f"🔄 Serializing value: {value}")
+        # print(f"🔄 Serializing value of type {type(value)} with {serializer=}")
+        # print(f"🔄 Serializing value: {value}")
         return msgspec.json.encode(value, enc_hook=serializer) if serializer else _msgspec_json_encoder.encode(value)
     except (TypeError, msgspec.EncodeError) as msgspec_error:
         raise SerializationException(str(msgspec_error)) from msgspec_error
@@ -193,7 +193,7 @@ def decode_json(  # type: ignore[misc]
         SerializationException: If error decoding ``value``.
     """
     try:
-        print(f"🔄 Decoding value of type {type(value)} with {target_type=}, {type_decoders=}, {strict=}")
+        # print(f"🔄 Decoding value of type {type(value)} with {target_type=}, {type_decoders=}, {strict=}")
         if target_type is Empty:
             return _msgspec_json_decoder.decode(value)
         return msgspec.json.decode(
