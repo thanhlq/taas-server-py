@@ -23,19 +23,13 @@ class Amount(ValueObject):
     value: Decimal
     currency: Currency
 
-    def __init__(self, value: float | Decimal | str, currency: Currency, **data):
-        """Initialize amount with validation."""
-        decimal_value: Decimal
-        if isinstance(value, (float, str)):
-            decimal_value = Decimal(str(value))
-        else:
-            decimal_value = value  # type: ignore
+    def __post_init__(self) -> None:
+        """Coerce the value to Decimal and validate it is non-negative."""
+        if isinstance(self.value, (float, str)):
+            self.value = Decimal(str(self.value))
 
-        if decimal_value < 0:
+        if self.value < 0:
             raise ValidationError('Amount cannot be negative')
-
-        self.value = decimal_value
-        self.currency = currency
 
     def add(self, other: 'Amount') -> 'Amount':
         """Add two amounts of the same currency."""

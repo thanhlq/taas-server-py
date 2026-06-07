@@ -1,4 +1,5 @@
 # SHOULD INLUCDE IN local dev/test
+# Contain all core features for testing purpose only
 
 from typing import TYPE_CHECKING, Any
 
@@ -13,7 +14,14 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
+from platform_core.http.response.builders import (
+    create_error_response,
+    create_paginated_response,
+    create_success_response,
+)
+from platform_core.http.response.responses import ErrorResponse, PaginatedResponse
 from platform_core.utils.datetime_utils import now_in_utc
+from platform_core.utils.validation import ValidationError
 
 if TYPE_CHECKING:
     from platform_core.http._socketio import SocketIOSession
@@ -69,21 +77,37 @@ def _sample_task_notifications(project_id: int) -> list[TaskNotification]:
 
 
 class ProjectController(BaseController):
-    api_prefix = '/api/v1/projects'
-    tags = ('Project API',)
+    api_prefix = '/api/v1/test-apis'
+    tags = ('Project API TEST',)
 
-    @get('/', ratelimit='60/minute')
-    @cache(expire=30)  # Cache this endpoint for 30 seconds
+    @get('/cached-projects')
+    @cache(expire=5)  # Cache this endpoint for 5 seconds
     async def list_projects(self) -> list[Project]:
         return await get_sample_projects()
 
-    @get(path='/pydantic-serialization', ratelimit='2/minute')
+    @get('/rfc7807')
+    @cache(expire=5)  # Cache this endpoint for 5 seconds
+    async def list_projects_rfc7807(self) -> PaginatedResponse[Project]:
+        projects = await get_sample_projects()
+        return create_paginated_response(projects)
+
+    @get(path='/pydantic-serialization')
     def list_projects2(self) -> list[ProjectEntityPy]:
         return samples_project2
 
     @get(path='/rate-limit-3-per-minutes/{n}', ratelimit='3/minute')
     def list_projects3(self) -> list[ProjectEntityPy]:
         return samples_project2
+
+    @get(path='/{id}')
+    def get_projects_by_id(self, id: int) -> Project:
+        return create_success_response[Project](samples_project[id])
+
+    @get(path='/error')
+    def get_project_error(self) -> Project | ErrorResponse:
+        ex = ValidationError(f'Project with id {id} not found')
+        return create_error_response( ex, message=str(ex), status=404)
+
 
     @websocket('/tasks/notifications', name='project_task_notifications')
     async def task_notifications(self, socket: WebSocketSession) -> None:

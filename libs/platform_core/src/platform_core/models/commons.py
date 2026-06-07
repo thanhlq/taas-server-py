@@ -1,5 +1,4 @@
 from platform_core.serialization import BaseModel
-from wrapt import T
 
 
 class ValueObject(BaseModel):
