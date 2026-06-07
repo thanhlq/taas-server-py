@@ -347,6 +347,14 @@ def cache(
                 return await _call(*args, **kwargs)
 
         cast(Any, inner).__signature__ = _augment_signature(wrapped_signature, *to_inject)
+        # Record the names of the request/response parameters that WE injected
+        # (i.e. the endpoint did not declare them). FastAPI resolves these from
+        # ``__signature__`` directly, but frameworks that resolve type hints via
+        # ``typing.get_type_hints`` (e.g. Litestar, which reads ``__annotations__``)
+        # need to know which synthetic params to ignore. The adapter for such a
+        # framework can read this attribute to strip them from the exposed
+        # signature; the wrapper still accepts them as ``None`` at call time.
+        cast(Any, inner).__cache_injected_params__ = tuple(p.name for p in to_inject)
         return inner
 
     return wrapper
