@@ -1,13 +1,13 @@
 [project]
-name = "taas-server"
+name = "taas-server-py"
 version = "0.1.0"
-description = "Add your description here"
+description = "uv workspace for TAAS server Python services and libraries"
 readme = "README.md"
 requires-python = ">=3.14"
 
 dependencies = [
-    'msgspec==0.21.1',
-    'pydantic==2.13.4',
+    # 'msgspec==0.21.1',
+    # 'pydantic==2.13.4',
 ]
 
 [tool.ty.environment]
@@ -19,6 +19,9 @@ root = ["./app", "./packages"]
 
 # Provide extra lookup locations for module resolution
 extra-paths = ["./submodules/external-lib"]
+
+[tool.uv]
+package = false
 
 [tool.uv.workspace]
 members = [
@@ -68,4 +71,12 @@ dev = [
     "pytest-xdist>=3.5.0",
     "filelock>=3.12.0",
     "respx>=0.23.1",
+    "hiro>=1.1.1",
 ]
+
+# Root pyproject.toml
+# [tool.pytest.ini_options]
+# addopts = "--import-mode=importlib"
+# $ uv run pytest packages/ -v
+# packages/cli/tests/test_helpers.py::test_cli_helper PASSED    [ 50%]
+# packages/core/tests/test_helpers.py::test_core_helper PASSED  [100%]

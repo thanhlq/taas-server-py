@@ -14,12 +14,13 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
-from platform_core.http.response.builders import (
+from platform_core.http.response import (
+    ErrorResponse,
+    PaginatedResponse,
     create_error_response,
     create_paginated_response,
     create_success_response,
 )
-from platform_core.http.response.responses import ErrorResponse, PaginatedResponse
 from platform_core.utils.datetime_utils import now_in_utc
 from platform_core.utils.validation import ValidationError
 
@@ -105,7 +106,7 @@ class ProjectController(BaseController):
 
     @get(path='/error')
     def get_project_error(self) -> Project | ErrorResponse:
-        ex = ValidationError(f'Project with id {id} not found')
+        ex = ValidationError(f'Project with id {5} not found')
         return create_error_response( ex, message=str(ex), status=404)
 
 
