@@ -8,7 +8,7 @@ services:
     volumes:
        - .:/app
        - /app/.venv
-    command: sh -c "uv run --package ews_api python -m ews_api.main"
+    command: sh -c "uv run ews_api python -m ews_api"
     env_file:
       - .docker.env
 

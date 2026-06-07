@@ -26,7 +26,7 @@ def build_websocket_redis_manager(
         encoding='utf-8',
         decode_responses=False,  # socketio uses binary payloads
     )
-    url = rc.get_all_in_one_redis_url()
+    url = rc.get_all_in_one_redis_url(db=True)
 
     cli_print_debug(f'build_websocket_redis_manager: {url}')
 

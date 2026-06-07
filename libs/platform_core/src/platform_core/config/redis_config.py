@@ -57,7 +57,7 @@ class RedisConfig:
         """Parse the host string into a list of (host, port) tuples for cluster mode."""
         return _parse_sentinel_hosts(self.get_host())
 
-    def get_all_in_one_redis_url(self) -> str:
+    def get_all_in_one_redis_url(self, db: bool = False) -> str:
         """
         Construct a Redis URL that can be used by redis-py clients.
         Also support of password included in the URL if provided.
@@ -70,9 +70,15 @@ class RedisConfig:
             # Notes:
             # - ⚠️ limits (lib): url format: sentinel_url="redis+sentinel://:redis-password@localhost:26379/mymaster",
             if self.password:
-                return f'redis+{self.mode}://:{self.password}@{self.get_host()}/{self.get_sentinel_master_name()}'
+                if db:
+                    return f'redis+{self.mode}://:{self.password}@{self.get_host()}/{self.db}/{self.get_sentinel_master_name()}'
+                else:
+                    return f'redis+{self.mode}://:{self.password}@{self.get_host()}/{self.get_sentinel_master_name()}'
             else:
-                return f'redis+{self.mode}://{self.get_host()}/{self.get_sentinel_master_name()}'
+                if db:
+                    return f'redis+{self.mode}://{self.get_host()}/{self.db}/{self.get_sentinel_master_name()}'
+                else:
+                    return f'redis+{self.mode}://{self.get_host()}/{self.get_sentinel_master_name()}'
         else:
             raise ValueError(
                 "Invalid mode. Expected 'single', 'sentinel', or 'cluster'."

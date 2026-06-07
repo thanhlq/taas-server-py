@@ -25,7 +25,7 @@ from platform_core.http.base_app import AppConfig, BaseApiApplication
 from platform_core.state.service_registry import register_service
 from store_redis import RedisStore, create_redis_client
 
-from .setup_env import root_path, settings
+from .bootstrap import root_path, settings
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):

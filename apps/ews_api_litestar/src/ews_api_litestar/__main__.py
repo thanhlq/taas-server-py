@@ -4,15 +4,10 @@
 # ``ews`` and are framework-agnostic; this entry point wires them into a
 # Litestar app via ``http_litestar.adapters``.
 import os
-
-os.environ['APP_MODULE_NAME'] = 'ews_api_litestar'
-
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import socketio
-from litestar import Litestar
-
 from ews.domain.ppm import ProjectController
 from http_litestar.adapters import (
     build_router_for_controller,
@@ -20,14 +15,14 @@ from http_litestar.adapters import (
 )
 from http_litestar.base_litestar_app import build_app
 from http_litestar.uvicorn import run_uvicorn
-
+from litestar import Litestar
 from platform_core.cli import cli_print_info
 from platform_core.config.openapi import build_openapi_config
 from platform_core.http import AppConfig
 from platform_core.http._socketio import verify_socketio_manager
 from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
 
-from .setup_env import settings, root_path
+from .bootstrap import settings
 
 
 def _build_app_config(settings) -> AppConfig:
@@ -49,6 +44,7 @@ def _build_app_config(settings) -> AppConfig:
 
 
 def main() -> None:
+    os.environ['APP_MODULE_NAME'] = 'ews_api_litestar'
     app_config = _build_app_config(settings)
 
     _controller = ProjectController()
