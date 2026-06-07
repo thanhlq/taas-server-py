@@ -20,6 +20,7 @@ from http_litestar.adapters import (
     create_socketio_asgi_app,
 )
 from http_litestar.base_litestar_app import build_app
+from iam import iam_controllers
 from litestar import Litestar
 from litestar.response import Response
 from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
@@ -109,7 +110,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
         return litestar_app
 
     def get_app_controllers(self) -> list[Any]:
-        return [*ews_conrrollers]
+        return [*iam_controllers, *ews_conrrollers]
 
 
 _ews_app = EwsLitestarApplication(settings, root_path)

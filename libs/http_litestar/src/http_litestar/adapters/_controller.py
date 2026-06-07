@@ -8,54 +8,8 @@ from litestar import Litestar, Router, WebSocket
 from litestar.handlers import HTTPRouteHandler, WebsocketRouteHandler
 from platform_core.http import BaseController, Route, WebSocketRoute
 
+from http_litestar.adapters._dependencies import adapt_handler, typed_path
 from http_litestar.adapters._websocket import LitestarWebSocketSession
-
-
-def _strip_injected_cache_params(handler: Callable[..., Any]) -> Callable[..., Any]:
-    """Hide synthetic ``request``/``response`` params added by ``@cache``.
-
-    ``platform_core.http.cache`` injects ``request``/``response`` into the
-    handler's ``__signature__`` so FastAPI can supply them. Litestar resolves
-    parameter types via ``typing.get_type_hints`` (``__annotations__``) and the
-    synthetic params are not present there, so it raises "does not have a type
-    annotation". We present Litestar a wrapper whose signature omits the
-    injected params; the underlying ``@cache`` wrapper still accepts them and
-    simply receives ``None`` (cache-control header honouring is skipped).
-    """
-    injected = getattr(handler, "__cache_injected_params__", None)
-    if not injected:
-        return handler
-
-    original_sig = inspect.signature(handler)
-    kept = [p for name, p in original_sig.parameters.items() if name not in injected]
-    new_sig = original_sig.replace(parameters=kept)
-    original_hints = getattr(handler, "__annotations__", {}) or {}
-    new_annotations = {
-        name: original_hints[name]
-        for name in (p.name for p in kept)
-        if name in original_hints
-    }
-    if "return" in original_hints:
-        new_annotations["return"] = original_hints["return"]
-
-    if inspect.iscoroutinefunction(handler):
-
-        async def adapted(*args: Any, **kwargs: Any) -> Any:
-            return await handler(*args, **kwargs)
-    else:
-
-        def adapted(*args: Any, **kwargs: Any) -> Any:
-            return handler(*args, **kwargs)
-
-    # Deliberately no functools.wraps: it would set ``__wrapped__`` and make
-    # Litestar follow through to the original injected signature.
-    adapted.__name__ = getattr(handler, "__name__", "adapted")
-    adapted.__doc__ = getattr(handler, "__doc__", None)
-    # Resolve forward references against the controller's module, not ours.
-    adapted.__module__ = getattr(handler, "__module__", adapted.__module__)
-    adapted.__signature__ = new_sig  # type: ignore[attr-defined]
-    adapted.__annotations__ = new_annotations
-    return adapted
 
 
 def build_handler_for_route(route: Route) -> HTTPRouteHandler:
@@ -65,11 +19,11 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     ``platform_core.http`` describe lightweight route handlers; explicit
     offloading can be set per-route via ``extra={'sync_to_thread': True}``.
     """
-    handler = _strip_injected_cache_params(route.handler)
+    handler, dependencies = adapt_handler(route.handler)
     is_async = inspect.iscoroutinefunction(handler)
 
     kwargs: dict[str, Any] = {
-        "path": route.path,
+        "path": typed_path(route.path, getattr(handler, "__annotations__", {})),
         "http_method": list(route.methods),
     }
     if not is_async and "sync_to_thread" not in route.extra:
@@ -87,6 +41,10 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     # ``extra`` carries framework-specific passthrough (guards, dependencies,
     # media_type, response_class, sync_to_thread overrides, ...).
     kwargs.update(route.extra)
+    # Dependencies derived from FastAPI-style ``Depends`` markers; explicit
+    # ``extra['dependencies']`` wins on key collisions.
+    if dependencies:
+        kwargs["dependencies"] = {**dependencies, **(kwargs.get("dependencies") or {})}
 
     return HTTPRouteHandler(**kwargs)(handler)
 

@@ -441,9 +441,11 @@ dependencies = [
     { name = "ews" },
     { name = "fastapi" },
     { name = "http-litestar" },
+    { name = "iam" },
     { name = "litestar" },
     { name = "platform-core" },
     { name = "redis" },
+    { name = "store-redis" },
     { name = "uvicorn" },
 ]
 
@@ -453,9 +455,11 @@ requires-dist = [
     { name = "ews", editable = "libs/ews" },
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "http-litestar", editable = "libs/http_litestar" },
+    { name = "iam", editable = "libs/iam" },
     { name = "litestar", specifier = "==2.22.0" },
     { name = "platform-core", editable = "libs/platform_core" },
     { name = "redis", specifier = "==7.4.0" },
+    { name = "store-redis", editable = "libs/store_redis" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]
 

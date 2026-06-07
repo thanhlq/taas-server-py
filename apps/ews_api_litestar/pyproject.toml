@@ -7,8 +7,10 @@ requires-python = ">=3.14"
 dependencies = [
   'platform_core',
   'ews',
+  'iam',
   'http_litestar',
   'db',
+  'store_redis',
   'fastapi==0.136.1',
   'litestar==2.22.0',
   'uvicorn==0.34.0',
