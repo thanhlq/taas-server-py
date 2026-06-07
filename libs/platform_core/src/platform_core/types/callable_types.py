@@ -7,19 +7,16 @@ from typing import (
     Awaitable,
     Callable,
     Generator,
-    TypeVar,
 )
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from platform_core.handlers.base import BaseRouteHandler
-    from platform_core.types.asgi_types import ASGIApp, Message, Method, Scope
+    from platform_core.types.asgi_types import ASGIApp, Scope
     from platform_core.types.helper_types import SyncOrAsyncUnion
     from platform_core.types.protocols import Logger
 
 
-from platform_core.middleware.base import DefineMiddleware
 from platform_core.types.asgi_types import ASGIApp, Scope
 
 if TYPE_CHECKING:

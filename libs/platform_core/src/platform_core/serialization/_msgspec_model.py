@@ -18,7 +18,6 @@ class BaseModel(msgspec.Struct, omit_defaults=True):
 class ApiResponse(BaseModel, rename='camel'):
     """Camelized Base Struct"""
 
-
 class CamelizedBaseStruct(BaseModel, rename='camel'):
     """Camelized Base Struct"""
 

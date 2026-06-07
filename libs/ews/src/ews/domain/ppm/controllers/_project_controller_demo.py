@@ -77,8 +77,12 @@ class ProjectController(BaseController):
     async def list_projects(self) -> list[Project]:
         return await get_sample_projects()
 
-    @get(path='/p2', ratelimit='2/minute')
+    @get(path='/pydantic-serialization', ratelimit='2/minute')
     def list_projects2(self) -> list[ProjectEntityPy]:
+        return samples_project2
+
+    @get(path='/rate-limit-3-per-minutes/{n}', ratelimit='3/minute')
+    def list_projects3(self) -> list[ProjectEntityPy]:
         return samples_project2
 
     @websocket('/tasks/notifications', name='project_task_notifications')
