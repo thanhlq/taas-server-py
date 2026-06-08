@@ -147,6 +147,10 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             'echo_pool': db_settings.ECHO_POOL,
             'pool_recycle': db_settings.POOL_RECYCLE,
             'pool_pre_ping': db_settings.POOL_PRE_PING,
+            'connect_args': {
+                # default 5, 1 for testing
+                'prepare_threshold': 0
+                },
         }
         if db_settings.POOL_DISABLED:
             engine_kwargs['poolclass'] = NullPool

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Annotated
 from uuid import UUID
 
@@ -49,6 +50,9 @@ class UserController(BaseController):
     async def create_user(
         self, data: UserCreate, users_service: UsersServiceDep
     ) -> User:
+
+        print(f'[{os.getpid()}] Creating user with data:')
+
         data.properties = {
             "mfa_enabled": True,
             "backup_codes": 'asdfasf',
