@@ -70,7 +70,15 @@ def include_controller(
     controller: BaseController,
     **router_kwargs: Any,
 ) -> APIRouter:
-    """Build a router for ``controller`` and attach it to ``app``."""
+    """
+    Build a router for ``controller`` and attach it to ``app``.
+    Examples:
+    - Registering a controller with default settings:
+
+    ```python
+    include_controller(app, MyController())
+    ```
+    """
     router = build_router_for_controller(controller, app=app, **router_kwargs)
     app.include_router(router)
     return router

@@ -14,20 +14,18 @@ from typing import Callable
 import pytest
 import socketio
 import uvicorn
-
-from ews.domain.ppm import ProjectController
+from ews.domain.ppm import TestController
 
 EXPECTED_EVENTS = {'connected', 'subscribed', 'task.created', 'task.assigned', 'pong'}
 
 
 def _build_fastapi_asgi():
     from fastapi import FastAPI
-
     from http_fastapi.adapters import create_socketio_asgi_app, include_controller
     from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 
     app = FastAPI(default_response_class=MsgSpecJSONResponse)
-    controller = ProjectController()
+    controller = TestController()
     include_controller(app, controller)
     return create_socketio_asgi_app(app, controller)
 
@@ -39,7 +37,7 @@ def _build_litestar_asgi():
     )
     from http_litestar.base_litestar_app import build_app
 
-    controller = ProjectController()
+    controller = TestController()
     app = build_app(route_handlers=[build_router_for_controller(controller)])
     return create_socketio_asgi_app(app, controller)
 

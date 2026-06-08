@@ -1,8 +1,9 @@
 from platform_core.http import BaseController
-from .controllers._project_controller_demo import ProjectController
+
+from .controllers._test_controller_demo import TestController
 
 project_controllers: list[BaseController] = [
-    ProjectController(),
+    TestController(),
 ]
 
 __all__ = [
