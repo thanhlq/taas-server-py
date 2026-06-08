@@ -9,6 +9,8 @@ FastAPI can't introspect ``msgspec.Struct`` into its OpenAPI doc, so we:
 """
 from __future__ import annotations
 
+import types
+import typing
 from typing import Any
 
 import msgspec
@@ -19,6 +21,42 @@ from fastapi.openapi.utils import get_openapi
 # until the global merger picks them up.
 _COMPONENTS_KEY = "x-msgspec-components"
 
+_REF_TEMPLATE = "#/components/schemas/{name}"
+
+
+def _union_members(tp: Any) -> tuple[Any, ...] | None:
+    """Return the members of *tp* if it is a Union, else ``None``.
+
+    Handles both ``typing.Union[...]``/``Optional[...]`` and the PEP 604
+    ``X | Y`` syntax.
+    """
+    origin = typing.get_origin(tp)
+    if origin is typing.Union or origin is types.UnionType:
+        return typing.get_args(tp)
+    return None
+
+
+def _schema_for_type(return_type: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build a JSON Schema (+ components) for a possibly-union return type.
+
+    ``msgspec.json.schema_components`` refuses a *single* type that is a union
+    of multiple untagged ``Struct`` types (it can't build a decoder for it).
+    For OpenAPI we don't need a decoder, only a schema, so we generate the
+    schema for each union member individually and combine them with ``anyOf``.
+    Non-union types are handled exactly as before.
+    """
+    members = _union_members(return_type)
+    if members is None:
+        (schema,), components = msgspec.json.schema_components(
+            [return_type], ref_template=_REF_TEMPLATE
+        )
+        return schema, components
+
+    schemas, components = msgspec.json.schema_components(
+        list(members), ref_template=_REF_TEMPLATE
+    )
+    return {"anyOf": list(schemas)}, components
+
 
 def msgspec_response(
     return_type: Any,
@@ -27,10 +65,7 @@ def msgspec_response(
     description: str = "Successful Response",
 ) -> dict[str, Any]:
     """Build an ``openapi_extra`` dict describing a msgspec response."""
-    (schema,), components = msgspec.json.schema_components(
-        [return_type],
-        ref_template="#/components/schemas/{name}",
-    )
+    schema, components = _schema_for_type(return_type)
     return {
         "responses": {
             str(status_code): {
@@ -49,10 +84,7 @@ def msgspec_request_body(
     description: str | None = None,
 ) -> dict[str, Any]:
     """Build an ``openapi_extra`` dict describing a msgspec request body."""
-    (schema,), components = msgspec.json.schema_components(
-        [body_type],
-        ref_template="#/components/schemas/{name}",
-    )
+    schema, components = _schema_for_type(body_type)
     body: dict[str, Any] = {
         "required": required,
         "content": {"application/json": {"schema": schema}},

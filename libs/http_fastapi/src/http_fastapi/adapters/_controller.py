@@ -17,6 +17,18 @@ from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 
 
+def _route_specificity_key(path: str) -> tuple[int, ...]:
+    """Rank a path by segment specificity (static beats path-param).
+
+    Each path segment contributes ``0`` if it is a literal segment and ``1``
+    if it is a path parameter (``{...}``). Sorting routes by this key
+    registers more specific routes first, so a literal path like ``/error``
+    is matched before a parametrised one like ``/{id}``.
+    """
+    segments = [seg for seg in path.strip('/').split('/') if seg]
+    return tuple(1 if seg.startswith('{') and seg.endswith('}') else 0 for seg in segments)
+
+
 def _router_kwargs(
     controller: BaseController, overrides: dict[str, Any]
 ) -> dict[str, Any]:
@@ -42,7 +54,11 @@ def build_router_for_controller(
     """
     router = APIRouter(**_router_kwargs(controller, router_kwargs))
     limiter = getattr(getattr(app, 'state', None), 'limiter', None) if app else None
-    for r in controller.get_routes():
+    # Starlette matches routes in registration order, so a parametrised path
+    # (``/{id}``) declared before a literal one (``/error``) would shadow it.
+    # Register more specific (static-segment) routes first to mirror
+    # Litestar's specificity-based matching.
+    for r in sorted(controller.get_routes(), key=lambda route: _route_specificity_key(route.path)):
         _add_route(router, r, limiter)
     for ws in controller.get_websocket_routes():
         _add_websocket_route(router, ws)

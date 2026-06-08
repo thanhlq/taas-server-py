@@ -1,3 +1,5 @@
+# This Dockerfile is used for local development and testing. It is not intended for production use.
+
 ARG REGISTRY="docker.io"
 ARG PYTHON_BASE_IMAGE_VERSION=3.14.5-slim-bookworm
 

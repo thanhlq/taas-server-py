@@ -1,8 +1,10 @@
+# This is a simple docker-compose file for production deployment. It uses the Dockerfile.prod for building the image.
+# For local development and testing, use docker-compose.yml which uses Dockerfile.dev instead.
 services:
   ews_api:
     build:
       context: ./
-      dockerfile: ./Dockerfile.dev
+      dockerfile: ./Dockerfile.prod
     ports:
       - "8191:8191"
     volumes:

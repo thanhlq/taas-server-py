@@ -1,0 +1,15 @@
+#
+# This dockerfile is used for production deployment. For local development and testing, use Dockerfile.dev instead.
+###########
+# Features:
+###########
+# - Caches apt and pip dependencies to speed up builds
+# - Uses uv for Python dependency management
+# - Does not contain development dependencies like node, npm, and yarn to keep the image lean
+# - Used by docker-compose.prod.yml for production deployment
+
+ARG REGISTRY="docker.io"
+ARG PYTHON_BASE_IMAGE_VERSION=3.14.5-slim-bookworm
+
+FROM ${REGISTRY}/python:${PYTHON_BASE_IMAGE_VERSION}
+ENV DEBIAN_FRONTEND=noninteractive
