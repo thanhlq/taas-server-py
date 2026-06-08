@@ -67,7 +67,8 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
         f'{_format_is_enabled(app.all_settings.db.MIGRATION_ENABLED)} -> {app.all_settings.db.MIGRATION_PATH}',
     )
     # WORKERS
-    table.add_row('Workers', str(app.all_settings.server.WORKERS))
+    workers = os.getenv('WEB_CONCURRENCY') or str(app.all_settings.server.WORKERS)
+    table.add_row('Workers', workers)
     table.add_row(
         'CORS',
         f'{_format_is_enabled(app.config.cors_config)}, allow_origins={app.config.cors_config.allow_origins if app.config.cors_config else "None"}',

@@ -34,7 +34,7 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
     Should be cached?
     """
     url = db_settings.URL.replace('postgresql://', 'postgresql+psycopg://')
-    # url = db_settings.URL
+
     if url.startswith('postgresql+asyncpg'):
         # Build engine kwargs - pool args are invalid with NullPool
         engine_kwargs: dict[str, Any] = {
@@ -150,6 +150,7 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
         }
         if db_settings.POOL_DISABLED:
             engine_kwargs['poolclass'] = NullPool
+            print('Creating SQLAlchemy engine with NullPool (pooling disabled)')
         else:
             engine_kwargs.update(
                 {
@@ -159,5 +160,6 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
                     'pool_use_lifo': True,
                 }
             )
+            print(f'Creating SQLAlchemy engine with pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT}')
         engine = create_async_engine(**engine_kwargs)
     return engine

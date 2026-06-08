@@ -59,7 +59,7 @@ class DatabaseSettings:
     ECHO_POOL: bool = field(default_factory=get_env('DATABASE_ECHO_POOL', False))
     """Enable SQLAlchemy connection pool logs."""
     POOL_DISABLED: bool = field(
-        default_factory=get_env('DATABASE_POOL_DISABLED', False)
+        default_factory=get_env('DATABASE_POOL_DISABLED', False, bool)
     )
     """Disable SQLAlchemy pool configuration."""
     POOL_MAX_OVERFLOW: int = field(
