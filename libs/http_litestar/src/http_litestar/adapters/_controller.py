@@ -10,6 +10,7 @@ from platform_core.http import BaseController, Route, WebSocketRoute
 
 from http_litestar.adapters._dependencies import adapt_handler, typed_path
 from http_litestar.adapters._websocket import LitestarWebSocketSession
+from http_litestar.middewares.slowapi_ratelimit import rate_limit_guard
 
 
 def build_handler_for_route(route: Route) -> HTTPRouteHandler:
@@ -45,6 +46,17 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     # ``extra['dependencies']`` wins on key collisions.
     if dependencies:
         kwargs["dependencies"] = {**dependencies, **(kwargs.get("dependencies") or {})}
+
+    # Per-route rate limiting: the limit string lives on ``route.rate_limit``.
+    # Carry it (plus a stable bucket key) on the handler's ``opt`` and attach
+    # the guard that enforces it against the app-wide limiter.
+    if route.rate_limit:
+        kwargs["opt"] = {
+            **(kwargs.get("opt") or {}),
+            "ratelimit": route.rate_limit,
+            "ratelimit_key": route.path,
+        }
+        kwargs["guards"] = [*(kwargs.get("guards") or []), rate_limit_guard]
 
     return HTTPRouteHandler(**kwargs)(handler)
 

@@ -652,6 +652,7 @@ name = "http-litestar"
 version = "0.1.0"
 source = { editable = "libs/http_litestar" }
 dependencies = [
+    { name = "limits" },
     { name = "litestar" },
     { name = "platform-core" },
     { name = "python-socketio" },
@@ -660,6 +661,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "limits", specifier = "==5.8.0" },
     { name = "litestar", specifier = "==2.22.0" },
     { name = "platform-core", editable = "libs/platform_core" },
     { name = "python-socketio", specifier = "==5.16.2" },

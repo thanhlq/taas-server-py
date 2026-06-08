@@ -99,6 +99,19 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
             exception_handlers={HTTP_500_INTERNAL_SERVER_ERROR: _internal_error_handler},
         )
 
+        # Per-route rate limiting (parity with the FastAPI adapter). The
+        # framework-agnostic ``@get(..., ratelimit=...)`` declarations are
+        # enforced by a guard that reads this shared limiter from app state.
+        ratelimit_config = self.config.ratelimit_config
+        if ratelimit_config and ratelimit_config.enabled:
+            from http_litestar.middewares.slowapi_ratelimit import (
+                setup_litestar_rate_limiting,
+            )
+
+            setup_litestar_rate_limiting(litestar_app, ratelimit_config)
+        else:
+            cli_print_info('Rate limiting is disabled.')
+
         if self.is_websocket_enabled():
             websocket_config: WebSocketConfig = self.config.websocket_config  # type: ignore[assignment]
             self._socketio_app, self._socketio_server = create_socketio_asgi_app(

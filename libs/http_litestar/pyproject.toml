@@ -12,6 +12,9 @@ dependencies = [
     'uvicorn==0.34.0',
     'platform_core',
 
+    # ⏱️ Rate limiting (per-route ``ratelimit=`` enforcement)
+    'limits==5.8.0',
+
     # 🔌 Real-time Communication
     'python-socketio==5.16.2',
 ]
