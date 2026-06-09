@@ -1,3 +1,13 @@
+/*
+Important note:
+
+- When starting see status=0 or no response body in k6, means:
+  1. They pile up in the OS accept backlog (connections waiting to be accepted by uvicorn).
+  2. When that backlog fills, the kernel refuses/resets new connections → k6 sees status=0 / "no response."
+  3. Your single worker is 100% busy draining the queue, so it stops accepting new ones → no new Creating user... log lines appear.
+  4. When k6 ramps down (or the queue drains), the backlog clears → it recovers and continues. Exactly the pattern you described.
+
+ */
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
@@ -39,6 +49,8 @@ import { check, sleep } from 'k6';
   spike, and dropped_iterations appear (k6 ran out of VUs to fire requests).
 */
 export const options = {
+  // reasonable for stress test
+  requestTimeout: '2m',
   scenarios: {
     capacity: {
       executor: 'ramping-arrival-rate',
@@ -105,8 +117,12 @@ export default function (data) {
   const res = http.post(url, payload, params);
 
   // Surface the real reason for any non-2xx so we stop guessing.
+  // status=0 means no HTTP response arrived (transport failure): the real
+  // reason is in res.error / res.error_code, NOT the body (which is null).
   if (res.status < 200 || res.status >= 300) {
-    console.error(`FAIL status=${res.status} body=${res.body}`);
+    console.error(
+      `FAIL status=${res.status} error_code=${res.error_code} error="${res.error}" body=${res.body}`,
+    );
   }
 
   check(res, {

@@ -93,14 +93,14 @@ class UserCreate(CamelizedBaseStruct):
 
     def __post_init__(self) -> None:
         """Additional validation after field validation."""
-        self.email = validate_email(self.email)
-        self.password = validate_password(self.password)
-        if self.name is not None:
-            self.name = validate_name(self.name)
-        if self.username is not None:
-            self.username = validate_username(self.username)
-        if self.phone is not None:
-            self.phone = validate_phone(self.phone)
+        # self.email = validate_email(self.email)
+        # self.password = validate_password(self.password)
+        # if self.name is not None:
+        #     self.name = validate_name(self.name)
+        # if self.username is not None:
+        #     self.username = validate_username(self.username)
+        # if self.phone is not None:
+        #     self.phone = validate_phone(self.phone)
 
         if self.username and self.email:
             email_local = self.email.split('@')[0]

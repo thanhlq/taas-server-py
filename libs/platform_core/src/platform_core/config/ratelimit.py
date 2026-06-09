@@ -26,7 +26,7 @@ class RateLimitConfig:
     """Master switch. When False, adapters skip installing the limiter entirely."""
 
     request_per_minute: int = field(
-        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_REQUEST_PER_MINUTE', 30)
+        default_factory=get_env(f'{CONFIG_PREFIX}_RATE_LIMIT_REQUEST_PER_MINUTE', 30000)
     )
     # Public: 10-30 RPS, authenticated: 100-300 RPS, internal: 1000+ RPS. Defaults to 10k RPM (166 RPS) to be safe; adjust as needed.
 

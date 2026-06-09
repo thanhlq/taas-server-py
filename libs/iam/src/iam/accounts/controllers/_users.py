@@ -6,8 +6,10 @@ from uuid import UUID
 
 from advanced_alchemy.service import OffsetPagination
 from fastapi import Depends
-from platform_core.db.advanced_session_manager import get_db_async_generator
-from platform_core.exceptions.report_error import report_error
+from platform_core.db.advanced_session_manager import (
+    MainDatabase,
+    get_db_async_generator,
+)
 from platform_core.http import BaseController, delete, get, patch, post, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,11 @@ async def provide_users_service(
 
 
 UsersServiceDep = Annotated[UserService, Depends(provide_users_service)]
+
+
+def get_user_service(session) -> UserService:
+
+    return UserService(session=session or MainDatabase.get_instance().get_session())
 
 
 class UserController(BaseController):
@@ -46,12 +53,15 @@ class UserController(BaseController):
         db_obj = await users_service.get(user_id)
         return users_service.to_schema(db_obj, schema_type=User)
 
+    # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
+    # @db_session
     async def create_user(
         self, data: UserCreate, users_service: UsersServiceDep
     ) -> User:
-
-        print(f'[{os.getpid()}] Creating user with data:')
+        # users_service = get_user_service()
+        self.count += 1
+        print(f'[{os.getpid()}] Creating user with data {self.count}')
 
         data.properties = {
             "mfa_enabled": True,
@@ -61,14 +71,8 @@ class UserController(BaseController):
             "mfa_recovery_codes": ['code1', 'code2', 'code3'],
         }
 
-        self.count += 1
-
-        try:
-
-            db_obj = await users_service.create(data=data.as_dict())
-            return users_service.to_schema(db_obj, schema_type=User)
-        except Exception as e:
-            report_error(e)
+        db_obj = await users_service.create(data=data.as_dict())
+        return users_service.to_schema(db_obj, schema_type=User)
 
     @patch('/{user_id}')
     async def update_user(

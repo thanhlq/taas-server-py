@@ -62,20 +62,26 @@ class DatabaseSettings:
         default_factory=get_env('DATABASE_POOL_DISABLED', False, bool)
     )
     """Disable SQLAlchemy pool configuration."""
-    POOL_MAX_OVERFLOW: int = field(
-        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 20)
-    )
-    """Max overflow for SQLAlchemy connection pool"""
     POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 15))
     """Pool size for SQLAlchemy connection pool"""
+    POOL_MAX_OVERFLOW: int = field(
+        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 15)
+    )
+    """Max overflow for SQLAlchemy connection pool"""
     POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
     """Time in seconds for timing connections out of the connection pool."""
-    POOL_RECYCLE: int = field(default_factory=get_env('DATABASE_POOL_RECYCLE', default=1800)) # 1800: 30 minutes, 300: 5 minutes
-    """Amount of time to wait before recycling connections."""
+    POOL_RECYCLE: int = field(default_factory=get_env('DATABASE_POOL_RECYCLE', default=300)) # 1800: 30 minutes, 300: 5 minutes
+    """
+    Recycle below any LB/network idle timeout
+    Amount of time to wait before recycling connections.
+    """
     POOL_PRE_PING: bool = field(
         default_factory=get_env('DATABASE_PRE_POOL_PING', False)
     )
-    """Optionally ping database before fetching a session from the connection pool."""
+    """
+    Survive pgdog/pod restarts cleanly.
+    Optionally ping database before fetching a session from the connection pool.
+    """
     URL: str = field(
         default_factory=get_env(
             'DATABASE_URL',

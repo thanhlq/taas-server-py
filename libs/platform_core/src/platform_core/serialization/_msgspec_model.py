@@ -15,10 +15,11 @@ class BaseModel(msgspec.Struct, omit_defaults=True):
         return msgspec.json.encode(self)
 
 
-class ApiResponse(BaseModel, rename='camel'):
+# , rename='camel'
+class ApiResponse(BaseModel):
     """Camelized Base Struct"""
 
-class CamelizedBaseStruct(BaseModel, rename='camel'):
+class CamelizedBaseStruct(BaseModel):
     """Camelized Base Struct"""
 
 
