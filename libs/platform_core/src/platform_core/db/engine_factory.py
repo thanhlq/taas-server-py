@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from platform_core.serialization import decode_json, encode_json
-from sqlalchemy import NullPool, event
+from sqlalchemy import AsyncAdaptedQueuePool, NullPool, event
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 if TYPE_CHECKING:
@@ -44,6 +44,7 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             'json_deserializer': decode_json,
             'echo': db_settings.ECHO,
             'echo_pool': db_settings.ECHO_POOL,
+            'poolclass': AsyncAdaptedQueuePool,
             'pool_recycle': db_settings.POOL_RECYCLE,
             'pool_pre_ping': db_settings.POOL_PRE_PING,
         }
@@ -147,6 +148,7 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             'echo_pool': db_settings.ECHO_POOL,
             'pool_recycle': db_settings.POOL_RECYCLE,
             'pool_pre_ping': db_settings.POOL_PRE_PING,
+            'poolclass': AsyncAdaptedQueuePool,
             'connect_args': {
                 # default 5, 1 for testing
                 'prepare_threshold': 0

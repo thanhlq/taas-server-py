@@ -62,10 +62,10 @@ class DatabaseSettings:
         default_factory=get_env('DATABASE_POOL_DISABLED', False, bool)
     )
     """Disable SQLAlchemy pool configuration."""
-    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 15))
+    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 5))
     """Pool size for SQLAlchemy connection pool"""
     POOL_MAX_OVERFLOW: int = field(
-        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 15)
+        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 30)
     )
     """Max overflow for SQLAlchemy connection pool"""
     POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
