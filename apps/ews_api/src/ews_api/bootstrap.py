@@ -7,7 +7,6 @@ The
 """
 from __future__ import annotations
 
-import inspect
 import os
 import sys
 from pathlib import Path
@@ -20,19 +19,6 @@ if TYPE_CHECKING:
 
 settings: Settings
 root_path: str
-
-# Get the absolute file path of the startup script
-startup_frame = inspect.stack()[-1]
-
-print(f"Startup script path: {str(startup_frame.filename)}")
-print(f"Startup module name: {Path(startup_frame.filename).stem}")
-
-# # Extract just the module name (e.g., "my_script")
-# startup_module_name = Path(startup_frame.filename).stem
-# print(startup_module_name)
-
-# print(f"Startup script path: {startup_frame.filename}")
-# print(f"Startup module name: {startup_module_name}")
 
 def setup_environment() -> tuple[Settings, str]:
     """Configure the environment variables and path."""

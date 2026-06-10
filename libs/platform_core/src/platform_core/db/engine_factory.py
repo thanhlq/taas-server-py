@@ -1,6 +1,7 @@
 import logging
 from typing import TYPE_CHECKING, Any
 
+from platform_core.cli import cli_print_info
 from platform_core.serialization import decode_json, encode_json
 from sqlalchemy import AsyncAdaptedQueuePool, NullPool, event
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -33,10 +34,12 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
 
     Should be cached?
     """
-    url = db_settings.URL.replace('postgresql://', 'postgresql+psycopg://')
+    # url = db_settings.URL.replace('postgresql://', 'postgresql+psycopg://')
+    url = db_settings.URL
 
     if url.startswith('postgresql+asyncpg'):
         # Build engine kwargs - pool args are invalid with NullPool
+        cli_print_info('Creating SQLAlchemy engine for PostgreSQL with asyncpg driver, pooling settings: ' + ('disabled' if db_settings.POOL_DISABLED else f'enabled (pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT})'))
         engine_kwargs: dict[str, Any] = {
             'url': url,
             'future': True,
@@ -44,7 +47,6 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             'json_deserializer': decode_json,
             'echo': db_settings.ECHO,
             'echo_pool': db_settings.ECHO_POOL,
-            'poolclass': AsyncAdaptedQueuePool,
             'pool_recycle': db_settings.POOL_RECYCLE,
             'pool_pre_ping': db_settings.POOL_PRE_PING,
         }
@@ -53,6 +55,7 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
         else:
             engine_kwargs.update(
                 {
+                    'poolclass': AsyncAdaptedQueuePool,
                     'max_overflow': db_settings.POOL_MAX_OVERFLOW,
                     'pool_size': db_settings.POOL_SIZE,
                     'pool_timeout': db_settings.POOL_TIMEOUT,
@@ -105,8 +108,8 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
                     format='binary',
                 ),
             )
-
     elif url.startswith('sqlite+aiosqlite'):
+        cli_print_info('Creating SQLAlchemy engine for SQLite with aiosqlite driver')
         engine = create_async_engine(
             url=url,
             future=True,
@@ -138,7 +141,8 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             dbapi_connection.exec_driver_sql('BEGIN')
 
     else:
-        # Build engine kwargs - pool args are invalid with NullPool
+        cli_print_info('Creating SQLAlchemy engine for PostgreSQL, pooling settings: ' + ('disabled' if db_settings.POOL_DISABLED else f'enabled (pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT})'))
+
         engine_kwargs = {
             'url': url,
             'future': True,
@@ -148,24 +152,26 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
             'echo_pool': db_settings.ECHO_POOL,
             'pool_recycle': db_settings.POOL_RECYCLE,
             'pool_pre_ping': db_settings.POOL_PRE_PING,
-            'poolclass': AsyncAdaptedQueuePool,
             'connect_args': {
                 # default 5, 1 for testing
-                'prepare_threshold': 0
-                },
+                'prepare_threshold': 0,
+                # See https://docs.sqlalchemy.org/en/21/dialects/postgresql.html#prepared-statement-name-with-pgbouncer
+                # pgdog does not support this param
+                # 'prepared_statement_name_func': lambda: f'__asyncpg_{uuid4()}__',
+            },
         }
         if db_settings.POOL_DISABLED:
-            engine_kwargs['poolclass'] = NullPool
-            print('Creating SQLAlchemy engine with NullPool (pooling disabled)')
+            engine_kwargs['poolclass'] = NullPool # type: ignore
         else:
             engine_kwargs.update(
                 {
+                    'poolclass': AsyncAdaptedQueuePool,
                     'max_overflow': db_settings.POOL_MAX_OVERFLOW,
                     'pool_size': db_settings.POOL_SIZE,
                     'pool_timeout': db_settings.POOL_TIMEOUT,
                     'pool_use_lifo': True,
                 }
-            )
-            print(f'Creating SQLAlchemy engine with pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT}')
+            ) # type: ignore
         engine = create_async_engine(**engine_kwargs)
+        cli_print_info(f'Created engine with URL: {engine.url.render_as_string(hide_password=True)}')
     return engine

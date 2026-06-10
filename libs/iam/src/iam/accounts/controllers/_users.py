@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 from typing import Annotated
 from uuid import UUID
 
+from advanced_alchemy.filters import LimitOffset
 from advanced_alchemy.service import OffsetPagination
 from fastapi import Depends
 from platform_core.db.advanced_session_manager import (
@@ -44,7 +44,9 @@ class UserController(BaseController):
         self, users_service: UsersServiceDep
     ) -> OffsetPagination[User]:
         """List all users."""
-        results, total = await users_service.list_and_count()
+        results, total = await users_service.get_many_and_count(
+             LimitOffset(offset=0, limit=50),
+        )
         return users_service.to_schema(results, total, schema_type=User)
 
     @get('/{user_id}')
@@ -61,7 +63,7 @@ class UserController(BaseController):
     ) -> User:
         # users_service = get_user_service()
         self.count += 1
-        print(f'[{os.getpid()}] Creating user with data {self.count}')
+        # print(f'[{os.getpid()}] Creating user with data {self.count}')
 
         data.properties = {
             "mfa_enabled": True,
