@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 import socketio
-from ews import ews_conrrollers
+from ews import conrrollers as ews_conrrollers
 from http_litestar.adapters import (
     build_router_for_controller,
     create_socketio_asgi_app,

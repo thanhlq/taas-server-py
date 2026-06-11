@@ -1,8 +1,10 @@
 from platform_core.config import Settings
+from platform_core.http import BaseController
+from platform_core.http.context import Context
 from platform_core.utils.datetime_utils import now_as_iso
 
 
-class PlatformController:
+class PlatformController(BaseController):
     api_prefix = "/"
     settings: Settings
 
@@ -13,7 +15,7 @@ class PlatformController:
 
     def _register_routes(self):
         @self.router.get(path="/health")
-        def health() -> dict:
+        def health(ctx: Context) -> dict:
             healthcheck = {
                 'status': 'healthy',
                 'timestamp': now_as_iso(),

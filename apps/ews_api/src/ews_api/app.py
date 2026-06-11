@@ -9,7 +9,7 @@ from logging import Logger
 from typing import Any, Optional
 
 import socketio
-from ews import ews_conrrollers
+from ews import conrrollers as ews_conrrollers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from http_fastapi import create_app
