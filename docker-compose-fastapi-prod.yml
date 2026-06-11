@@ -4,7 +4,7 @@ services:
   ews_api:
     build:
       context: ./
-      dockerfile: ./Dockerfile.prod
+      dockerfile: ./Dockerfile.fastapi.prod
     ports:
       - "8191:8191"
     volumes:

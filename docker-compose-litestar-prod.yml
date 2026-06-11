@@ -1,0 +1,20 @@
+# This is a simple docker-compose file for production deployment. It uses the Dockerfile.prod for building the image.
+# For local development and testing, use docker-compose.yml which uses Dockerfile.dev instead.
+services:
+  ews_api:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile.litestar.prod
+    ports:
+      - "8191:8191"
+    volumes:
+       - .:/app
+       - /app/.venv
+    command: sh -c "uv run ews_api python -m ews_api"
+    env_file:
+      - .docker.env
+
+networks:
+  default:
+    name: external-network
+    external: true

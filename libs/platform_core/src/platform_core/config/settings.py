@@ -435,6 +435,9 @@ class Settings:
     alchemy: SQLAlchemyAsyncConfig = field(default_factory=SQLAlchemyAsyncConfig)
     email: EmailSettings = field(default_factory=EmailSettings)
 
+    environment: str = field(default_factory=get_env('ENVIRONMENT', 'local'))
+    """The current environment (development, staging, production)."""
+
     def find_env_file(self, filename: str) -> Path | None:
         """Search for the specified .env file in the current and parent directories.
 

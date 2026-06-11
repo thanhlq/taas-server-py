@@ -54,21 +54,22 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
         'VERSION',
         f'{__version__.major}.{__version__.minor}.{__version__.patch}',
     )
-    table.add_row('Debug mode', _format_is_enabled(app.config.debug))
+    table.add_row('Env/Debug', f'{app.all_settings.environment}/{_format_is_enabled(app.config.debug)}')
     if app.config.debug:
         table.add_row('DB URL:', app.all_settings.db.URL or 'Not set')
-    table.add_row('Root path', app._root_path)
+    table.add_row('Root path', app.root_app_path())
     table.add_row(
         'Python Debugger on exception', _format_is_enabled(app.config.pdb_on_exception)
     )
     # db migration enabled?
     table.add_row(
         'DB MIGRATION',
-        f'{_format_is_enabled(app.all_settings.db.MIGRATION_ENABLED)} -> {app.all_settings.db.MIGRATION_PATH}',
+        f'{_format_is_enabled(app.all_settings.db.MIGRATION_ENABLED)}',
     )
+    table.add_row('DB MIGRATION PATH', app.all_settings.db.MIGRATION_PATH)  # Add an empty column for spacing
     # WORKERS
     workers = os.getenv('WEB_CONCURRENCY') or str(app.all_settings.server.WORKERS)
-    table.add_row('Workers', workers)
+    table.add_row('WORKERS', workers)
     table.add_row(
         'CORS',
         f'{_format_is_enabled(app.config.cors_config)}, allow_origins={app.config.cors_config.allow_origins if app.config.cors_config else "None"}',
@@ -82,25 +83,20 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
     ratelimit_enabled = (
         app.config.ratelimit_config and app.config.ratelimit_config.enabled
     )
-    table.add_row('Rate Limiting', _format_is_enabled(ratelimit_enabled))
-    if ratelimit_enabled:
-        table.add_row(
-            'Rate limit redis host',
-            f'{app.config.ratelimit_config.redis_host if app.config.ratelimit_config else "N/A"}',
-        )
+    table.add_row('RATE LIMIT', f'{_format_is_enabled(ratelimit_enabled)} - {app.config.ratelimit_config.redis_host if app.config.ratelimit_config else "N/A"}')
 
     openapi_enabled = _format_is_enabled(app.config.openapi_config)
     table.add_row('OpenAPI', openapi_enabled)
 
     table.add_row(
-        'Compression',
+        'COMPRESSION',
         app.config.compression_config.backend
         if app.config.compression_config
         else '[red]Disabled',
     )
 
     table.add_row(
-        'WebSocket redis host',
+        'WEBSOCKET PUBSUB HOST',
         app.config.websocket_config.redis_host
         if app.config.websocket_config
         else '[red]Disabled',
