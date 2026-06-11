@@ -4,7 +4,7 @@ start=$(date +%s.%N)
 
 # 1
 curl -X 'GET' \
-  'http://localhost:8191/api/v1/users/' \
+  'http://localhost:8191/api/v1/users/list_fast' \
   -H 'accept: application/json' \
   -H 'Accept-Encoding: gzip' \
   -H 'Content-Type: application/json' | gunzip -

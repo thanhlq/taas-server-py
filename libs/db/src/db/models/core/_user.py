@@ -54,8 +54,8 @@ class User(UUIDv7AuditBase):
         String(length=255),
         nullable=True,
         default=None,
-        deferred=True,
-        deferred_group='security_sensitive',
+        # deferred=True,
+        # deferred_group='security_sensitive',
     )
     avatar_url: Mapped[str | None] = mapped_column(
         String(length=500), nullable=True, default=None
@@ -78,8 +78,8 @@ class User(UUIDv7AuditBase):
         EncryptedString(key=settings.app.SECRET_KEY),
         nullable=True,
         default=None,
-        deferred=True,
-        deferred_group="security_sensitive",
+        # deferred=True,
+        # deferred_group="security_sensitive",
     )
     """Encrypted TOTP secret for authenticator apps."""
     is_two_factor_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
@@ -90,20 +90,22 @@ class User(UUIDv7AuditBase):
         JSONB,
         nullable=True,
         default=None,
-        deferred=True,
-        deferred_group="security_sensitive",
+        # deferred=True,
+        # deferred_group="security_sensitive",
     )
     # Relationships
 
     roles: Mapped[list[UserRole]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        # selectin
+        lazy="noload",
         uselist=True,
         cascade="all, delete",
     )
     teams: Mapped[list[TeamMember]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        # lazy="selectin",
+        lazy="noload",
         uselist=True,
         cascade="all, delete",
         viewonly=True,
@@ -135,7 +137,7 @@ class User(UUIDv7AuditBase):
 
     @hybrid_property
     def has_password(self) -> bool:
-        return self.hashed_password is not None
+        return self.hashed_password is not None # # <-- reads a deferred column
 
     @hybrid_property
     def has_mfa(self) -> bool:

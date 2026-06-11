@@ -16,7 +16,6 @@ dependencies = [
     "uvicorn==0.34.0",
 
     # rate limiting libs / decorators
-    "slowapi_advanced==0.1.9",
     "fastapi-cache2==0.2.2",
 
     # 🔌 Real-time Communication

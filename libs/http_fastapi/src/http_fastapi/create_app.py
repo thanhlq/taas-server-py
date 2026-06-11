@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from platform_core.http import AppConfig
 
@@ -33,6 +34,9 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
 
     # 3. Install MsgSpec OpenAPI support (must be after app creation)
     install_msgspec_openapi(app)
+
+    # Middlewares
+    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=7)
 
     # 4. Add a simple root endpoint for testing
     app.add_api_route(

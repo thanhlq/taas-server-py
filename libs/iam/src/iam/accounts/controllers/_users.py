@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from advanced_alchemy.filters import LimitOffset
+from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.service import OffsetPagination
 from fastapi import Depends
 from platform_core.db.advanced_session_manager import (
@@ -11,6 +11,7 @@ from platform_core.db.advanced_session_manager import (
     get_db_async_generator,
 )
 from platform_core.http import BaseController, delete, get, patch, post, status
+from platform_core.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from iam.accounts.schemas._user import User, UserCreate, UserUpdate
@@ -39,15 +40,38 @@ class UserController(BaseController):
     tags = ('Users',)
     count = 0
 
+
     @get('/')
+    async def list_users_slow(
+        self, users_service: UsersServiceDep
+    ) -> OffsetPagination[User]:
+        """List all users."""
+
+        # SLOW
+        # order_filter = OrderBy(field_name="id", sort_order="asc")
+        results, total = await users_service.get_many_and_count(
+             LimitOffset(offset=0, limit=50),OrderBy(field_name="id", sort_order="asc")
+        )
+
+
+        return users_service.to_schema(results, total, schema_type=User)
+
+    @get('/list_fast')
     async def list_users(
         self, users_service: UsersServiceDep
     ) -> OffsetPagination[User]:
         """List all users."""
-        results, total = await users_service.get_many_and_count(
-             LimitOffset(offset=0, limit=50),
-        )
-        return users_service.to_schema(results, total, schema_type=User)
+
+        # SLOW
+        # order_filter = OrderBy(field_name="id", sort_order="asc")
+        # results, total = await users_service.get_many_and_count(
+        #      LimitOffset(offset=0, limit=1),order_filter
+        # )
+
+        # FAST
+        results: ListResult[User] = await users_service.list_users_fast()
+
+        return users_service.to_schema(results.data, results.total_count, schema_type=User)
 
     @get('/{user_id}')
     async def get_user(self, user_id: UUID, users_service: UsersServiceDep) -> User:

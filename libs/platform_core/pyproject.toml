@@ -10,7 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "msgspec==0.21.1",
     "sqlalchemy==2.0.50",
-    "advanced_alchemy==1.10.0",
+    "advanced-alchemy[cryptography]==1.11.0",
     "typing_extensions==4.15.0",
     "sniffio==1.3.1",
     "multidict==6.7.1",

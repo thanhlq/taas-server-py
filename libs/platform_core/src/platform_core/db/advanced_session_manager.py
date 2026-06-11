@@ -147,7 +147,7 @@ class DBConcurrentSessionFactory:
             self._db.session_factory(), scopefunc=get_current_task_id
         )
 
-    def create_session(self) -> AsyncSession:
+    def get_session(self) -> AsyncSession:
         return self.scoped_session_factory()
 
     @staticmethod
