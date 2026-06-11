@@ -8,11 +8,12 @@ from advanced_alchemy.service import OffsetPagination
 from fastapi import Depends
 from platform_core.db.advanced_session_manager import (
     MainDatabase,
+    db_concurrent_session,
     get_db_async_generator,
 )
-from platform_core.http import BaseController, delete, get, patch, post, status
+from platform_core.http import BaseController, cache, delete, get, patch, post, status
 from platform_core.models import ListResult
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from iam.accounts.schemas._user import User, UserCreate, UserUpdate
 from iam.accounts.services._users import UserService
@@ -40,7 +41,6 @@ class UserController(BaseController):
     tags = ('Users',)
     count = 0
 
-
     @get('/')
     async def list_users_slow(
         self, users_service: UsersServiceDep
@@ -50,28 +50,38 @@ class UserController(BaseController):
         # SLOW
         # order_filter = OrderBy(field_name="id", sort_order="asc")
         results, total = await users_service.get_many_and_count(
-             LimitOffset(offset=0, limit=50),OrderBy(field_name="id", sort_order="asc")
+            LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
         )
-
 
         return users_service.to_schema(results, total, schema_type=User)
 
-    @get('/list_fast')
-    async def list_users(
-        self, users_service: UsersServiceDep
+    @get('/slow2')
+    @db_concurrent_session
+    async def list_users_slow2(
+        self, session: async_scoped_session[AsyncSession]
     ) -> OffsetPagination[User]:
         """List all users."""
 
-        # SLOW
-        # order_filter = OrderBy(field_name="id", sort_order="asc")
-        # results, total = await users_service.get_many_and_count(
-        #      LimitOffset(offset=0, limit=1),order_filter
-        # )
+        users_service = UserService(session=session)
+        results, total = await users_service.get_many_and_count(
+            LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
+        )
 
-        # FAST
-        results: ListResult[User] = await users_service.list_users_fast()
+        return users_service.to_schema(results, total, schema_type=User)
 
-        return users_service.to_schema(results.data, results.total_count, schema_type=User)
+        # return create_paginated_response[User](results, total=total)
+
+    @get('/list_fast')
+    @db_concurrent_session
+    @cache(expire=60)  # Cache the response for 60 seconds
+    async def list_users(
+        self, session: async_scoped_session[AsyncSession]
+    ) -> OffsetPagination[User]:
+        users_service = UserService(session=session)
+        results: ListResult[User] = await users_service.list_users_fast(session=session)
+        return users_service.to_schema(
+            results.data, results.total_count, schema_type=User
+        )
 
     @get('/{user_id}')
     async def get_user(self, user_id: UUID, users_service: UsersServiceDep) -> User:
@@ -90,11 +100,11 @@ class UserController(BaseController):
         # print(f'[{os.getpid()}] Creating user with data {self.count}')
 
         data.properties = {
-            "mfa_enabled": True,
-            "backup_codes": 'asdfasf',
-            "mfa_method": 'google',
-            "mfa_secret": 'aasdfasf',
-            "mfa_recovery_codes": ['code1', 'code2', 'code3'],
+            'mfa_enabled': True,
+            'backup_codes': 'asdfasf',
+            'mfa_method': 'google',
+            'mfa_secret': 'aasdfasf',
+            'mfa_recovery_codes': ['code1', 'code2', 'code3'],
         }
 
         db_obj = await users_service.create(data=data.as_dict())

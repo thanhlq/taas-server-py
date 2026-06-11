@@ -4,10 +4,10 @@ start=$(date +%s.%N)
 
 # 1
 curl -X 'GET' \
-  'http://localhost:8191/api/v1/users/' \
+  'http://localhost:8191/api/v1/users/slow2' \
   -H 'accept: application/json' \
   -H 'Accept-Encoding: gzip' \
-  -H 'Content-Type: application/json'
+  -H 'Content-Type: application/json' | gunzip -
 
 #  | gunzip -
 

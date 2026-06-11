@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from math import ceil
-from typing import Any
+from typing import Any, Sequence
 
 from platform_core.http.context import Context
 from platform_core.http.response.responses import (
@@ -51,7 +51,7 @@ def _pagination_params(ctx: Context | None, fallback_size: int) -> tuple[int, in
 
 
 def create_paginated_response[T](
-    result: ListResult[T] | list[T], ctx: Context | None = None
+    result: ListResult[T] | Sequence[T], ctx: Context | None = None, total: int | None = None
 ) -> PaginatedResponse[T]:
     """
     A shortcut to create paginated response from ListResult.
@@ -60,11 +60,13 @@ def create_paginated_response[T](
     avoiding redundant calculations.
     """
     if isinstance(result, list):
-        total = len(result)
-        data = result
-    else:
-        total = result.total_count
+        total = total or len(result)
+        data: Sequence[T] = result
+    elif isinstance(result, ListResult):
+        total = total or result.total_count
         data = result.data
+    else:
+        raise TypeError("Result must be a ListResult or a Sequence")
 
     page, page_size = _pagination_params(
         ctx, fallback_size=len(data) or _DEFAULT_PAGE_SIZE
@@ -82,8 +84,8 @@ def create_paginated_response[T](
         trace_id=trace_id,
         correlation_id=correlation_id,
     )
-    return PaginatedResponse(
-        data=data, status=ResponseStatus.SUCCESS, meta=meta
+    return PaginatedResponse[T](
+        items=data, status=ResponseStatus.SUCCESS, meta=meta
     )
 
 

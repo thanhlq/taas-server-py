@@ -29,11 +29,13 @@ import inspect
 import re
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, Callable, get_args, get_type_hints
+from typing import Any, Callable, cast, get_args, get_origin, get_type_hints
 from uuid import UUID
 
 from litestar.di import Provide
+from platform_core.db.advanced_session_manager import DBConcurrentSessionFactory
 from platform_core.http.context import Context
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from http_litestar.middewares.request_context import get_request_context
 
@@ -52,6 +54,22 @@ _PATH_PARAM_TYPES: dict[Any, str] = {
 }
 
 _PATH_PARAM_RE = re.compile(r"\{([^}]+)\}")
+
+
+def _is_db_injected_type(annotation: Any) -> bool:
+    if annotation is inspect.Parameter.empty:
+        return False
+    if isinstance(annotation, str):
+        return 'AsyncSession' in annotation or 'DBConcurrentSessionFactory' in annotation
+    if hasattr(annotation, '__metadata__'):
+        annotation = get_args(annotation)[0]
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    if annotation is AsyncSession or annotation is DBConcurrentSessionFactory:
+        return True
+    if origin is None:
+        return False
+    return AsyncSession in args or DBConcurrentSessionFactory in args
 
 
 def _is_fastapi_depends(obj: Any) -> bool:
@@ -102,23 +120,28 @@ def _make_wrapper(
     annotations: dict[str, Any],
 ) -> Callable[..., Any]:
     """Wrap ``func`` with a clean signature, preserving its call semantics."""
+    wrapper: Callable[..., Any]
     if inspect.isasyncgenfunction(func):
 
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
             async for value in func(*args, **kwargs):
                 yield value
+        wrapper = async_gen_wrapper
     elif inspect.iscoroutinefunction(func):
 
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             return await func(*args, **kwargs)
+        wrapper = async_wrapper
     elif inspect.isgeneratorfunction(func):
 
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def sync_generator_wrapper(*args: Any, **kwargs: Any) -> Any:
             yield from func(*args, **kwargs)
+        wrapper = sync_generator_wrapper
     else:
 
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             return func(*args, **kwargs)
+        wrapper = sync_wrapper
 
     # Deliberately no functools.wraps: it sets ``__wrapped__`` and Litestar's
     # signature model would follow through to the original (dirty) signature.
@@ -126,7 +149,7 @@ def _make_wrapper(
     wrapper.__doc__ = getattr(func, "__doc__", None)
     # Resolve forward references against the source module, not this one.
     wrapper.__module__ = getattr(func, "__module__", wrapper.__module__)
-    wrapper.__signature__ = signature  # type: ignore[attr-defined]
+    cast(Any, wrapper).__signature__ = signature
     wrapper.__annotations__ = annotations
     return wrapper
 
@@ -197,12 +220,13 @@ def adapt_handler(
       provider is registered as a :class:`Provide`,
     * all other params are passed through untouched.
     """
-    injected = set(getattr(handler, "__cache_injected_params__", ()) or ())
+    injected: set[str] = set(getattr(handler, "__cache_injected_params__", ()) or ())
     dependencies: dict[str, Provide] = {}
     _collect_dependencies(handler, dependencies)
 
     signature = inspect.signature(handler)
     hints = _resolve_hints(handler)
+    db_injected_names: set[str] = set()
     for name, param in signature.parameters.items():
         hint = hints.get(name, param.annotation)
         base, _ = _split_annotated(hint)
@@ -210,8 +234,10 @@ def adapt_handler(
             dependencies[name] = Provide(
                 get_request_context, use_cache=False, sync_to_thread=False
             )
+        if _is_db_injected_type(hint):
+            db_injected_names.add(name)
 
-    if not injected and not dependencies:
+    if not injected and not dependencies and not db_injected_names:
         return handler, dependencies
 
     new_params: list[inspect.Parameter] = []
@@ -221,6 +247,8 @@ def adapt_handler(
         if name in injected:
             continue  # drop synthetic cache request/response params
         hint = hints.get(name, param.annotation)
+        if name in db_injected_names:
+            continue
         if _depends_callable(param, hint) is not None:
             base = _split_annotated(hint)[0]
             new_params.append(

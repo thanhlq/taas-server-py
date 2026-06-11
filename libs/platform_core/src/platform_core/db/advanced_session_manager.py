@@ -4,11 +4,12 @@ Asynchronous database session manager.
 
 import contextlib
 import contextvars
+import inspect
 import logging
 from asyncio import gather
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable
 from functools import wraps
-from typing import Optional, Union
+from typing import Optional, Union, get_args, get_type_hints
 
 from platform_core.concurrency import get_current_task_id
 from platform_core.config import DatabaseSettings, get_settings
@@ -137,18 +138,22 @@ class MainDatabase:
 
 
 class DBConcurrentSessionFactory:
-    scoped_session_factory: async_scoped_session[AsyncSession]
+    _scoped_session_factory: async_scoped_session[AsyncSession]
 
     def __init__(self, db: AdvancedSessionManager | None = None):
         if db is None:
             db = MainDatabase.get_instance()
         self._db = db
-        self.scoped_session_factory = async_scoped_session(
+        self._scoped_session_factory = async_scoped_session(
             self._db.session_factory(), scopefunc=get_current_task_id
         )
 
     def get_session(self) -> AsyncSession:
-        return self.scoped_session_factory()
+        return self._scoped_session_factory()
+
+    @property
+    def scoped_session_factory(self) -> async_scoped_session[AsyncSession]:
+        return self._scoped_session_factory
 
     @staticmethod
     async def close_sessions(sessions: Iterable[AsyncSession]):
@@ -216,6 +221,33 @@ def db_session(_func: Union[Callable, None] = None, *, transaction: bool = False
 count = 0
 
 
+def _resolve_injected_param_name(func: Callable, target_type: type, fallback: str) -> str:
+    signature = inspect.signature(func)
+    try:
+        hints = get_type_hints(func, include_extras=True)
+    except Exception:
+        hints = getattr(func, '__annotations__', {}) or {}
+
+    for name, param in signature.parameters.items():
+        if name in {'self', 'cls'}:
+            continue
+
+        hint = hints.get(name, param.annotation)
+        if hint is inspect.Parameter.empty:
+            continue
+
+        if hasattr(hint, '__metadata__'):
+            hint = get_args(hint)[0]
+
+        args = get_args(hint)
+        if hint is target_type:
+            return name
+        if target_type in args:
+            return name
+
+    return fallback
+
+
 def db_context_session(
     _func: Union[Callable, None] = None, *, transaction: bool = False
 ):
@@ -229,10 +261,13 @@ def db_context_session(
     """
 
     def decorator(func: Callable) -> Callable:
+        injected_param_name = _resolve_injected_param_name(func, AsyncSession, 'session')
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             current_depth = _call_depth.get()
             existing_session = MainDatabase.get_instance().get_current_context_session()
+            kwargs.pop(injected_param_name, None)
 
             if existing_session is not None:
                 # Use existing session from context - pass it in kwargs
@@ -241,7 +276,9 @@ def db_context_session(
                     f'♻️ 🐬 [db_context_session] Reusing existing session (depth: {current_depth})'
                 )
 
-                return await func(*args, session=existing_session, **kwargs)
+                return await func(
+                    *args, **{**kwargs, injected_param_name: existing_session}
+                )
             else:
                 # Create new session (legacy behavior for non-transaction calls)
                 # async with db_context_transaction(transaction) as new_session:
@@ -258,7 +295,9 @@ def db_context_session(
                         )
                         count += 1
                         # kwargs['session'] = new_session
-                        result = await func(*args, session=new_session, **kwargs)
+                        result = await func(
+                            *args, **{**kwargs, injected_param_name: new_session}
+                        )
                         return result
                 finally:
                     # await new_session.close()
@@ -272,23 +311,6 @@ def db_context_session(
     else:
         return decorator(_func)
 
-
-def db_transactional_session(func: Callable) -> Callable:
-    """
-    A decorator to provide a database session to the decorated async function.
-     - This session is transactional and will be committed automatically.
-     - This session will be instantiated and not reused from context (Local Thread).
-    """
-
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        async with MainDatabase.get_instance().get_session_generator() as session:
-            result = await func(*args, session=session, **kwargs)
-            # No commit should be done by the user of this decorator,
-            await session.commit()
-            return result
-
-    return wrapper
 
 
 # ref https://medium.com/@lironbenyeda/fastapi-sqlalchemy-and-parallel-queries-walk-into-a-bar-86dfe40aa878
@@ -304,11 +326,17 @@ async def get_db_concurrent_sesson_manager() -> AsyncGenerator[
 
 
 def db_concurrent_session(func):
+    injected_param_name = _resolve_injected_param_name(
+        func, async_sessionmaker[AsyncSession], 'session'
+    )
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         cs_manager = DBConcurrentSessionFactory()
+        kwargs.pop(injected_param_name, None)
         try:
-            result = await func(*args, cs_manager, **kwargs)
+            a_session: async_scoped_session[AsyncSession] = cs_manager.scoped_session_factory
+            result = await func(*args, **{**kwargs, injected_param_name: a_session})
             return result
         except Exception as e:
             sessions = cs_manager.scoped_session_factory.registry.registry.values()

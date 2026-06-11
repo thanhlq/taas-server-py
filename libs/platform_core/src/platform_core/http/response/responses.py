@@ -6,9 +6,10 @@ Following the design principles of:
 """
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Sequence
 
 import msgspec
+
 from platform_core.serialization import ApiResponse
 
 
@@ -88,7 +89,7 @@ class PaginatedResponse[T](ApiResponse):
     Example:
         ```python
         response = PaginatedResponse(
-            data=[{"id": 1}, {"id": 2}],
+            items=[{"id": 1}, {"id": 2}],
             meta=PaginatedResponseMeta(
                 page=1,
                 page_size=10,
@@ -99,7 +100,7 @@ class PaginatedResponse[T](ApiResponse):
         ```
     """
 
-    data: list[T]
+    items: Sequence[T]
     status: ResponseStatus = ResponseStatus.SUCCESS
     meta: Optional[PaginatedResponseMeta] = None
     links: Optional[ApiLinks] = None

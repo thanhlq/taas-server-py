@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
-from typing import Any, Callable
+from typing import Any, Callable, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter, Depends, FastAPI
+from platform_core.db.advanced_session_manager import DBConcurrentSessionFactory
 from platform_core.http import BaseController, Route, WebSocketRoute
 from platform_core.http.cache import RequestLike, ResponseLike
 from platform_core.http.context import Context
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.websockets import WebSocket
@@ -17,6 +18,22 @@ from starlette.websockets import WebSocket
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 from http_fastapi.middewares.request_context import get_request_context
+
+
+def _is_db_injected_type(annotation: Any) -> bool:
+    if annotation is inspect.Parameter.empty:
+        return False
+    if isinstance(annotation, str):
+        return 'AsyncSession' in annotation or 'DBConcurrentSessionFactory' in annotation
+    if hasattr(annotation, '__metadata__'):
+        annotation = get_args(annotation)[0]
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    if annotation is AsyncSession or annotation is DBConcurrentSessionFactory:
+        return True
+    if origin is None:
+        return False
+    return AsyncSession in args or DBConcurrentSessionFactory in args
 
 
 def _route_specificity_key(path: str) -> tuple[int, ...]:
@@ -130,6 +147,10 @@ def _retarget_cache_injected_params(handler: Callable[..., Any]) -> Callable[...
     — only the public signature is updated.
     """
     sig = inspect.signature(handler)
+    try:
+        hints = get_type_hints(handler, include_extras=True)
+    except Exception:
+        hints = getattr(handler, '__annotations__', {}) or {}
     params = list(sig.parameters.values())
     # ``@functools.wraps`` (used by slowapi_advanced and others) sets
     # ``__wrapped__`` on the wrapper, which causes ``inspect.signature`` to
@@ -141,35 +162,61 @@ def _retarget_cache_injected_params(handler: Callable[..., Any]) -> Callable[...
     new_params: list[inspect.Parameter] = []
     changed = strip_self
     for p in params:
+        hint = hints.get(p.name, p.annotation)
         if p.annotation is RequestLike:
             new_params.append(p.replace(annotation=Request))
             changed = True
         elif p.annotation is ResponseLike:
             new_params.append(p.replace(annotation=Response))
             changed = True
-        elif p.annotation is Context and p.default is inspect.Parameter.empty:
-            new_params.append(p.replace(default=Depends(get_request_context)))
+        elif _is_db_injected_type(hint):
+            changed = True
+            continue
+        elif hint is Context and p.default is inspect.Parameter.empty:
+            new_params.append(
+                p.replace(annotation=Context, default=Depends(get_request_context))
+            )
             changed = True
         else:
-            new_params.append(p)
+            if hint is not inspect.Parameter.empty and hint is not p.annotation:
+                new_params.append(p.replace(annotation=hint))
+                changed = True
+            else:
+                new_params.append(p)
     if not changed:
         return handler
-    new_sig = sig.replace(parameters=new_params)
+    return_annotation = hints.get('return', sig.return_annotation)
+    if return_annotation is type(None):
+        # Keep the original ``-> None`` annotation shape so FastAPI's
+        # 204 no-body checks continue to behave as expected.
+        return_annotation = sig.return_annotation
+    new_sig = sig.replace(parameters=new_params, return_annotation=return_annotation)
 
     # Wrap in a fresh function so we can attach ``__signature__`` without
     # mutating the underlying ``__func__`` (which would re-introduce
     # ``self`` on every other call site).
-    if asyncio.iscoroutinefunction(handler):
-        async def wrapped(*args: Any, **kwargs: Any) -> Any:
+    if inspect.iscoroutinefunction(handler):
+        async def cache_wrapped_async(*args: Any, **kwargs: Any) -> Any:
             return await handler(*args, **kwargs)
+        wrapped = cache_wrapped_async
     else:
-        def wrapped(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        def cache_wrapped_sync(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
             return handler(*args, **kwargs)
+        wrapped = cache_wrapped_sync
 
     wrapped.__name__ = getattr(handler, '__name__', 'cache_endpoint')
     wrapped.__qualname__ = getattr(handler, '__qualname__', wrapped.__name__)
     wrapped.__module__ = getattr(handler, '__module__', __name__)
     wrapped.__doc__ = getattr(handler, '__doc__', None)
+    wrapped.__annotations__ = {
+        k: (
+            sig.return_annotation
+            if k == 'return' and v is type(None)
+            else v
+        )
+        for k, v in hints.items()
+        if v is not inspect.Parameter.empty
+    }
     from typing import cast as _cast
     _cast(Any, wrapped).__signature__ = new_sig
     return wrapped
@@ -201,20 +248,25 @@ def _apply_rate_limit(
     ]
     new_sig = sig.replace(parameters=new_params)
 
-    if asyncio.iscoroutinefunction(handler):
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    if inspect.iscoroutinefunction(handler):
+        async def rate_limited_wrapper_async(*args: Any, **kwargs: Any) -> Any:
             kwargs.pop('request', None)
             return await handler(*args, **kwargs)
+        rate_limited_wrapper = rate_limited_wrapper_async
     else:
-        def wrapper(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        def rate_limited_wrapper_sync(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
             kwargs.pop('request', None)
             return handler(*args, **kwargs)
+        rate_limited_wrapper = rate_limited_wrapper_sync
 
-    wrapper.__signature__ = new_sig  # type: ignore[attr-defined]
-    wrapper.__name__ = getattr(handler, '__name__', 'rate_limited_endpoint')
-    wrapper.__qualname__ = getattr(handler, '__qualname__', wrapper.__name__)
-    wrapper.__module__ = getattr(handler, '__module__', __name__)
-    return limiter.limit(limit_value)(wrapper)
+    from typing import cast as _cast
+    _cast(Any, rate_limited_wrapper).__signature__ = new_sig
+    rate_limited_wrapper.__name__ = getattr(handler, '__name__', 'rate_limited_endpoint')
+    rate_limited_wrapper.__qualname__ = getattr(
+        handler, '__qualname__', rate_limited_wrapper.__name__
+    )
+    rate_limited_wrapper.__module__ = getattr(handler, '__module__', __name__)
+    return limiter.limit(limit_value)(rate_limited_wrapper)
 
 
 def _wrap_websocket_handler(handler: Callable[..., Any]) -> Callable[..., Any]:
