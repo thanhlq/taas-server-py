@@ -5,6 +5,7 @@ from platform_core.http import AppConfig
 
 from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
+from http_fastapi.middewares.request_context import RequestContextMiddleware
 
 
 def create_app(config: AppConfig, **kwargs) -> FastAPI:
@@ -36,6 +37,7 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
     install_msgspec_openapi(app)
 
     # Middlewares
+    app.add_middleware(RequestContextMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=7)
 
     # 4. Add a simple root endpoint for testing

@@ -19,7 +19,8 @@ from http_litestar.adapters import (
     build_router_for_controller,
     create_socketio_asgi_app,
 )
-from http_litestar.base_litestar_app import build_app
+from http_litestar.create_app import build_app
+from http_litestar.middewares.request_context import RequestContextMiddleware
 from iam import iam_controllers
 from litestar import Litestar
 from litestar.response import Response
@@ -97,6 +98,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
             route_handlers=[build_router_for_controller(c) for c in controllers],
             lifespan=[lifespan],
             exception_handlers={HTTP_500_INTERNAL_SERVER_ERROR: _internal_error_handler},
+            middleware=[RequestContextMiddleware],
         )
 
         # Per-route rate limiting (parity with the FastAPI adapter). The

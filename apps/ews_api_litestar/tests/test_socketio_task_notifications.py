@@ -35,7 +35,7 @@ def _build_litestar_asgi():
         build_router_for_controller,
         create_socketio_asgi_app,
     )
-    from http_litestar.base_litestar_app import build_app
+    from http_litestar.create_app import build_app
 
     controller = TestController()
     app = build_app(route_handlers=[build_router_for_controller(controller)])

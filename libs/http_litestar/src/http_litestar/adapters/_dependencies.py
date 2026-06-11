@@ -33,6 +33,9 @@ from typing import Any, Callable, get_args, get_type_hints
 from uuid import UUID
 
 from litestar.di import Provide
+from platform_core.http.context import Context
+
+from http_litestar.middewares.request_context import get_request_context
 
 # Maps a Python annotation to the Litestar path-parameter type token.
 _PATH_PARAM_TYPES: dict[Any, str] = {
@@ -198,11 +201,19 @@ def adapt_handler(
     dependencies: dict[str, Provide] = {}
     _collect_dependencies(handler, dependencies)
 
+    signature = inspect.signature(handler)
+    hints = _resolve_hints(handler)
+    for name, param in signature.parameters.items():
+        hint = hints.get(name, param.annotation)
+        base, _ = _split_annotated(hint)
+        if base is Context and name not in dependencies:
+            dependencies[name] = Provide(
+                get_request_context, use_cache=False, sync_to_thread=False
+            )
+
     if not injected and not dependencies:
         return handler, dependencies
 
-    signature = inspect.signature(handler)
-    hints = _resolve_hints(handler)
     new_params: list[inspect.Parameter] = []
     new_annotations: dict[str, Any] = {}
 

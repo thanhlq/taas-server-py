@@ -6,15 +6,17 @@ import asyncio
 import inspect
 from typing import Any, Callable
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from platform_core.http import BaseController, Route, WebSocketRoute
 from platform_core.http.cache import RequestLike, ResponseLike
+from platform_core.http.context import Context
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.websockets import WebSocket
 
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
+from http_fastapi.middewares.request_context import get_request_context
 
 
 def _route_specificity_key(path: str) -> tuple[int, ...]:
@@ -144,6 +146,9 @@ def _retarget_cache_injected_params(handler: Callable[..., Any]) -> Callable[...
             changed = True
         elif p.annotation is ResponseLike:
             new_params.append(p.replace(annotation=Response))
+            changed = True
+        elif p.annotation is Context and p.default is inspect.Parameter.empty:
+            new_params.append(p.replace(default=Depends(get_request_context)))
             changed = True
         else:
             new_params.append(p)

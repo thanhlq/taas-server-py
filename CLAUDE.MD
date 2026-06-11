@@ -42,3 +42,10 @@ Key/value store implementation using memcached
 ### libs/store_redis
 
 Key/value store implementation using redis
+
+## Start the app
+
+There are two scripts to start the api service in fastapi and litestar framework:
+
+- start_ews_api_fastapi.sh
+- start_ews_api_litestar.sh
