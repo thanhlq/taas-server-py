@@ -30,9 +30,9 @@ from platform_core.http.route import (
 )
 
 from . import status
-from .cache import cache
-
 from ._socketio import verify_socketio_manager
+from .cache import cache
+from .context import Context
 
 __all__ = [
     'BaseController',
@@ -54,4 +54,5 @@ __all__ = [
     'cache',
     'status',
     'verify_socketio_manager',
+    'Context',
 ]

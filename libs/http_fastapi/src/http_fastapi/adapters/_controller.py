@@ -6,11 +6,9 @@ import inspect
 from typing import Any, Callable, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter, Depends, FastAPI
-from platform_core.db.advanced_session_manager import DBConcurrentSessionFactory
 from platform_core.http import BaseController, Route, WebSocketRoute
 from platform_core.http.cache import RequestLike, ResponseLike
 from platform_core.http.context import Context
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.websockets import WebSocket
@@ -18,22 +16,32 @@ from starlette.websockets import WebSocket
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 from http_fastapi.middewares.request_context import get_request_context
+from platform_core.http.types import CONTROLLER_PARAM_INJECTED_TYPES
+
+# Bare names of the injected types, used to match string (forward-ref)
+# annotations where we only have the textual name to compare against.
+_INJECTED_TYPE_NAMES = frozenset(
+    name
+    for name in (
+        getattr(t, '__name__', None) or getattr(get_origin(t), '__name__', '')
+        for t in CONTROLLER_PARAM_INJECTED_TYPES
+    )
+    if name
+)
 
 
 def _is_db_injected_type(annotation: Any) -> bool:
     if annotation is inspect.Parameter.empty:
         return False
     if isinstance(annotation, str):
-        return 'AsyncSession' in annotation or 'DBConcurrentSessionFactory' in annotation
+        return any(name in annotation for name in _INJECTED_TYPE_NAMES)
     if hasattr(annotation, '__metadata__'):
         annotation = get_args(annotation)[0]
-    origin = get_origin(annotation)
-    args = get_args(annotation)
-    if annotation is AsyncSession or annotation is DBConcurrentSessionFactory:
+    if annotation in CONTROLLER_PARAM_INJECTED_TYPES:
         return True
-    if origin is None:
+    if get_origin(annotation) is None:
         return False
-    return AsyncSession in args or DBConcurrentSessionFactory in args
+    return any(arg in CONTROLLER_PARAM_INJECTED_TYPES for arg in get_args(annotation))
 
 
 def _route_specificity_key(path: str) -> tuple[int, ...]:

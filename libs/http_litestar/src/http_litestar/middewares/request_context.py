@@ -29,6 +29,7 @@ class RequestContextMiddleware:
         # Controllers can mutate this response object (headers/cookies/status).
         # Changes are merged into the real outbound response in send wrapper.
         ctx.res = Response()
+        ctx.pack()
 
         state = scope.setdefault("state", {})
         if isinstance(state, dict):

@@ -18,11 +18,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         ctx = Context()
-        ctx.req = request
+        # ctx.req = request
         # Controllers can mutate this response object (headers/cookies/status).
         # Changes are merged into the real outbound response after the handler returns.
-        ctx.res = Response()
+        # ctx.res = Response()
         request.state.ctx = ctx
+        ctx.pack()
 
         token = set_request_context(ctx)
         try:

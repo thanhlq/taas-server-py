@@ -9,9 +9,12 @@ from fastapi import Depends
 from platform_core.db.advanced_session_manager import (
     MainDatabase,
     db_concurrent_session,
+    db_context_session,
     get_db_async_generator,
 )
+from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
 from platform_core.http import BaseController, cache, delete, get, patch, post, status
+from platform_core.http.context import Context
 from platform_core.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
@@ -42,13 +45,18 @@ class UserController(BaseController):
     count = 0
 
     @get('/')
+    @db_context_session
     async def list_users_slow(
-        self, users_service: UsersServiceDep
+        self,
+        session: DBAsyncSession,
+        ctx: Context,
+        # users_service: UsersServiceDep
     ) -> OffsetPagination[User]:
         """List all users."""
 
         # SLOW
         # order_filter = OrderBy(field_name="id", sort_order="asc")
+        users_service = UserService(session=session)
         results, total = await users_service.get_many_and_count(
             LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
         )
@@ -75,7 +83,7 @@ class UserController(BaseController):
     @db_concurrent_session
     @cache(expire=60)  # Cache the response for 60 seconds
     async def list_users(
-        self, session: async_scoped_session[AsyncSession]
+        self, session: DBAsyncScopedSession
     ) -> OffsetPagination[User]:
         users_service = UserService(session=session)
         results: ListResult[User] = await users_service.list_users_fast(session=session)

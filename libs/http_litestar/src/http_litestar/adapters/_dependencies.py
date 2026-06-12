@@ -33,9 +33,8 @@ from typing import Any, Callable, cast, get_args, get_origin, get_type_hints
 from uuid import UUID
 
 from litestar.di import Provide
-from platform_core.db.advanced_session_manager import DBConcurrentSessionFactory
 from platform_core.http.context import Context
-from sqlalchemy.ext.asyncio import AsyncSession
+from platform_core.http.types import CONTROLLER_PARAM_INJECTED_TYPES
 
 from http_litestar.middewares.request_context import get_request_context
 
@@ -56,20 +55,30 @@ _PATH_PARAM_TYPES: dict[Any, str] = {
 _PATH_PARAM_RE = re.compile(r"\{([^}]+)\}")
 
 
+# Bare names of the injected types, used to match string (forward-ref)
+# annotations where we only have the textual name to compare against.
+_INJECTED_TYPE_NAMES = frozenset(
+    name
+    for name in (
+        getattr(t, '__name__', None) or getattr(get_origin(t), '__name__', '')
+        for t in CONTROLLER_PARAM_INJECTED_TYPES
+    )
+    if name
+)
+
+
 def _is_db_injected_type(annotation: Any) -> bool:
     if annotation is inspect.Parameter.empty:
         return False
     if isinstance(annotation, str):
-        return 'AsyncSession' in annotation or 'DBConcurrentSessionFactory' in annotation
+        return any(name in annotation for name in _INJECTED_TYPE_NAMES)
     if hasattr(annotation, '__metadata__'):
         annotation = get_args(annotation)[0]
-    origin = get_origin(annotation)
-    args = get_args(annotation)
-    if annotation is AsyncSession or annotation is DBConcurrentSessionFactory:
+    if annotation in CONTROLLER_PARAM_INJECTED_TYPES:
         return True
-    if origin is None:
+    if get_origin(annotation) is None:
         return False
-    return AsyncSession in args or DBConcurrentSessionFactory in args
+    return any(arg in CONTROLLER_PARAM_INJECTED_TYPES for arg in get_args(annotation))
 
 
 def _is_fastapi_depends(obj: Any) -> bool:
