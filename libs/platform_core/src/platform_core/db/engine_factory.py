@@ -139,7 +139,6 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
         ) -> Any:
             """Emits a custom begin"""
             dbapi_connection.exec_driver_sql('BEGIN')
-
     else:
         cli_print_info('Creating SQLAlchemy engine for PostgreSQL, pooling settings: ' + ('disabled' if db_settings.POOL_DISABLED else f'enabled (pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT})'))
 

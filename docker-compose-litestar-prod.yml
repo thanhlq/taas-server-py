@@ -1,18 +1,37 @@
-# This is a simple docker-compose file for production deployment. It uses the Dockerfile.prod for building the image.
-# For local development and testing, use docker-compose.yml which uses Dockerfile.dev instead.
+# Production-style compose for the Litestar variant. Builds Dockerfile.litestar.prod.
+# The image is self-contained (no source bind-mount): the app runs from the venv
+# baked into the image via the Dockerfile CMD (`python -m ews_api_litestar`).
+#
+# Prerequisites: the shared infra (postgres/pgdog, redis sentinels, ...) must be
+# reachable on the `external-network` referenced below, matching .docker.env.
+#   docker network create external-network   # if it does not exist yet
+#
+# Build & run:
+#   docker compose -f docker-compose-litestar-prod.yml up --build
 services:
   ews_api:
     build:
       context: ./
       dockerfile: ./Dockerfile.litestar.prod
+    image: taas-ews-api-litestar:prod
     ports:
       - "8191:8191"
-    volumes:
-       - .:/app
-       - /app/.venv
-    command: sh -c "uv run ews_api python -m ews_api"
     env_file:
       - .docker.env
+    environment:
+      # Production: never run the autoreloader inside the container.
+      TAAS_RELOAD: "False"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8191/health', timeout=4).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 networks:
   default:

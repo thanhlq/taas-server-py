@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # File: Dockerfile.fastapi.prod
 # This dockerfile is used for production deployment. For local development and testing, use Dockerfile.dev instead.
 ###########
@@ -7,12 +8,111 @@
 # - Multiple stages to optimize the final image size
 # - Uses uv for Python dependency management
 # - Does not contain development dependencies like node, npm, and yarn to keep the image lean
-# - Used by docker-compose.prod.yml for production deployment
-# - This dockerfile is using libs/http_fastapi package and apps/ews_api_fastapi for Fastapi api based service.
-#   + This means: the following packages should not be included: libs/http_litestar, apps/ews_api_litestar
+# - Used by docker-compose-fastapi-prod.yml for production deployment
+# - This dockerfile is using libs/http_fastapi package and apps/ews_api for Fastapi api based service.
+#   + Installation is scoped with `uv sync --package ews_api`, whose dependency closure is:
+#     platform_core, ews, http_fastapi, db, iam, store_redis, slowapi_advanced
+#   + This means: the following packages are NOT installed into the final image: libs/http_litestar, apps/ews_api_litestar
+# - The final image size should be small and clean and best practices for production deployment should be followed.
+#   Non-root user, tini as PID 1, bytecode pre-compiled, only the runtime venv is copied into the final stage.
 
 ARG REGISTRY="docker.io"
 ARG PYTHON_BASE_IMAGE_VERSION=3.14.5-slim-bookworm
 
-FROM ${REGISTRY}/python:${PYTHON_BASE_IMAGE_VERSION}
+#############################################################################
+# Stage 1: builder — resolve & install dependencies into a self-contained venv
+#############################################################################
+FROM ${REGISTRY}/python:${PYTHON_BASE_IMAGE_VERSION} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
+
+# uv configuration: copy (not hardlink) into the venv, pre-compile bytecode,
+# never download a managed Python (use the base image interpreter), pin the
+# project environment so we know exactly which directory to copy to runtime.
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=false \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Pinned uv binary from the official distroless image.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Build toolchain in case any dependency needs to compile from source.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/log/* /tmp/*
+
+WORKDIR /app
+
+# 1) Install ONLY the third-party dependency closure of `ews_api` first.
+#    Bind-mounting the lockfile + every workspace member's pyproject.toml lets
+#    uv resolve the workspace without copying source, so this layer is cached
+#    until the lockfile or a pyproject.toml changes.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=libs/platform_core/pyproject.toml,target=libs/platform_core/pyproject.toml \
+    --mount=type=bind,source=libs/http_fastapi/pyproject.toml,target=libs/http_fastapi/pyproject.toml \
+    --mount=type=bind,source=libs/http_litestar/pyproject.toml,target=libs/http_litestar/pyproject.toml \
+    --mount=type=bind,source=libs/db/pyproject.toml,target=libs/db/pyproject.toml \
+    --mount=type=bind,source=libs/ews/pyproject.toml,target=libs/ews/pyproject.toml \
+    --mount=type=bind,source=libs/iam/pyproject.toml,target=libs/iam/pyproject.toml \
+    --mount=type=bind,source=libs/store_redis/pyproject.toml,target=libs/store_redis/pyproject.toml \
+    --mount=type=bind,source=libs/store_memcached/pyproject.toml,target=libs/store_memcached/pyproject.toml \
+    --mount=type=bind,source=libs/slowapi_advanced/pyproject.toml,target=libs/slowapi_advanced/pyproject.toml \
+    --mount=type=bind,source=apps/ews_api/pyproject.toml,target=apps/ews_api/pyproject.toml \
+    --mount=type=bind,source=apps/ews_api_litestar/pyproject.toml,target=apps/ews_api_litestar/pyproject.toml \
+    --mount=type=bind,source=apps/ews_worker/pyproject.toml,target=apps/ews_worker/pyproject.toml \
+    uv sync --frozen --no-dev --no-install-workspace --package ews_api
+
+# 2) Copy the source and install the workspace packages as non-editable wheels.
+#    `--package ews_api` restricts installation to its closure, so litestar
+#    sources, even though copied here, are never built into the venv.
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --package ews_api
+
+#############################################################################
+# Stage 2: runtime — minimal image carrying only the venv and a non-root user
+#############################################################################
+FROM ${REGISTRY}/python:${PYTHON_BASE_IMAGE_VERSION} AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# tini for correct PID-1 signal handling / zombie reaping. No build tools,
+# no curl, no node — the health check uses the bundled Python interpreter.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tini ca-certificates \
+    && rm -rf /var/lib/apt/lists/* /var/log/* /tmp/*
+
+# Dedicated unprivileged user.
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid 1000 --no-create-home app
+
+WORKDIR /app
+
+# Copy the fully built virtual environment (interpreter-compatible with the
+# identical base image) owned by the non-root user.
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+
+USER app
+
+EXPOSE 8191
+STOPSIGNAL SIGTERM
+
+# Health check hits the /health endpoint using only the standard library.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8191/health', timeout=4).status==200 else 1)"]
+
+ENTRYPOINT ["tini", "--"]
+CMD ["python", "-m", "ews_api"]
