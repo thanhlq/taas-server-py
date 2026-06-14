@@ -5,4 +5,5 @@
 - [X] ctx object inject into controller method
 - [ ] still import fastapi Depend
 - [ ] docker: improvement i.e. multiple stages with build, test, runtime only (no dev)
+- [ ] corse middleware in both frameworks fastapi & litestar
 - [ ]

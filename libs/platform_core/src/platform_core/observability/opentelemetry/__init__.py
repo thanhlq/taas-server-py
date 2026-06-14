@@ -1,0 +1,15 @@
+from platform_core.observability.types import ObservabilityT
+
+from .decorator import instrument
+from .otel_logging import LogAdapter
+from .otel_tracing import TracingManager
+
+
+class OpentelemetryObservability(ObservabilityT):
+    """
+    A global interface for specfic observability implementations.
+    The implementation can be in Elastic APM, Open Telemetry, etc.
+    """
+
+
+__all__ = ['LogAdapter', 'TracingManager', 'instrument']

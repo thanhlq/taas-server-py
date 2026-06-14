@@ -1,0 +1,19 @@
+from platform_core.config import Settings, get_settings
+from platform_core.observability.types import Tracing
+
+
+def is_tracing_enabled() -> bool:
+    return is_elk_tracing_enabled() or is_otel_tracing_enabled()
+
+
+def is_elk_tracing_enabled() -> bool:
+    settings: Settings = get_settings()
+    return Tracing.TRACING_ADAPTER_ELK in settings.trace.TRACING_ADAPTERS
+
+
+def is_otel_tracing_enabled() -> bool:
+    settings: Settings = get_settings()
+    return (
+        Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.trace.TRACING_ADAPTERS
+        or Tracing.TRACING_ADAPTER_OTLP_GRPC in settings.trace.TRACING_ADAPTERS
+    )

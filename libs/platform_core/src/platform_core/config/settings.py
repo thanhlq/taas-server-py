@@ -22,7 +22,10 @@ from platform_core.config.compression import CompressionConfig
 from platform_core.config.cors import CORSConfig
 from platform_core.config.csrf import CSRFConfig
 from platform_core.config.lock import DistributedLockConfig
+from platform_core.config.log import LogSettings
+from platform_core.config.otel import OtelSettings
 from platform_core.config.ratelimit import RateLimitConfig
+from platform_core.config.tracing import TracingSettings
 from platform_core.config.wss import WebSocketConfig
 from platform_core.db.db_config import (
     AlembicAsyncConfig,
@@ -45,11 +48,10 @@ BASE_DIR: Final[Path] = module_to_os_path(DEFAULT_MODULE_NAME)
 # print(f'Base directory resolved to: {BASE_DIR}')  # noqa: T201
 STATIC_DIR = Path(BASE_DIR / 'server' / 'static' / 'web')
 
-# cli_print_info_formal('DB MIGRATIONS MODULE', str(BASE_DIR.resolve()))
-
-
 @dataclass
 class DatabaseSettings:
+    """Contain pure user settings from environment variables related to database configuration."""
+
     ECHO: bool = field(default_factory=get_env('DATABASE_ECHO', False))
     """Enable SQLAlchemy engine logs."""
     DEBUG: bool = field(
@@ -70,7 +72,9 @@ class DatabaseSettings:
     """Max overflow for SQLAlchemy connection pool"""
     POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
     """Time in seconds for timing connections out of the connection pool."""
-    POOL_RECYCLE: int = field(default_factory=get_env('DATABASE_POOL_RECYCLE', default=300)) # 1800: 30 minutes, 300: 5 minutes
+    POOL_RECYCLE: int = field(
+        default_factory=get_env('DATABASE_POOL_RECYCLE', default=300)
+    )  # 1800: 30 minutes, 300: 5 minutes
     """
     Recycle below any LB/network idle timeout
     Amount of time to wait before recycling connections.
@@ -298,9 +302,11 @@ class AppSettings:
     """Path to environment secrets."""
 
     CACHE_ENABLED: bool = field(default_factory=get_env('CACHE_ENABLED', True, bool))
-    API_CACHE_PREFIX: str = field(default_factory=get_env('API_CACHE_PREFIX', 'api_cache'))
-    CACHE_LRU_SIZE: int = 10000 # Default max size for LRU cache (number of entries)
-    CACHE_EXPIRES_AFTER: int = 300 # 5 minutes
+    API_CACHE_PREFIX: str = field(
+        default_factory=get_env('API_CACHE_PREFIX', 'api_cache')
+    )
+    CACHE_LRU_SIZE: int = 10000  # Default max size for LRU cache (number of entries)
+    CACHE_EXPIRES_AFTER: int = 300  # 5 minutes
 
     @property
     def google_oauth_enabled(self) -> bool:
@@ -371,8 +377,8 @@ class AppSettings:
             self._websocket_config = WebSocketConfig()
         return self._websocket_config
 
-    def __post_init__(self) -> None:
-        # Check if the ALLOWED_CORS_ORIGINS is a string.
+    def get_allowed_cors_origins(self) -> list[str]:
+        _allowed_origins: list[str] = cast('list[str]', self.ALLOWED_CORS_ORIGINS)
         if isinstance(self.ALLOWED_CORS_ORIGINS, str):
             # Check if the string starts with "[" and ends with "]", indicating a list.
             if self.ALLOWED_CORS_ORIGINS.startswith(
@@ -380,49 +386,20 @@ class AppSettings:
             ) and self.ALLOWED_CORS_ORIGINS.endswith(']'):
                 try:
                     # Safely evaluate the string as a Python list.
-                    self.ALLOWED_CORS_ORIGINS = json.loads(self.ALLOWED_CORS_ORIGINS)  # pyright: ignore[reportConstantRedefinition]
+                    _allowed_origins = json.loads(self.ALLOWED_CORS_ORIGINS)  # pyright: ignore[reportConstantRedefinition]
                 except SyntaxError, ValueError:
                     # Handle potential errors if the string is not a valid Python literal.
                     msg = 'ALLOWED_CORS_ORIGINS is not a valid list representation.'
                     raise ValueError(msg) from None
             else:
                 # Split the string by commas into a list if it is not meant to be a list representation.
-                self.ALLOWED_CORS_ORIGINS = [
+                _allowed_origins = [
                     host.strip() for host in self.ALLOWED_CORS_ORIGINS.split(',')
                 ]  # pyright: ignore[reportConstantRedefinition]
+        return _allowed_origins
 
-
-@dataclass
-class LogSettings:
-    """Logger configuration"""
-
-    # https://stackoverflow.com/a/1845097/6560549
-    EXCLUDE_PATHS: str = r'\A(?!x)x'
-    """Regex to exclude paths from logging."""
-    INCLUDE_COMPRESSED_BODY: bool = False
-    """Include 'body' of compressed responses in log output."""
-    LEVEL: int = field(default_factory=get_env('LOG_LEVEL', 30))
-    """Stdlib log levels.
-
-    Only emit logs at this level, or higher.
-    """
-    OBFUSCATE_COOKIES: set[str] = field(
-        default_factory=lambda: {'session', 'XSRF-TOKEN'}
-    )
-    """Request cookie keys to obfuscate."""
-    OBFUSCATE_HEADERS: set[str] = field(
-        default_factory=lambda: {'Authorization', 'X-API-KEY', 'X-XSRF-TOKEN'}
-    )
-    """Attributes of the [Response][litestar.response.Response] to be
-    logged."""
-    SAQ_LEVEL: int = field(default_factory=get_env('SAQ_LOG_LEVEL', 50))
-    """Level to log SAQ logs."""
-    SQLALCHEMY_LEVEL: int = field(default_factory=get_env('SQLALCHEMY_LOG_LEVEL', 30))
-    """Level to log SQLAlchemy logs."""
-    ASGI_ACCESS_LEVEL: int = field(default_factory=get_env('ASGI_ACCESS_LOG_LEVEL', 30))
-    """Level to log uvicorn access logs."""
-    ASGI_ERROR_LEVEL: int = field(default_factory=get_env('ASGI_ERROR_LOG_LEVEL', 30))
-    """Level to log uvicorn error logs."""
+    def __post_init__(self):
+        pass
 
 
 @dataclass
@@ -432,7 +409,9 @@ class Settings:
     server: ServerSettings = field(default_factory=ServerSettings)
     # saq: SaqSettings = field(default_factory=SaqSettings)
     log: LogSettings = field(default_factory=LogSettings)
+    trace: TracingSettings = field(default_factory=TracingSettings)
     alchemy: SQLAlchemyAsyncConfig = field(default_factory=SQLAlchemyAsyncConfig)
+    otel: OtelSettings = field(default_factory=OtelSettings)
     email: EmailSettings = field(default_factory=EmailSettings)
 
     environment: str = field(default_factory=get_env('ENVIRONMENT', 'local'))
@@ -459,17 +438,15 @@ class Settings:
 
     def _find_app_home_path(self, default_path: Optional[str] = None) -> str:
         if default_path:
-            return default_path
+            _home_path = default_path
+        else:
+            _home_path = os.environ.get(f'{CONFIG_PREFIX}_HOME_PATH', None)
+            if _home_path:
+                return _home_path
+            _home_path = str(Path(os.curdir).resolve())
 
-        _home_path = os.environ.get(f'{CONFIG_PREFIX}_HOME_PATH', None)
-        if _home_path:
-            return _home_path
-
-        # print(f'Current working directory (Path.cwd()): {Path.cwd()}')  # noqa: T201
-        # print(f'Current working directory (os.curdir): {os.curdir} / {Path(os.curdir).resolve()}')  # noqa: T201
-
-        _home_path = str(Path(os.curdir).resolve())
-
+        if os.environ.get(f'{CONFIG_PREFIX}_HOME_PATH', None) is None:
+            os.environ[f'{CONFIG_PREFIX}_HOME_PATH'] = _home_path
         return _home_path
 
     @classmethod
@@ -503,10 +480,15 @@ class Settings:
             # vite: ViteSettings = ViteSettings()
             app: AppSettings = AppSettings()
             log: LogSettings = LogSettings()
+            trace: TracingSettings = TracingSettings()
+            otel: OtelSettings = OtelSettings()
+            email: EmailSettings = EmailSettings()
         except Exception as e:  # noqa: BLE001
             logger.fatal('Could not load settings. %s', e)
             sys.exit(1)
-        return Settings(app=app, db=db, server=server, log=log)
+        return Settings(
+            app=app, db=db, server=server, log=log, trace=trace, otel=otel, email=email
+        )
 
 
 def get_settings(

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from platform_core.config.wss import WebSocketConfig
     from platform_core.config.lock import DistributedLockConfig
     from platform_core.config.cache import CacheConfig
-    from platform_core.config.log_config import BaseLoggingConfig
+    from platform_core.config.log_config_todo import BaseLoggingConfig
     from platform_core.events.emitter import BaseEventEmitterBackend
     from platform_core.events.listener import EventListener
     from platform_core.openapi.config import OpenAPIConfig
