@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Annotated
 from uuid import UUID
 
+import db.models.core as m
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.service import OffsetPagination
-from fastapi import Depends
+
+# from fastapi import Depends
 from platform_core.db.advanced_session_manager import (
     MainDatabase,
     db_concurrent_session,
     db_context_session,
-    get_db_async_generator,
 )
 from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
 from platform_core.http import BaseController, cache, delete, get, patch, post, status
@@ -18,18 +18,18 @@ from platform_core.http.context import Context
 from platform_core.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
+from iam.accounts.accounts_factory import AccountFactory
 from iam.accounts.schemas._user import User, UserCreate, UserUpdate
 from iam.accounts.services._users import UserService
 
+# async def provide_users_service(
+#     db_session: Annotated[AsyncSession, Depends(get_db_async_generator)],
+# ) -> UserService:
+#     """Provide a ``UserService`` bound to a request-scoped session."""
+#     return UserService(session=db_session)
 
-async def provide_users_service(
-    db_session: Annotated[AsyncSession, Depends(get_db_async_generator)],
-) -> UserService:
-    """Provide a ``UserService`` bound to a request-scoped session."""
-    return UserService(session=db_session)
 
-
-UsersServiceDep = Annotated[UserService, Depends(provide_users_service)]
+# UsersServiceDep = Annotated[UserService, Depends(provide_users_service)]
 
 
 def get_user_service(session) -> UserService:
@@ -49,7 +49,6 @@ class UserController(BaseController):
         self,
         session: DBAsyncSession,
         ctx: Context,
-        # users_service: UsersServiceDep
     ) -> OffsetPagination[User]:
         """List all users."""
 
@@ -69,7 +68,7 @@ class UserController(BaseController):
     ) -> OffsetPagination[User]:
         """List all users."""
 
-        users_service = UserService(session=session)
+        users_service = AccountFactory.get_user_service(session)
         results, total = await users_service.get_many_and_count(
             LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
         )
@@ -81,27 +80,27 @@ class UserController(BaseController):
     @get('/list_fast')
     @db_concurrent_session
     @cache(expire=60)  # Cache the response for 60 seconds
-    async def list_users(
-        self, session: DBAsyncScopedSession
-    ) -> OffsetPagination[User]:
-        users_service = UserService(session=session)
-        results: ListResult[User] = await users_service.list_users_fast(session=session)
+    async def list_users(self, session: DBAsyncScopedSession) -> OffsetPagination[User]:
+        users_service = AccountFactory.get_user_service(session)
+        results: ListResult[m.User] = await users_service.list_users_fast()
         return users_service.to_schema(
             results.data, results.total_count, schema_type=User
         )
 
     @get('/{user_id}')
-    async def get_user(self, user_id: UUID, users_service: UsersServiceDep) -> User:
+    @db_concurrent_session
+    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> User:
         """Get a user by ID."""
+        users_service = AccountFactory.get_user_service(session)
         db_obj = await users_service.get(user_id)
         return users_service.to_schema(db_obj, schema_type=User)
 
     # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
-    # @db_session
-    async def create_user(
-        self, data: UserCreate, users_service: UsersServiceDep
-    ) -> User:
+    @db_context_session
+    async def create_user(self, data: UserCreate, session: DBAsyncSession) -> User:
+
+        users_service = AccountFactory.get_user_service(session)
 
         data.properties = {
             'mfa_enabled': True,
@@ -115,17 +114,21 @@ class UserController(BaseController):
         return users_service.to_schema(db_obj, schema_type=User)
 
     @patch('/{user_id}')
+    @db_context_session
     async def update_user(
         self,
         user_id: UUID,
         data: UserUpdate,
-        users_service: UsersServiceDep,
+        session: DBAsyncSession,
     ) -> User:
         """Update an existing user."""
+        users_service = AccountFactory.get_user_service(session)
         db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
         return users_service.to_schema(db_obj, schema_type=User)
 
     @delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_user(self, user_id: UUID, users_service: UsersServiceDep) -> None:
+    @db_context_session
+    async def delete_user(self, user_id: UUID, session: DBAsyncSession) -> None:
         """Delete a user by ID."""
+        users_service = AccountFactory.get_user_service(session)
         await users_service.delete(user_id)

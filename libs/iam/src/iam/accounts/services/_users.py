@@ -6,6 +6,7 @@ import db.models.core as m
 from advanced_alchemy.extensions.fastapi import repository, service
 from iam.accounts.schemas._user import UserCreate, UserStatus
 from iam.constants import Roles
+from platform_core.db.types import DBAsyncScopedSession
 from platform_core.models import ListResult
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
@@ -44,7 +45,8 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
 
         return result
 
-    async def list_users_fast(self, session: async_scoped_session[AsyncSession] | None = None, limit: int = 100, offset: int = 0) -> ListResult[m.User]:
+    async def list_users_fast(self, limit: int = 100, offset: int = 0) -> ListResult[m.User]:
+        session: DBAsyncScopedSession = self.repository.session
         async with asyncio.TaskGroup() as tg:
             t_select = tg.create_task(self.do_list_users(session, limit, offset))
             t_count = tg.create_task(self.count_fast(session))
