@@ -198,10 +198,26 @@ dependencies = [
     { name = "platform-core" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "python-dotenv" },
+    { name = "testcontainers" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "db", editable = "libs/db" },
     { name = "platform-core", editable = "libs/platform_core" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "python-dotenv" },
+    { name = "testcontainers", extras = ["postgres"] },
 ]
 
 [[package]]

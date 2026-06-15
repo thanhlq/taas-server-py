@@ -1,21 +1,28 @@
 from __future__ import annotations
 
 import db.models.banking as m
-from advanced_alchemy.extensions.fastapi import repository, service
+import msgspec
+from advanced_alchemy import repository, service
 
 from ..schemas import CryptoToken as CryptoTokenCreate
 
+# Columns of the ORM model we can populate from the create payload.
+_TOKEN_COLUMNS = {column.name for column in m.CryptoToken.__table__.columns}
+
 
 def new_token_to_db_token(token: CryptoTokenCreate) -> m.CryptoToken:
-    return m.CryptoToken(
-        name=token.name,
-        symbol=token.symbol,
-        decimals=token.decimals,
-        blockchain=token.blockchain,
-        network=token.network,
-        type=token.type,
-        contract_address=token.contract_address,
-    )
+    """Map a create payload to an ORM row.
+
+    Copies every field shared by the schema and the model, skipping ``None`` so
+    database/server defaults still apply (e.g. ``categories``, ``is_stable_coin``).
+    """
+    data = msgspec.structs.asdict(token)
+    kwargs = {
+        key: value
+        for key, value in data.items()
+        if key in _TOKEN_COLUMNS and value is not None
+    }
+    return m.CryptoToken(**kwargs)
 
 
 class CryptoTokenService(service.SQLAlchemyAsyncRepositoryService[m.CryptoToken]):
