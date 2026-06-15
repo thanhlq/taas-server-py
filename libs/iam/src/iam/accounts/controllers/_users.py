@@ -42,7 +42,6 @@ class UserController(BaseController):
 
     api_prefix = '/api/v1/users'
     tags = ('Users',)
-    count = 0
 
     @get('/')
     @db_context_session
@@ -103,9 +102,6 @@ class UserController(BaseController):
     async def create_user(
         self, data: UserCreate, users_service: UsersServiceDep
     ) -> User:
-        # users_service = get_user_service()
-        self.count += 1
-        # print(f'[{os.getpid()}] Creating user with data {self.count}')
 
         data.properties = {
             'mfa_enabled': True,

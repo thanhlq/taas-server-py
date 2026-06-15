@@ -6,7 +6,7 @@ The module is responsible for setting up the FastAPI app, including:
   - routes
 """
 from logging import Logger
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import socketio
 from ews import conrrollers as ews_conrrollers
@@ -27,13 +27,28 @@ from store_redis import RedisStore, create_redis_client
 
 from .bootstrap import root_path, settings
 
+if TYPE_CHECKING:
+    from platform_core.observability.types import InstrumentSettings
+
 
 class EwsApplication(BaseApiApplication[FastAPI]):
     _socketio_app: Optional[socketio.ASGIApp] = None
 
-    def __init__(self, settings: Settings, root_path: str) -> None:
-        super().__init__(settings, root_path)
+    def __init__(
+        self,
+        *,
+        settings: Settings,
+        runtime_path: str,
+    ) -> None:
+        super().__init__(settings, runtime_path, None)
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
+
+
+    def instrument_settings(self) -> 'InstrumentSettings':
+        from platform_core.observability.types import InstrumentSettings
+        if not hasattr(self, '_instrument_settings'):
+            self._instrument_settings = InstrumentSettings()
+        return self._instrument_settings
 
     def get_app_id(self) -> str:
         return 'ews_api'
@@ -115,8 +130,9 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastA
 
     return app
 
-
-_ews_app = EwsApplication(settings, root_path)
+_ews_app = EwsApplication(
+    settings=settings, runtime_path=root_path
+)
 
 app = (
     _ews_app.get_websocket_app()

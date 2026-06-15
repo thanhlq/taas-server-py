@@ -4,6 +4,7 @@ import asyncio
 
 import db.models.core as m
 from advanced_alchemy.extensions.fastapi import repository, service
+from iam.accounts.schemas._user import UserCreate, UserStatus
 from iam.constants import Roles
 from platform_core.models import ListResult
 from sqlalchemy import select
@@ -23,6 +24,11 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
     default_role = Roles.USER
     match_fields = ['email']
 
+    async def create_user(self, user: UserCreate) -> m.User:
+        """Create a new user with the default role."""
+        user_row = self.user_create_to_db_user(user)
+        return await self.create(user_row)
+
     async def do_list_users(self, session: AsyncSession | async_scoped_session[AsyncSession], limit: int = 100, offset: int = 0) -> list[m.User]:
         _session: AsyncSession
         if isinstance(session, async_scoped_session):
@@ -38,7 +44,6 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
 
         return result
 
-    # @db_concurrent_session
     async def list_users_fast(self, session: async_scoped_session[AsyncSession] | None = None, limit: int = 100, offset: int = 0) -> ListResult[m.User]:
         async with asyncio.TaskGroup() as tg:
             t_select = tg.create_task(self.do_list_users(session, limit, offset))
@@ -65,3 +70,21 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
         query = text(sql)
         result = await _session.scalar(query)
         return int(result)
+
+    def user_create_to_db_user(self, user_create: UserCreate) -> m.User:
+        """Convert UserCreate schema to User DB model."""
+        user = m.User(
+            email=user_create.email,
+            name=user_create.name,
+            role=self.default_role,
+            tenant_id=user_create.tenant_id,
+            org_id=user_create.org_id,
+            status=user_create.status or UserStatus.ACTIVE,
+            first_name=user_create.first_name,
+            last_name=user_create.last_name,
+            username=user_create.username,
+            properties=user_create.properties,
+            phones=user_create.phones,
+        )
+
+        return user

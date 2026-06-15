@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedString
 from platform_core.config import Settings, get_settings
+from platform_core.iam.types import UserStatus
 from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -36,20 +37,17 @@ settings: Settings = get_settings()
 class User(UUIDv7AuditBase):
     __tablename__ = USER_ACCOUNT_TABLE
     """Hashed backup codes for MFA recovery."""
-    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
-    )
-    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
-    )
     email: Mapped[str] = mapped_column(unique=False, index=True, nullable=False)
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
+    first_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
+    last_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     username: Mapped[str | None] = mapped_column(
         String(length=30), unique=False, index=True, nullable=True, default=None
     )
-    phone: Mapped[str | None] = mapped_column(
-        String(length=20), nullable=True, default=None
-    )
+    # phone: Mapped[str | None] = mapped_column(
+    #     String(length=20), nullable=True, default=None
+    # )
+    phones: Mapped[list[dict]] = mapped_column(JSONB, nullable=True, default=[])
     hashed_password: Mapped[str | None] = mapped_column(
         String(length=255),
         nullable=True,
@@ -60,20 +58,24 @@ class User(UUIDv7AuditBase):
     avatar_url: Mapped[str | None] = mapped_column(
         String(length=500), nullable=True, default=None
     )
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
-    is_superuser: Mapped[bool] = mapped_column(default=False, nullable=False)
-    is_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
     verified_at: Mapped[date] = mapped_column(nullable=True, default=None)
     joined_at: Mapped[date] = mapped_column(default=lambda: datetime.now(UTC).date())
     login_count: Mapped[int] = mapped_column(default=0)
-    status: Mapped[str | None] = mapped_column(
-        String(length=30), index=True, nullable=True, default=None
+    status: Mapped[UserStatus] = mapped_column(
+        String(length=30), index=True, nullable=True, default=UserStatus.ACTIVE
     )
+    is_root_account: Mapped[bool] = mapped_column(default=False, nullable=False)
     properties: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     password_reset_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     failed_reset_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
     reset_locked_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
-
+    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )
+    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
+        String(length=36), index=True, nullable=True, default=None
+    )
     totp_secret: Mapped[str | None] = mapped_column(
         EncryptedString(key=settings.app.SECRET_KEY),
         nullable=True,

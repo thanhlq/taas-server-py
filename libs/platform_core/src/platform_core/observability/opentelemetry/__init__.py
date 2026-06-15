@@ -1,8 +1,8 @@
 from platform_core.observability.types import ObservabilityT
 
 from .decorator import instrument
-from .otel_logging import LogAdapter
-from .otel_tracing import TracingManager
+from .otel_logging import OtelLogAdapter
+from .otel_tracing import OtelTracingManager
 
 
 class OpentelemetryObservability(ObservabilityT):
@@ -12,4 +12,4 @@ class OpentelemetryObservability(ObservabilityT):
     """
 
 
-__all__ = ['LogAdapter', 'TracingManager', 'instrument']
+__all__ = ['OtelLogAdapter', 'OtelTracingManager', 'instrument']

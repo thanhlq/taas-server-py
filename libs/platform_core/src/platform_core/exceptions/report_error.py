@@ -2,6 +2,9 @@ import logging
 from logging import Logger
 from typing import Any, Optional
 
+from platform_core.observability.config import is_tracing_enabled
+from platform_core.observability.tracing_factory import TracingFactory
+
 
 def _extract_exception_chain(exception: Exception) -> list[dict[str, str]]:
     """
@@ -144,8 +147,8 @@ def report_error(
     _logger = logger or logging.getLogger()
     _tracing_manager = None
 
-    # if is_tracing_enabled() and capture_in_span:
-    #     _tracing_manager = TracingFactory().get_tracing_manager()
+    if is_tracing_enabled() and capture_in_span:
+        _tracing_manager = TracingFactory().get_tracing_manager()
 
     # Determine if we're dealing with an exception or a message
     is_exception = isinstance(error_message, Exception)
@@ -177,11 +180,11 @@ def report_error(
     if is_exception and exception_obj:
         exception_chain = _extract_exception_chain(exception_obj)
         if exception_chain:
-            log_context['exception_chain'] = exception_chain
+            log_context['exception_chain'] = exception_chain # type: ignore
 
     # Add extra context if provided
     if extra_context:
-        log_context['extra_context'] = extra_context
+        log_context['extra_context'] = extra_context # type: ignore
 
     # Add trace context if available
     if _tracing_manager:

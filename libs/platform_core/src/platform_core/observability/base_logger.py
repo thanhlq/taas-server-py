@@ -1,9 +1,13 @@
+"""
+Base classes and default implementations for logging and tracing when no specific observability
+implementation is enabled. This includes a noop instrument decorator and a default log adapter that does nothing. The noop instrument decorator simply returns the original function or class without any instrumentation, while the default log adapter can be used to log messages without any integration with OpenTelemetry or other tracing systems. This allows the application to run without any observability features when they are not needed orwhen the configuration is not set up for it.
+"""
+
 import logging
 from abc import ABC
 from typing import Any, Optional
 
 from platform_core.cli import cli_print_warning
-from platform_core.config import get_settings
 from platform_core.config.log import LogSettings
 from platform_core.observability.types import Logging
 
@@ -191,6 +195,7 @@ class DefaultLogAdapter(BaseLogAdapter):
     """
 
     def __init__(self):
+        from platform_core.config import get_settings
         super().__init__(get_settings().log)
 
     def get_handler(self):

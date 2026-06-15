@@ -1,11 +1,8 @@
 from fastapi import FastAPI
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from platform_core.http import AppConfig
 
-from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
-from http_fastapi.middewares.request_context import RequestContextMiddleware
 
 
 def create_app(config: AppConfig, **kwargs) -> FastAPI:
@@ -33,16 +30,15 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
         **kwargs,
     )
 
-    # 3. Install MsgSpec OpenAPI support (must be after app creation)
-    install_msgspec_openapi(app)
+    # 3. Tracing
+    from platform_core.observability.tracing_factory import TracingFactory
+    config.instrumentation.fastapi_app = app  # type: ignore
+    TracingFactory().initialize(config)
 
-    # Middlewares
-    app.add_middleware(RequestContextMiddleware)
-    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=7)
+    # 4. Configure the app with our custom settings and middlewares
+    from .configuration import configure_app
 
-    # 4. Add a simple root endpoint for testing
-    app.add_api_route(
-        '/', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
-    )
+    configure_app(app, config, **kwargs)
 
+    # 5. Return the application instance
     return app

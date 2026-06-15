@@ -1,15 +1,16 @@
 import logging
-import os
 from abc import ABC, abstractmethod
 from logging import Logger
 from typing import Optional
 
+from litestar.utils import join_paths
 from rich.console import Console
 
 from platform_core.cli import get_console
-from platform_core.config import Settings
+from platform_core.config import DatabaseSettings, Settings
 from platform_core.config.app import AppConfig
 from platform_core.config.openapi import build_openapi_config
+from platform_core.observability.types import InstrumentSettings
 
 __all__ = ('BaseApiApplication', 'AppConfig')
 
@@ -21,9 +22,9 @@ class BaseApiApplication[A](ABC):
     _all_settings: Settings
     _console: Console
     _logger: Logger
-    _root_path: str
+    _runtime_path: str
 
-    def __init__(self, settings: Settings, root_path: str) -> None:
+    def __init__(self, settings: Settings, runtime_path: str, instrumentation: InstrumentSettings | None) -> None:
         self._all_settings = settings
         self._config = AppConfig(
             app_name=settings.app.NAME,
@@ -34,8 +35,9 @@ class BaseApiApplication[A](ABC):
             websocket_config=settings.app.get_websocket_config(),
             cors_config=settings.app.get_cors_config(),
             # csrf_config=config.app.get_csrf_config(),
+            instrumentation=instrumentation or InstrumentSettings(),
         )
-        self._root_path = root_path
+        self._runtime_path = runtime_path
         self._db_config = settings.db
         self.openapi_enabled = settings.app.OPENAPI_ENABLED
         if self.openapi_enabled:
@@ -48,16 +50,19 @@ class BaseApiApplication[A](ABC):
 
         self.show_app_info()
 
+    def get_instrument_settings(self) -> InstrumentSettings:
+        return self._config.instrumentation # type: ignore
+
     @property
     def all_settings(self) -> Settings:
         return self._all_settings
 
-    def root_app_path(self, *subpaths: Optional[str]) -> str:
-        """Construct a path relative to the app's root path."""
+    def get_app_runtime_path(self, *subpaths: Optional[str]) -> str:
+        """Construct a path relative to the app's runtime path."""
         if not subpaths:
-            return self._root_path
+            return self._runtime_path
         else:
-            return os.path.join(self._root_path, *subpaths)
+            return join_paths(self._runtime_path, *subpaths)
 
     @property
     def logger(self) -> Logger:

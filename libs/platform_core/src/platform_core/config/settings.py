@@ -417,6 +417,14 @@ class Settings:
     environment: str = field(default_factory=get_env('ENVIRONMENT', 'local'))
     """The current environment (development, staging, production)."""
 
+    def is_debug(self) -> bool:
+        """Check if the application is in debug mode.
+
+        Returns:
+            True if in debug mode, False otherwise.
+        """
+        return self.log.LOG_LEVEL == logging.DEBUG
+
     def find_env_file(self, filename: str) -> Path | None:
         """Search for the specified .env file in the current and parent directories.
 

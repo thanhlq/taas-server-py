@@ -6,9 +6,6 @@ Examples: https://github.com/open-telemetry/opentelemetry-python/blob/main/docs/
 from logging import INFO, Filter
 from typing import Any, Optional
 
-from platform_core.config import get_settings
-from platform_core.observability.base_logger import LOG_FMT, BaseLogAdapter
-
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
     OTLPLogExporter as OTLPLogExporterGRPC,
@@ -21,6 +18,9 @@ from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
+from platform_core.config import get_settings
+from platform_core.observability.base_logger import LOG_FMT, BaseLogAdapter
 
 from .otel_config import OtelConfig
 
@@ -76,14 +76,13 @@ class OtelLogProvider:
         return provider
 
 
-class LogAdapter(BaseLogAdapter):
+class OtelLogAdapter(BaseLogAdapter):
     """OpenTelemetry-compatible logger adapter that ."""
 
     _insecured: bool = False
     _endpoint: bool = False
 
     def __init__(self):
-
         super().__init__(get_settings().log)
 
     def get_handler(self):

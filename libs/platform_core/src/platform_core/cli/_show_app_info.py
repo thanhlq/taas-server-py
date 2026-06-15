@@ -57,7 +57,7 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
     table.add_row('Env/Debug', f'{app.all_settings.environment}/{_format_is_enabled(app.config.debug)}')
     if app.config.debug:
         table.add_row('DB URL:', app.all_settings.db.URL or 'Not set')
-    table.add_row('Root path', app.root_app_path())
+    table.add_row('Root path', app.get_app_runtime_path())
     table.add_row(
         'Python Debugger on exception', _format_is_enabled(app.config.pdb_on_exception)
     )

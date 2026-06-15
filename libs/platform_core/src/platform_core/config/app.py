@@ -1,26 +1,28 @@
 from __future__ import annotations
-from starlette.responses import Response
 
 import enum
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
+
+from starlette.responses import Response
 
 from platform_core.config.allowed_hosts import AllowedHostsConfig
 from platform_core.datastructures import State
 from platform_core.events.emitter import SimpleEventEmitter
+from platform_core.observability.types import InstrumentSettings
 from platform_core.types.composite_types import Middleware
 from platform_core.types.empty import Empty
 
 if TYPE_CHECKING:
 
+    from platform_core.config.cache import CacheConfig
     from platform_core.config.compression import CompressionConfig
     from platform_core.config.cors import CORSConfig
     from platform_core.config.csrf import CSRFConfig
+    from platform_core.config.lock import DistributedLockConfig
+    from platform_core.config.log_config_todo import BaseLoggingConfig
     from platform_core.config.ratelimit import RateLimitConfig
     from platform_core.config.wss import WebSocketConfig
-    from platform_core.config.lock import DistributedLockConfig
-    from platform_core.config.cache import CacheConfig
-    from platform_core.config.log_config_todo import BaseLoggingConfig
     from platform_core.events.emitter import BaseEventEmitterBackend
     from platform_core.events.listener import EventListener
     from platform_core.openapi.config import OpenAPIConfig
@@ -45,6 +47,10 @@ class AppConfig:
 
     app_name: str | None = field(default=None)
     debug: bool = field(default=False)
+
+    instrumentation: InstrumentSettings | None = field(default=None)
+    """The configuration for observability instrumentation. If provided,
+    the app will be automatically instrumented according to the settings. If not provided, no instrumentation will be applied."""
 
     # Serialization:
     default_response_class: type[Response] | None = field(default=None)

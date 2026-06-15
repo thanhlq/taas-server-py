@@ -12,11 +12,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Tuan PHAM",
   "username": "tp214813",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 # 2
@@ -29,11 +28,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Vinh PHAM",
   "username": "pxvinh214",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 # 3
@@ -46,11 +44,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Sang",
   "username": "un1234",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 # 4
@@ -63,11 +60,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Ngoc LE",
   "username": "socwow214",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 # 5
@@ -80,11 +76,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Miki",
   "username": "m12345",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 # 6
@@ -97,11 +92,10 @@ curl -X 'POST' \
   "password": "Bamevietnam@214",
   "name": "Rok",
   "username": "rok9321",
-  "phone": null,
-  "isSuperuser": false,
-  "isActive": true,
-  "isVerified": false,
-  "properties": null
+  "is_root_account": true,
+  "status": "active",
+  "email_verified": true,
+  "properties": {"profile": "https://avatars.githubusercontent.com/u/12345678?v=4"}
 }'
 
 

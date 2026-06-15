@@ -5,6 +5,7 @@ from uuid import UUID
 
 import msgspec
 from db.models import TeamRoles
+from platform_core.iam.types import Phone, UserStatus
 from platform_core.serialization._msgspec_model import CamelizedBaseStruct
 from platform_core.utils.validation import (
     validate_email,
@@ -84,12 +85,15 @@ class UserCreate(CamelizedBaseStruct):
     email: str
     password: str
     name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     username: str | None = None
-    phone: str | None = None
-    is_superuser: bool = False
-    is_active: bool = True
-    is_verified: bool = False
+    status: UserStatus = UserStatus.ACTIVE
+    email_verified: bool = False
     properties: dict | None = None
+    phones: list[Phone] = []
+    tenant_id: str | None = None
+    org_id: str | None = None
 
     def __post_init__(self) -> None:
         """Additional validation after field validation."""

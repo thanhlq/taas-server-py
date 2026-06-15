@@ -127,31 +127,6 @@ class ObservabilityT(ABC):
         self.logging_factory = logging_factory
 
 
-from abc import ABC, abstractmethod
-
-
-class IDistributedTracing:
-    """
-    This interface define methods support for distributed tracing.
-
-    The idea, following W3C Trace Context specification, is to propagate:
-    - traceparent: carries the tracing information across service boundaries
-    - tracestate: carries system-specific tracing information across service boundaries
-    - baggage: carries user-defined key-value pairs across service boundaries
-    """
-
-    @abstractmethod
-    def get_carrier(self) -> dict[str, str]:
-        """
-        Get the tracing carrier for propagation.
-
-        Returns:
-            A dictionary representing the tracing carrier with keys like
-            'traceparent', 'tracestate', and 'baggage'.
-        """
-        ...
-
-
 class IContextTracer(ABC):
     """Abstract async context tracer interface."""
 
@@ -170,7 +145,7 @@ class IContextTracer(ABC):
     def set_attribute(self, key: str, value: Any): ...
 
     @abstractmethod
-    def record_exception(self, e: Optional[Exception]) -> 'IContextTracer': ...
+    def record_exception(self, e: Exception) -> 'IContextTracer': ...
 
     # @abstractmethod
     # def set_status(self, status: Any) -> None: ...
@@ -180,7 +155,7 @@ class IContextTracer(ABC):
     # """ i.e. ct.set_attribute('retry_count', event.metadata.retry_count) """
 
 
-class ITracingManager(ABC, IDistributedTracing):
+class ITracingManager(ABC):
     """
     Interface for a Tracing Manager.
 
@@ -244,7 +219,7 @@ class ITracingManager(ABC, IDistributedTracing):
         pass
 
     @abstractmethod
-    def capture_exception(self, ex: Optional[Exception] = None):
+    def capture_exception(self, e: Exception):
         """
         Record an exception in the current span.
 
@@ -272,22 +247,31 @@ class ITracingManager(ABC, IDistributedTracing):
         """
         pass
 
+    @abstractmethod
+    def get_carrier(self) -> dict[str, str]:
+        """
+        Get the tracing carrier for propagation.
 
-""" """
+        Returns:
+            A dictionary representing the tracing carrier with keys like
+            'traceparent', 'tracestate', and 'baggage'.
+        """
+        ...
+
 
 
 @dataclass
-class ApplicationStartupOptions:
+class InstrumentSettings:
     """
     Parameters for setting up the application context.
     """
 
-    app_name: str
-    # Logging
     logger_class: Optional[type[Logger]] = None
     uvicorn_log_config_builder: Optional[
         Union[dict[str, Any], Callable[[], dict[str, Any]]]
     ] = None
+    logger: Optional[Logger] = None
+
     # Tracing
     tracing_manager_class: Optional[type[ITracingManager]] = None
     instrument_decorator: Optional[Callable] = None
@@ -297,14 +281,3 @@ class ApplicationStartupOptions:
     aiokafka_consumer_hook: Optional[Any] = None
     redis_instrument: bool = False
     sqlalchemy_instrument: bool = False
-
-    logger: Optional[Logger] = None
-
-
-class ApplicationContext:
-    """Holds application-wide context information."""
-
-    startupOptions: ApplicationStartupOptions
-
-    def __init__(self, params: ApplicationStartupOptions):
-        self.startupOptions = params

@@ -1,8 +1,8 @@
 """init database
 
-Revision ID: 5f44a5414e1e
+Revision ID: bd98a35aaf1c
 Revises: 
-Create Date: 2026-06-02 10:54:36.122046
+Create Date: 2026-06-15 13:27:52.336120
 
 """
 
@@ -47,7 +47,7 @@ sa.FernetBackend = FernetBackend
 sa.PGCryptoBackend = PGCryptoBackend
 
 # revision identifiers, used by Alembic.
-revision = '5f44a5414e1e'
+revision = 'bd98a35aaf1c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -354,37 +354,39 @@ def schema_upgrades() -> None:
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
+    sa.Column('first_name', sa.String(), nullable=True),
+    sa.Column('last_name', sa.String(), nullable=True),
     sa.Column('username', sa.String(length=30), nullable=True),
-    sa.Column('phone', sa.String(length=20), nullable=True),
+    sa.Column('phones', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('is_superuser', sa.Boolean(), nullable=False),
-    sa.Column('is_verified', sa.Boolean(), nullable=False),
+    sa.Column('email_verified', sa.Boolean(), nullable=False),
     sa.Column('verified_at', sa.Date(), nullable=True),
     sa.Column('joined_at', sa.Date(), nullable=False),
     sa.Column('login_count', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(length=30), nullable=True),
+    sa.Column('is_root_account', sa.Boolean(), nullable=False),
+    sa.Column('properties', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('password_reset_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.Column('failed_reset_attempts', sa.Integer(), nullable=False),
     sa.Column('reset_locked_until', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('tenant_id', sa.String(length=36), nullable=True),
+    sa.Column('org_id', sa.String(length=36), nullable=True),
     sa.Column('totp_secret', sa.EncryptedString(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=True),
     sa.Column('is_two_factor_enabled', sa.Boolean(), nullable=False),
     sa.Column('two_factor_confirmed_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.Column('backup_codes', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('tenant_id', sa.String(length=36), nullable=True),
-    sa.Column('org_id', sa.String(length=36), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_user_account'))
     )
     with op.batch_alter_table('taas_user_account', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_taas_user_account_email'), ['email'], unique=True)
+        batch_op.create_index(batch_op.f('ix_taas_user_account_email'), ['email'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_org_id'), ['org_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_status'), ['status'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_tenant_id'), ['tenant_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_taas_user_account_username'), ['username'], unique=True)
+        batch_op.create_index(batch_op.f('ix_taas_user_account_username'), ['username'], unique=False)
 
     op.create_table('taas_audit_log',
     sa.Column('id', sa.GUID(length=16), nullable=False),
@@ -714,9 +716,9 @@ def schema_upgrades() -> None:
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('user_id', sa.GUID(length=16), nullable=False),
     sa.Column('oauth_name', sa.String(length=100), nullable=False),
-    sa.Column('access_token', sa.EncryptedString(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=False),
+    sa.Column('access_token', sa.EncryptedText(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=False),
     sa.Column('expires_at', sa.Integer(), nullable=True),
-    sa.Column('refresh_token', sa.EncryptedString(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=True),
+    sa.Column('refresh_token', sa.EncryptedText(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=True),
     sa.Column('account_id', sa.String(length=320), nullable=False),
     sa.Column('account_email', sa.String(length=320), nullable=False),
     sa.Column('token_expires_at', sa.DateTime(timezone=True), nullable=True),

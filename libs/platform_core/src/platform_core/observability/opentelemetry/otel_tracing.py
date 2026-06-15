@@ -5,8 +5,8 @@ Initializes the OpenTelemetry tracer provider and configures exporters
 based on application settings from Pydantic configuration.
 
 Author: Thanh Le
-Date: 2025-06-10
 """
+from logging import Logger
 from typing import Optional
 
 from opentelemetry import trace
@@ -26,11 +26,11 @@ from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapProp
 # from opentracing import Span
 from opentelemetry.trace.span import Span
 
-from platform_core.observability.base_logger import BaseLogAdapter, DefaultLogAdapter
+from platform_core.observability.base_logger import DefaultLogAdapter
+from platform_core.utils.singleton import singleton
 
 from ..types import (
     IContextTracer,
-    IDistributedTracing,
     ITracingManager,
 )
 from .otel_config import (
@@ -38,50 +38,40 @@ from .otel_config import (
 )
 
 
-class TracingManager(ITracingManager, IDistributedTracing):
+@singleton
+class OtelTracingManager(ITracingManager):
     """[SINGLETON] A class for initialize of OpenTelemetry tracing."""
 
-    _instance: Optional['TracingManager'] = None
+    _instance: Optional['OtelTracingManager'] = None
     trace_provider: TracerProvider
     config: OtelConfig
     default_tracer: Optional[trace.Tracer] = None
-    _logger: Optional[BaseLogAdapter] = None
+    _logger: Optional[Logger] = None
 
-    def __new__(cls, logger: Optional[BaseLogAdapter] = None):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self, logger: Optional[BaseLogAdapter] = None):
-        if not hasattr(self, '_initialized'):
-            super().__init__()
-            self.config = OtelConfig.get_instance()
-            # self.default_tracer = None  # Initialize before conditional use
-            if self.config.is_tracing_enabled():
-                self.trace_provider = self.init_tracer_provider()
-                trace.set_tracer_provider(self.trace_provider)
-                self.default_tracer = self.get_tracer()
-                self.test_tracing()
-            self._logger = logger if logger else DefaultLogAdapter()
-            self._initialized = True
+    def __init__(self, logger: Optional[Logger] = None):
+        super().__init__()
+        self.config = OtelConfig()
+        # self.default_tracer = None  # Initialize before conditional use
+        if self.config.is_tracing_enabled():
+            self.trace_provider = self.init_tracer_provider()
+            trace.set_tracer_provider(self.trace_provider)
+            self.default_tracer = self.get_tracer()
+            self.test_tracing()
+        self._logger = logger
 
     @property
-    def logger(self) -> BaseLogAdapter:
-        return self._logger or DefaultLogAdapter()
-
-    # @staticmethod
-    # def get_instance() -> 'OtelTracingManager':
-    #     if OtelTracingManager._instance is None:
-    #         OtelTracingManager._instance = OtelTracingManager()
-    #     return OtelTracingManager._instance
+    def logger(self) -> Logger:
+        if not self._logger:
+            self._logger = DefaultLogAdapter().create_logger('OtelTracingManager')
+        return self._logger
 
     def get_context_tracer(self) -> type[IContextTracer]:
         return OtelContextTracer
 
-    def capture_exception(self, ex: Optional[Exception] = None):
+    def capture_exception(self, e: Exception):
         try:
             span = self.get_current_span()
-            span.record_exception(ex)
+            span.record_exception(e)
             if span.is_recording():
                 span.set_status(Status(StatusCode.ERROR))
         except Exception as e:
@@ -175,9 +165,8 @@ class TracingManager(ITracingManager, IDistributedTracing):
             return trace.get_tracer(name)
 
     def get_faust_sensor(self):
-        from .otel_faust_sensor import OtelFaustSensor
-
-        return OtelFaustSensor()
+        # from .otel_faust_sensor import OtelFaustSensor
+        raise NotImplementedError('Faust sensor integration is not implemented yet.')
 
     def test_tracing(self):
         tracer = self.get_tracer()
@@ -221,7 +210,7 @@ class OtelContextTracer(IContextTracer):
 
     def __enter__(self) -> IContextTracer:
         """Enter the context manager and start the span."""
-        tracer = TracingManager().get_tracer()
+        tracer = OtelTracingManager().get_tracer()
 
         if self.ctx is not None:
             self.span_context_man = tracer.start_as_current_span(
@@ -245,7 +234,7 @@ class OtelContextTracer(IContextTracer):
         """Exit the context manager and end the span."""
         # self.span_context_man.__exit__(exc_type, exc_val, exc_tb)
         if self.span_context_man:
-            return self.span_context_man.__exit__(exc_type, exc_val, exc_tb)
+            self.span_context_man.__exit__(exc_type, exc_val, exc_tb)
 
     def set_attribute(self, key, value):
         if self.span:
@@ -259,3 +248,4 @@ class OtelContextTracer(IContextTracer):
             self.span.set_status(Status(StatusCode.ERROR, str(e)))
         else:
             print('⚠️ Warning: Attempted to record exception on a non-existent span.')
+        return self
