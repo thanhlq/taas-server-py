@@ -4,8 +4,8 @@
 from typing import TYPE_CHECKING, Any
 
 import msgspec
-from ews.domain.ppm.schemas import Project, TaskNotification, TaskNotificationEvent
-from ews.domain.ppm.schemas._project import ProjectEntityPy
+from ews.ppm.schemas import Project, TaskNotification, TaskNotificationEvent
+from ews.ppm.schemas._project import ProjectEntityPy
 from platform_core.http import (
     BaseController,
     WebSocketSession,

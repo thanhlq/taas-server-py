@@ -5,6 +5,10 @@ IMPORTANT:
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
 
+from .banking import (
+    CryptoToken,
+)
+
 # Core models (IAM, Auth, etc.)
 from .core import (
     AuditLog,
@@ -56,7 +60,9 @@ from .ews import (
 
 # from sqlalchemy.orm import DeclarativeBase
 
+
 __all__ = [
+    # Core / Iam
     'AdvancedDeclarativeBase',
     'AuditLog',
     'EmailVerificationToken',
@@ -73,9 +79,11 @@ __all__ = [
     'UserRole',
     'team_tag',
     'CasbinRule',
+
     # CRM
     'CrmAccount',
     'CrmAccountAddress',
+
     # PPM
     'Category',
     'ChecklistTemplate',
@@ -101,4 +109,7 @@ __all__ = [
     'Timelog',
     'Workflow',
     'WorkflowStage',
+
+    # Banking
+    'CryptoToken',
 ]

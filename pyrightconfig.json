@@ -21,6 +21,7 @@
     "libs/ews/src",
     "libs/http_fastapi/src",
     "libs/platform_core/src",
+    "libs/banking_core/src",
     "libs/iam/src",
     "apps/ews_api/src",
     "apps/ews_worker/src"
@@ -38,6 +39,11 @@
     },
     {
       "root": "libs/db",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/banking_core",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },

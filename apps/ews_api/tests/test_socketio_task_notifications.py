@@ -14,7 +14,7 @@ from typing import Callable
 import pytest
 import socketio
 import uvicorn
-from ews.domain.ppm import TestController
+from ews.ppm import TestController
 
 EXPECTED_EVENTS = {'connected', 'subscribed', 'task.created', 'task.assigned', 'pong'}
 
