@@ -1,10 +1,12 @@
-
-from libs.banking_core.src.banking_core.crypto.services._crypto_token import CryptoTokenService
 from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
 
+from banking_core.crypto.services import CryptoTokenService
+
+
 class CryptoFactory:
-
     @staticmethod
-    def get_crypto_token_service(session: DBAsyncSession | DBAsyncScopedSession) -> CryptoTokenService:
+    def get_crypto_token_service(
+        session: DBAsyncSession | DBAsyncScopedSession,
+    ) -> CryptoTokenService:
 
-        return Crypto()
+        return CryptoTokenService(session)
