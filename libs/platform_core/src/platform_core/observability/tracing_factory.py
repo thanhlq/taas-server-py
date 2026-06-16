@@ -40,7 +40,8 @@ class TracingFactory:
             self._logger = _ins_config.logger
 
         if not is_tracing_enabled():
-            self.logger.info('Tracing is not enabled.')
+            self.logger.info('⚫ Tracing is not enabled.')
+            return
 
         if _ins_config.fastapi_app:
             self.trace_fastapi_app(_ins_config.fastapi_app)

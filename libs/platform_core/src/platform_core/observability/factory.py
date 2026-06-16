@@ -1,10 +1,12 @@
 """
 Load the logging/tracing/... implementation
 """
+
 import logging
 from logging import Logger
 from typing import TYPE_CHECKING, Optional
 
+from platform_core.config.log import LogSettings
 from platform_core.observability.base_logger import ROOT_LOGGER_NAME
 from platform_core.observability.types import Logging
 from platform_core.utils.singleton import singleton
@@ -33,16 +35,47 @@ else:
     from .defaults import noop_instrument as instrument
 
 
+DISABLE_DEBUG_IN_LOGGER = [
+    'urllib3.connectionpool',
+    'urllib3.util.retry',
+    'passlib.utils.compat',
+    'aiokafka',
+    'aiokafka.conn',
+    'aiokafka.consumer.consumer',
+    'passlib.registry',
+    'httpcore.http11',
+    'httpcore.connection',
+]
+
+
 @singleton
 class LogFactory:
     _root_logger: Logger
     _adapter: LogAdapter
     _settings: 'Settings'
 
-    def __init__(self) -> None:
+    def __init__(self):
         from platform_core.config import get_settings
+
         self._settings = get_settings()
         self._validate_config()
+
+        # Initialize the root logger with the configured handlers and log level
+        handlers = self.get_configured_handlers()
+        logging.basicConfig(
+            handlers=handlers, level=self.settings.LOG_LEVEL
+        )
+        for logger_name in DISABLE_DEBUG_IN_LOGGER:
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+        self.logger.info(
+            '📝 Initializing logging with adapter [%s] log level: %s, handlers: %s', self._adapter.__class__.__name__, self.settings.LOG_LEVEL, handlers
+        )
+
+    @property
+    def settings(self) -> LogSettings:
+        """Configure the logging system by patching logging.getLogger."""
+        return self._settings.log
 
     @property
     def log_adapter(self) -> LogAdapter:
@@ -53,11 +86,16 @@ class LogFactory:
     @property
     def logger(self) -> Logger:
         if not hasattr(self, '_root_logger'):
-            self._root_logger = Logger(ROOT_LOGGER_NAME)
+            self._root_logger = self.get_logger(ROOT_LOGGER_NAME)
         return self._root_logger
+
+    def get_configured_handlers(self) -> list[logging.Handler]:
+        """Return all handlers configured for the root logger, including those from the adapter and any additional handlers."""
+        return self.logger.handlers
 
     def is_debug_enabled(self) -> bool:
         from platform_core.config import get_settings
+
         settings = get_settings()
         return settings.is_debug()
 
@@ -90,4 +128,7 @@ class LogFactory:
             raise ValueError('ELK and OTEL log adapters cannot be used together.')
 
 
-__all__ = ['instrument', 'LogAdapter', 'TracingManager']
+logger: Logger = LogFactory().logger
+""" Default logger instance that can be imported and used across the application. """
+
+__all__ = ['instrument', 'LogAdapter', 'TracingManager', 'logger']

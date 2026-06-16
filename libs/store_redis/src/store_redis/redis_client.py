@@ -18,8 +18,6 @@ def create_single_redis_client(
     if 'redis://' not in host:
         host = f'redis://{config.host}:{config.port}'
 
-    print(f'Creating single Redis client with host: {host}')
-
     return aioredis.from_url(
         f'{host}',
         password=config.password,
@@ -88,7 +86,6 @@ def create_redis_client(config: RedisConfig) -> aioredis.Redis:
         redis = create_sentinel_client(config)
     else:
         raise ValueError(f'Unsupported mode: {config.mode}')
-    print(f'Created Redis client with config: {config}')
     return redis
 
 

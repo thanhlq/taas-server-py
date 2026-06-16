@@ -2,8 +2,7 @@
 OpenTelemetry-compatible logging implementation.
 Examples: https://github.com/open-telemetry/opentelemetry-python/blob/main/docs/examples/logs/example.py
 """
-
-from logging import INFO, Filter
+from logging import Filter
 from typing import Any, Optional
 
 from opentelemetry._logs import set_logger_provider
@@ -19,6 +18,7 @@ from opentelemetry.sdk._logs.export import (
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
+from platform_core.cli import cli_print_info_formal
 from platform_core.config import get_settings
 from platform_core.observability.base_logger import LOG_FMT, BaseLogAdapter
 
@@ -48,10 +48,9 @@ class OtelLogProvider:
             self._initialized = True
 
     def init_otel_log_provider(self) -> LoggerProvider:
-        config: OtelConfig = OtelConfig.get_instance()
+        config: OtelConfig = OtelConfig()
         resource = Resource({SERVICE_NAME: config.service_name})
         provider = LoggerProvider(resource=resource)
-        exporter = None
 
         if config.is_auth_enabled() and config.log_exporter_protocol == 'grpc':
             raise ValueError(
@@ -73,6 +72,7 @@ class OtelLogProvider:
         provider.add_log_record_processor(processor)
 
         set_logger_provider(provider)
+        cli_print_info_formal('🔗 OpenTelemetry Log Provider', f'endpoint: {config.log_exporter_endpoint}, protocol: {config.log_exporter_protocol}, service name: {config.service_name}')
         return provider
 
 
@@ -87,7 +87,7 @@ class OtelLogAdapter(BaseLogAdapter):
 
     def get_handler(self):
         handler = LoggingHandler(
-            level=INFO, logger_provider=OtelLogProvider().logger_provider
+            level=self.settings.LOG_LEVEL, logger_provider=OtelLogProvider().logger_provider
         )
         # Example of adding a filter to remove extra fields if needed
         # handler.addFilter(RemoveExtra())

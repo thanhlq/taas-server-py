@@ -16,8 +16,9 @@ from logging import Logger
 from typing import Any
 
 import socketio
+from socketio import Manager
 
-from platform_core.cli import cli_print_debug, cli_print_info
+from platform_core.cli import cli_print_info
 from platform_core.http.controller import BaseController
 
 
@@ -79,7 +80,7 @@ class SocketIOSession:
         await self._server.disconnect(self.sid, namespace=self.namespace)
 
 
-def build_socketio_server(client_manager=None, logger: Logger | bool = False, **kwargs: Any) -> socketio.AsyncServer:
+def build_socketio_server(client_manager=None, logger: Logger | None = None, **kwargs: Any) -> socketio.AsyncServer:
     """Create an ``AsyncServer`` with sensible defaults for ASGI hosting.
 
     ``cors_allowed_origins='*'`` is the default so browser Socket.IO clients
@@ -89,11 +90,12 @@ def build_socketio_server(client_manager=None, logger: Logger | bool = False, **
     kwargs.setdefault('async_mode', 'asgi')
     # TODO: to check why '*'
     kwargs.setdefault('cors_allowed_origins', '*')
-    cli_print_debug(f"Building Socket.IO server with, client_manager: {type(client_manager).__name__}, kwargs: {kwargs}")
+    if logger:
+        logger.debug(f"Building Socket.IO server with, client_manager: {type(client_manager).__name__}, kwargs: {kwargs}")
     if client_manager is not None:
         kwargs['client_manager'] = client_manager
     if logger:
-        kwargs['logger'] = logger
+        kwargs['logger'] = logger or False
         kwargs['engineio_logger'] = logger
     return socketio.AsyncServer(**kwargs)
 
@@ -117,7 +119,7 @@ async def verify_socketio_manager(
     """
     import asyncio
 
-    manager = server.manager
+    manager: Manager = server.manager
     info: dict[str, Any] = {
         'manager_class': type(manager).__name__,
         'manager_module': type(manager).__module__,
@@ -145,7 +147,7 @@ async def verify_socketio_manager(
     # method the manager itself uses on first publish so we test the real path.
     if getattr(manager, 'redis', None) is None:
         try:
-            manager._redis_connect()
+            manager._redis_connect() # pyright: ignore[reportPrivateUsage]
         except Exception as exc:
             raise RuntimeError(
                 f'AsyncRedisManager could not connect to {info["redis_url"]!r}: {exc!r}'

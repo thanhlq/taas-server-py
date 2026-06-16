@@ -54,6 +54,9 @@ class DetailedFormatter(logging.Formatter):
 class BaseLogAdapter(ABC):
     """
     A base logger adapter class that will be responsible for managing logging settings and handlers.
+
+    Normally subclass should implement the get_handler method to return the appropriate handler for
+    the logging provider (e.g., OpenTelemetry, Elastic, etc.)
     """
 
     _delegate: logging.Logger
@@ -65,6 +68,10 @@ class BaseLogAdapter(ABC):
         self._level = settings.LOG_LEVEL
         self._format = settings.LOG_FORMAT or Logging.LOG_FORMAT_STANDARD
         self._log_settings = settings
+
+    @property
+    def settings(self) -> LogSettings:
+        return self._log_settings
 
     def get_internal_logger(self) -> logging.Logger:
         """Get the underlying Python logger."""
@@ -117,6 +124,7 @@ class BaseLogAdapter(ABC):
         return file_handler
 
     def get_handler(self) -> Optional[logging.Handler]:
+        """ This method should be implemented by adapter i.e. Elastic or OpenTelemetry to return the appropriate handler for that provider. """
         cli_print_warning(
             'BaseLogAdapter.get_handler called - should be overridden by subclasses if needed'
         )

@@ -57,7 +57,10 @@ class OtelTracingManager(ITracingManager):
             trace.set_tracer_provider(self.trace_provider)
             self.default_tracer = self.get_tracer()
             self.test_tracing()
+        else:
+            self.logger.debug('⚫ OpenTelemetry tracing is not enabled but initialized.')
         self._logger = logger
+        self.logger.info('OtelTracingManager initialized with config: %s', self.config)
 
     @property
     def logger(self) -> Logger:

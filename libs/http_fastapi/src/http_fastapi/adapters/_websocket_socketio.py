@@ -10,8 +10,8 @@ The returned object is the ASGI app you hand to uvicorn — Socket.IO traffic on
 FastAPI.
 """
 from __future__ import annotations
-from logging import Logger
 
+from logging import Logger
 from typing import Any
 
 import socketio
@@ -21,6 +21,7 @@ from platform_core.http._socketio import (
     build_socketio_server,
     register_controller,
 )
+from platform_core.logger import logger
 
 
 def create_socketio_asgi_app(
@@ -29,6 +30,7 @@ def create_socketio_asgi_app(
     server: socketio.AsyncServer | None = None,
     socketio_path: str = 'socket.io',
     client_manager: socketio.AsyncManager | None = None,
+    logging_enabled: bool = False,
     **server_kwargs: Any,
 ) -> tuple[socketio.ASGIApp, socketio.AsyncServer]:
     """
@@ -37,9 +39,9 @@ def create_socketio_asgi_app(
     """
 
     # how to setup redis pubsub for this socketio server? if we want to run multiple instances, we need to share state between them. the socketio docs recommend using a message queue like redis for this: https://python-socketio.readthedocs.io/en/latest/redis.html#redis-manager
-    logger: Logger | bool = server_kwargs.pop('logger', False)
+    _logger: Logger | None = server_kwargs.pop('logger', logger if logging_enabled else None)
 
-    server = server or build_socketio_server(client_manager=client_manager, logger=logger, **server_kwargs)
+    server = server or build_socketio_server(client_manager=client_manager, logger=_logger, **server_kwargs)
     for controller in controllers:
         register_controller(server, controller)
 

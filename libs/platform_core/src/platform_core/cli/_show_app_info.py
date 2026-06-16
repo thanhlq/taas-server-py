@@ -54,7 +54,8 @@ def show_api_app_info(app: 'BaseApiApplication') -> None:  # pragma: no cover
         'VERSION',
         f'{__version__.major}.{__version__.minor}.{__version__.patch}',
     )
-    table.add_row('Env/Debug', f'{app.all_settings.environment}/{_format_is_enabled(app.config.debug)}')
+    table.add_row('ENV/DEBUG', f'{app.all_settings.environment}/{_format_is_enabled(app.config.debug)}')
+    table.add_row('LOG ADAPTERS', app.all_settings.log.LOG_ADAPTERS)
     if app.config.debug:
         table.add_row('DB URL:', app.all_settings.db.URL or 'Not set')
     table.add_row('Root path', app.get_app_runtime_path())

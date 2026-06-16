@@ -63,6 +63,9 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     def is_websocket_enabled(self) -> bool:
         return True
 
+    def enable_ws_logging(self) -> bool:
+        return (self.config.websocket_config is not None and self.config.websocket_config.debug)
+
     def build_application(self) -> 'FastAPI':
 
         @asynccontextmanager
@@ -103,6 +106,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
                 _fastapi_app,
                 *_controllers,
                 client_manager=build_websocket_redis_manager(websocket_config),
+                logging_enabled=self.enable_ws_logging(),
             )
 
         return _fastapi_app

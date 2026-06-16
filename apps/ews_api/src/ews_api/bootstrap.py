@@ -38,6 +38,11 @@ def setup_environment(env_file) -> tuple[Settings, str]:
     # os.environ.setdefault(f"{CONFIG_PREFIX}_GRANIAN_IN_SUBPROCESS", "false")
     # original_format_help = LitestarExtensionGroup.format_help
 
+    # Init Logging (triggered by importing the factory, which is used by the app config and the app itself)
+    from platform_core.observability.factory import LogFactory
+
+    LogFactory().logger.info('Environment setup complete. Starting application...')
+
     return settings, root_path
 
 

@@ -1,7 +1,7 @@
 import socketio
 
-from platform_core.cli import cli_print_debug
 from platform_core.config.wss import WebSocketConfig
+from platform_core.logger import logger
 
 
 def build_websocket_redis_manager(
@@ -28,6 +28,7 @@ def build_websocket_redis_manager(
     )
     url = rc.get_all_in_one_redis_url(db=True)
 
-    cli_print_debug(f'build_websocket_redis_manager: {url}')
+    logger.info(f'Creating WebSocket Redis manager with URL: {url}, channel: {channel}, write_only: {write_only}')
+
 
     return socketio.AsyncRedisManager(url, channel=channel, write_only=write_only)
