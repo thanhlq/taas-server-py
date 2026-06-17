@@ -26,7 +26,7 @@ from typing import Protocol, runtime_checkable
 
 import msgspec
 
-from platform_core.serialization import BaseEntity
+from platform_core.serialization import BaseModel
 
 
 # --------------------------------------------------------------------------- #
@@ -53,7 +53,7 @@ class OutboxStatus(enum.StrEnum):
     FAILED = "failed"
 
 
-class OutboxMessage(BaseEntity):
+class OutboxMessage(BaseModel):
     """A message awaiting publication."""
 
     id: str

@@ -9,4 +9,4 @@ Definition of common patterns for resilience services, such as:
 - Bulkheads
 - Timeouts
 - Fallbacks
-- Dead Letter Queue: for 
+- Dead Letter Queue:

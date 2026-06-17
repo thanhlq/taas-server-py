@@ -23,6 +23,7 @@
     "libs/platform_core/src",
     "libs/banking_core/src",
     "libs/iam/src",
+    "libs/resiliant/src",
     "apps/ews_api/src",
     "apps/ews_worker/src"
   ],
