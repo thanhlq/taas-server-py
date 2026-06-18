@@ -1,0 +1,16 @@
+<mjml>
+  <mj-body background-color="#fafbfc">
+    <mj-section background-color="#fff" padding="40px 20px">
+      <mj-column vertical-align="middle" width="100%">
+        <p align="lelft" padding="35px" font-size="20px" color="#333">Hello,</p>
+        <mj-text align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">Congratulation 🎉, your account has been registered successfully with  </mj-text>
+        <mj-text align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">{{ email }}, </mj-text>
+        <mj-text align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">Password: *****</mj-text>
+        <p align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">You now can login and enjoy the app!</p>
+        <p align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">Thanh you</p>
+        <p align="lelft" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">{{project_name}} Team</p>
+        <mj-divider border-color="#ccc" border-width="2px"></mj-divider>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

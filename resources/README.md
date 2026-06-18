@@ -1,0 +1,3 @@
+# Resources Folder
+
+Shared resources among services as email tempaltes,...
