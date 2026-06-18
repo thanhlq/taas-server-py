@@ -20,11 +20,14 @@
     "libs/db/src",
     "libs/ews/src",
     "libs/http_fastapi/src",
+    "apps/ews_api_litestar/src",
     "libs/platform_core/src",
     "libs/banking_core/src",
     "libs/iam/src",
     "libs/resiliant/src",
+    "libs/block-kaspa/src",
     "apps/ews_api/src",
+    "apps/ews_api_litestar/src",
     "apps/ews_worker/src"
   ],
   "executionEnvironments": [
@@ -35,6 +38,11 @@
     },
     {
       "root": "libs/http_fastapi",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/http_litestar",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
@@ -59,12 +67,27 @@
       "extraPaths": ["src"]
     },
     {
+      "root": "libs/resiliant",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/block-kaspa",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
       "root": "apps/ews_api",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
     {
       "root": "apps/ews_worker",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "apps/ews_api_litestar",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     }

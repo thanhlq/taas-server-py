@@ -29,15 +29,16 @@ members = [
     "libs/http_fastapi",
     "libs/db",
     "libs/ews",
-    "apps/ews_api",
-    "apps/ews_api_litestar",
-    "apps/ews_worker",
     "libs/http_litestar",
     "libs/store_redis",
     "libs/store_memcached",
     "libs/slowapi_advanced",
     "libs/iam",
     "libs/banking_core",
+    "libs/block-kaspa",
+    "apps/ews_api",
+    "apps/ews_api_litestar",
+    "apps/ews_worker",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -56,6 +57,7 @@ store_memcached = { workspace = true }
 slowapi_advanced = { workspace = true }
 iam = { workspace = true }
 banking_core = { workspace = true }
+block_kaspa = { workspace = true }
 
 
 [dependency-groups]
