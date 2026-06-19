@@ -1,0 +1,84 @@
+{
+  "subnetwork_id": "0000000000000000000000000000000000000000",
+  "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+  "hash": "731569ab0f78b261d6e145d54d130547ab9c1534f6b5fcb59b346fe7afbf927f",
+  "mass": "5390",
+  "payload": null,
+  "block_hash": [
+    "e0ec66354c2ed3073bc9db7070493d538c38534cfbcc9b76f1e04d1d06cbea07",
+    "12d14c352a1e0118a0567b1c8405e27d27d63e23c9e01680130331af37d36893",
+    "f1cad9d0cb8131011fc82f7c9cfeba688aecf8db9af00805d807c8beac9899c6",
+    "1b7d2c061404f7325bb0e619217b8b49f13f2521dec8714d6b5d0b000e4141e8",
+    "7b53036126664596ce698fb0dcc2c053d18272ccb5d13c8c4bc1836ae7aa8f43",
+    "95095d4152ab09876c959c6a77276325e4eaa2060e56948f42abb60f384b079d",
+    "9eb8be0e3ffe6b2f069152dc11baa07feb43531c4c601f67f018f404e8b58171",
+    "c5b24777c61c716f8eb6e73e8082e2a54f27a9b715e613629d16b53d72922be1",
+    "ecde44295edf2cd76accf8183910cfdc3f92a09428c292ce738b5bc07ac7186e"
+  ],
+  "block_time": 1781690026471,
+  "version": 0,
+  "is_accepted": true,
+  "accepting_block_hash": "09eb7073ea294153d09cec57f2aad92672993c99eff590749cdda7e16ccfae57",
+  "accepting_block_blue_score": 460817409,
+  "accepting_block_time": 1781690026562,
+  "inputs": [
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 0,
+      "previous_outpoint_hash": "df275e9140fd1860d4c83b6e6245b52d9098fb5ba5d80812b880ede047b7cb8f",
+      "previous_outpoint_index": "1",
+      "previous_outpoint_address": null,
+      "previous_outpoint_amount": null,
+      "signature_script": "41a6a9c25316fd7455e7162974a00167cfa0e790e61f6b62ac2fdf00ce34f348494cb70b686ad04b2fe025c5087ce8ebd8935e26c0177f70b5dce38aaecf7f873e01",
+      "sig_op_count": "1"
+    },
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 1,
+      "previous_outpoint_hash": "fb4a411f657915e2adb2c45678bec23fdfd3e00c62541d8a3a5d77bf58c54305",
+      "previous_outpoint_index": "1",
+      "previous_outpoint_address": null,
+      "previous_outpoint_amount": null,
+      "signature_script": "41cca860ee47ee72a2f5faafde4bf1d74dbfcadd849144c9db9aad73bb12f51f6950628fa3b66f8fc2a63c8c15d2f5c62a095f47c4829c2db3520f4e9c4f23b10e01",
+      "sig_op_count": "1"
+    },
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 2,
+      "previous_outpoint_hash": "c7d253c61ac09d8514933b8dbafe419bfb684036890febbbfbe25744c48977c9",
+      "previous_outpoint_index": "1",
+      "previous_outpoint_address": null,
+      "previous_outpoint_amount": null,
+      "signature_script": "41524fffa9ee1d316823a10ddc04a4ec4ffd2d1150196fb9e239e223ec007d3af3f72367e5863bf086989f0d3496e0e73a93e0a8e0549b1fe773df43598edb350b01",
+      "sig_op_count": "1"
+    },
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 3,
+      "previous_outpoint_hash": "6ac1e65739a724233dda62bc9d8879fdb8833e4e720aac4dd01bc36b43c21e5f",
+      "previous_outpoint_index": "1",
+      "previous_outpoint_address": null,
+      "previous_outpoint_amount": null,
+      "signature_script": "4195738232354635c12467511ea83318f1754aab7af2164892d5c2665579baf39af0da27f20e2a5aa267c2f7d18686be7ee6f061ffb75af11062ddc89eb172dce101",
+      "sig_op_count": "1"
+    }
+  ],
+  "outputs": [
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 0,
+      "amount": 348092453355611,
+      "script_public_key": "20e7b0a2904f7a1aed2a9730719d7f060b287ede68c96729d9ece0db71ed9656dbac",
+      "script_public_key_address": "kaspa:qrnmpg5sfaap4mf2juc8r8tlqc9jslk7drykw2weansdku0djetdksx035snj",
+      "script_public_key_type": "pubkey"
+    },
+    {
+      "transaction_id": "e72c7970f6569e72aecb564ac627c1fa67d36dff7cc85f86c6da4878944c5675",
+      "index": 1,
+      "amount": 729403554761,
+      "script_public_key": "20f428cedef7609c4e37889bcdf59feba459cb01764618c0ff1bf45356b2b2f816ac",
+      "script_public_key_address": "kaspa:qr6z3nk77asfcn3h3zdumavlawj9njcpwerp3s8lr069x44jktupvq74kpmmh",
+      "script_public_key_type": "pubkey"
+    }
+  ]
+}

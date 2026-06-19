@@ -236,10 +236,14 @@ version = "0.1.0"
 source = { editable = "libs/block-kaspa" }
 dependencies = [
     { name = "kaspa" },
+    { name = "platform-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "kaspa", specifier = ">=2.0.0" }]
+requires-dist = [
+    { name = "kaspa", specifier = ">=2.0.0" },
+    { name = "platform-core", editable = "libs/platform_core" },
+]
 
 [[package]]
 name = "cachetools"
