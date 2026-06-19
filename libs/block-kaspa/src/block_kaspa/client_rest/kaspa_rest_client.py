@@ -1,3 +1,4 @@
+from platform_core.utils.singleton import singleton
 from block_kaspa.types import ScriptPublicKeyModel, UtxoModel, UtxoResponse, TxModel
 import msgspec
 import httpx
@@ -8,6 +9,7 @@ from typing import Dict, Any
 from platform_core.serialization import decode_json
 
 
+@singleton
 class KaspaRestClient:
     _url: str
     _api_key: str
