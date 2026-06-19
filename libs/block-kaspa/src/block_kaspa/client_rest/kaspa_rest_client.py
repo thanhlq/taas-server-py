@@ -17,6 +17,7 @@ class KaspaRestClient:
     def __init__(self, url: str | None):
         self._settings = KaspaSettings()
         self._url = url or self._settings.rest_url
+        self._headers = {}
 
     @property
     def headers(self) -> Dict[str, str]:
