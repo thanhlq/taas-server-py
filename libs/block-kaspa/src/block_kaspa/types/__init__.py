@@ -1,5 +1,8 @@
 """Export all models from types_generated.py."""
 
+# Our custom types (not generated from OpenAPI spec) are in types.py, so we import them here to make them available when importing block_kaspa.types
+from .types import FeeEstimate
+
 from .types_generated import (
     Number,
     # enums
@@ -80,6 +83,9 @@ from .types_generated import (
 )
 
 __all__ = [
+    # Our custom
+    "FeeEstimate",
+
     "Number",
     "AcceptanceMode",
     "PreviousOutpointLookupMode",

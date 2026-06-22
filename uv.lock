@@ -241,7 +241,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "kaspa", specifier = ">=2.0.0" },
+    { name = "kaspa", specifier = "==2.0.1" },
     { name = "platform-core", editable = "libs/platform_core" },
 ]
 
@@ -968,14 +968,14 @@ wheels = [
 
 [[package]]
 name = "kaspa"
-version = "2.0.0"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/48/e2376d8fe333643e62adbc18ef3df7bb30b6cf6207fcad5b021d376b2279/kaspa-2.0.0-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:3243df023f2ce692506c118678f91a04ab022c4848c7c94b1053e8d65a52cb5d", size = 9768960, upload-time = "2026-06-17T13:48:08.382Z" },
-    { url = "https://files.pythonhosted.org/packages/6a/af/2d133b27b45791fedde9c6c562bd6286707aec282118f3e990a6e0f1385c/kaspa-2.0.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:3b510378ef6ef97b636adc8617f888eee1774e76b37cda7cbb494c34b646bec4", size = 9577296, upload-time = "2026-06-17T13:48:51.015Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/b4/1d9eb168b4f7195fd2171059133b6d8bc51b173ca78f61b273ea99ad93c8/kaspa-2.0.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:9e173bc6f3ec960b4b18e984bd2b4e6af5151581bf149c28d35ab9522b6bb7a0", size = 11557740, upload-time = "2026-06-17T13:49:25.55Z" },
-    { url = "https://files.pythonhosted.org/packages/a4/61/60a6caa925f92ccba26e3ead015e5d0f1bf6f5da92615bff59b12d9c81f4/kaspa-2.0.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:37ec11abfbcda9ecc2f68aaebef2b6cc9424921e9f86ac8eb1d18ff297075b88", size = 11998378, upload-time = "2026-06-17T13:50:11.863Z" },
-    { url = "https://files.pythonhosted.org/packages/36/14/88c242e9afc3ad7e52e10a4ddb160155485b180c73f191d4eeff76e1afb4/kaspa-2.0.0-cp314-cp314-win_amd64.whl", hash = "sha256:00b03b7da9f79eae69bd217458d663670cbc6811db12cd562de4bd2e64af76c1", size = 10577410, upload-time = "2026-06-17T13:50:50.258Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/69/8db8aec6fb53f2720ec5b763d0ff8c697f40e9eea1407092bdc4c13bcbaf/kaspa-2.0.1-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:6e67c7fd2663d2aad8467f0a178ada23f9d2471a8484094012f4ead53b722842", size = 9824326, upload-time = "2026-06-18T13:43:02.086Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/1e/129592897e81161225c107b409a8a90d81f3c1fb6d4e924906c1ff85c2c3/kaspa-2.0.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:d408617eef7d2051ea07ebfc476d0086bb5897d2dbcf0b47ad7add24f0204e28", size = 9620436, upload-time = "2026-06-18T13:43:05.891Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/9b/3afe1be2fca8bdf551ae7b7f645fe0f937b588f7fa6e9fd8bcca2827ebfc/kaspa-2.0.1-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:55c3e1d19093b2ec9f8b5275c3cdde978d3863970a0b6f21e7e75095ef49870e", size = 11616991, upload-time = "2026-06-18T13:43:10.046Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/59/0df85158d97f5dce91a3f782f801ac576010f0bb0c6a5014702ef3777121/kaspa-2.0.1-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:940cad6dd086eb0d9b67bbd63d2c982335f924b4858a0b6d58b24f3768a95bf5", size = 12057360, upload-time = "2026-06-18T13:43:14.186Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/49/32966701516b7c018bb220e2bf896d13320ed71711e2063f25a86275ca9e/kaspa-2.0.1-cp314-cp314-win_amd64.whl", hash = "sha256:a9cc977a94134ae4f32d386181334f057bc6bceee37cdfc13d3c6bdcde111c3f", size = 10655549, upload-time = "2026-06-18T13:43:17.873Z" },
 ]
 
 [[package]]

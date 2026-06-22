@@ -1,8 +1,9 @@
+from platform_core.serialization import BaseModel
 from dataclasses import dataclass
 
 
-@dataclass
-class FeeEstimate:
+
+class FeeEstimate(BaseModel):
     compute_mass: int
     storage_mass: int
     network_mass: int  # max(compute, storage) -- relay/block limit mass (`mass`)
