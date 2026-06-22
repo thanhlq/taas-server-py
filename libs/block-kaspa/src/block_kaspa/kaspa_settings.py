@@ -11,7 +11,7 @@ KASPA_TESTNET_REST_API_URL = 'https://api-tn10.kaspa.org'
 KASPA_MAINNET_REST_API_URL = 'https://api.kaspa.org'
 
 
-KASPA_ESTIMATED_NETWORK_FEE: float = 0.00003165
+KASPA_ESTIMATED_NETWORK_FEE: int = 316500 # in sompi
 
 
 MAX_UTXOS = 1000
@@ -51,9 +51,9 @@ class KaspaSettings:
     fee_estimator_max_utxos: int = field(
         default_factory=get_env('KASPA_FEE_ESTIMATOR_MAX_UTXOS', MAX_UTXOS, int)
     )
-    fee_estimator_fallback_feerate: float = field(
-        default_factory=get_env(  # type : ignore
-            'KASPA_FEE_ESTIMATOR_FALLBACK_FEERATE', KASPA_ESTIMATED_NETWORK_FEE, float
+    fee_estimator_fallback_feerate: int = field(
+        default_factory=get_env(
+            'KASPA_FEE_ESTIMATOR_FALLBACK_FEERATE', KASPA_ESTIMATED_NETWORK_FEE, int
         )
     )
 

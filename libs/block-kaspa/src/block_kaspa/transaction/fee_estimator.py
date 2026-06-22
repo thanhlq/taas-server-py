@@ -3,6 +3,7 @@ Kaspa fee estimator by using official Kaspa Wasm SDK: https://github.com/kaspane
 
 See sample: https://github.com/kaspanet/kaspa-python-sdk/blob/main/examples/transactions/estimate.py
 """
+
 from typing import Dict, Any
 from platform_core import BaseService
 from block_kaspa.kaspa_factory import KaspaFactory
@@ -15,10 +16,11 @@ from kaspa import (
     Resolver,
     RpcClient,
     kaspa_to_sompi,
-    GeneratorSummary, UtxoEntries, UtxoEntryReference, UtxoEntry, TransactionOutpoint,
+    GeneratorSummary,
 )
 
 from platform_core.cli import cli
+
 
 class KaspaFeeEstimator(BaseService):
     def __init__(self):
@@ -42,82 +44,77 @@ class KaspaFeeEstimator(BaseService):
         rest_client: KaspaRestClient = KaspaFactory().get_rest_client()
         config = KaspaSettings()
 
-        # S1 count utxos for the source address
+        # S1: Count utxos for the source address
         count = await rest_client.count_utxos(source_address)
         if count > config.fee_estimator_max_utxos:
             self.logger.warning(
                 f'Kaspa address {source_address} has {count} UTXOs, which exceeds the maximum limit of {config.fee_estimator_max_utxos}. Fee estimation may be inaccurate.'
             )
+            return FeeEstimate(
+                compute_mass=0,
+                storage_mass=0,
+                network_mass=0,
+                minimum_fee=config.fee_estimator_fallback_feerate,
+                fee=config.fee_estimator_fallback_feerate,
+                change=0,
+                n_inputs=0,
+                n_outputs=0,
+            )
 
-        _utxo_entries: list[UtxoResponse]  = (
-            await rest_client.get_utxos(source_address)
-        )
 
-        print('--------')
-        print(_utxo_entries)
-        print('--------')
+        # S2: OK, UTX0 count <= 1k records -> fetch all UTXOs and estimate fee
+        _utxo_entries: list[UtxoResponse] = await rest_client.get_utxos(source_address)
 
+        # S2.1: Convert UTXO entries to the format required by the Kaspa Generator
         refs: list[dict[str, Any]] = []
         for utxo in _utxo_entries:
-            # outpoint=TransactionOutpoint(
-            #             transaction_id=utxo.outpoint.transactionId,
-            #             index=utxo.outpoint.index,
-            #         )
-            # entry=UtxoEntry(
-            #         address=utxo.address,
-            #         outpoint=outpoint,
-            #         amount=utxo.utxoEntry.amount,
-            #     )
-            # ref_class = UtxoEntryReference(
-            #     address=utxo.address,
-            #     outpoint=TransactionOutpoint(
-            #         transaction_id=utxo.outpoint.transactionId,
-            #         index=utxo.outpoint.index,
-            #     ),
-            #     entry=UtxoEntry(
-            #         amount=utxo.utxoEntry.amount,
-            #         script_public_key=utxo.utxoEntry.scriptPublicKey.scriptPublicKey,
-            #         block_daa_score=utxo.utxoEntry.blockDaaScore,
-            #         is_coinbase=utxo.utxoEntry.isCoinbase,
-            #     ),
-            # )
-            ref: dict[str, Any] =(
-                {
-                    "address": utxo.address,
-                    "outpoint": {
-                        "transaction_id": utxo.outpoint.transactionId,
-                        "index": utxo.outpoint.index,
-                    },
-                    "entry": {
-                        "amount": utxo.utxoEntry.amount,
-                        "scriptPublicKey": {
-                            "scriptPublicKey": utxo.utxoEntry.scriptPublicKey.scriptPublicKey
-                        },
-                        "blockDaaScore": utxo.utxoEntry.blockDaaScore,
-                        "isCoinbase": utxo.utxoEntry.isCoinbase,
-                    },
-                }
-            )
+            ref: dict[str, Any] = {
+                'address': utxo.address,
+                'outpoint': {
+                    'transactionId': utxo.outpoint.transactionId,
+                    'index': utxo.outpoint.index,
+                },
+                'utxoEntry': {
+                    'amount': int(utxo.utxoEntry.amount),  # type: ignore
+                    'scriptPublicKey': utxo.utxoEntry.scriptPublicKey.scriptPublicKey,
+                    'blockDaaScore': int(utxo.utxoEntry.blockDaaScore),  # type: ignore
+                    'isCoinbase': utxo.utxoEntry.isCoinbase,
+                    'covenantId': None,
+                },
+            }
             refs.append(ref)
 
-            print(f'Type of UTXO: {type(utxo)}, UTXO: {utxo}')
-
-
+        # S3: Use the Kaspa Generator to estimate the fee
         generator = Generator(
-            network_id=network_id,
-            entries=UtxoEntries(items=refs),
-            outputs=[
+            network_id=network_id,  # type: ignore
+            entries=refs,  # type: ignore
+            outputs=[  # type: ignore
                 {'address': source_address, 'amount': kaspa_to_sompi(send_amount)}
             ],
             priority_fee=kaspa_to_sompi(priority_fee),
-            change_address=source_address,
+            change_address=source_address,  # type: ignore
         )
 
         estimate: GeneratorSummary = generator.estimate()
-        print(estimate.final_transaction_id)
-
-        for key, value in estimate.to_dict().items():
-            cli.success_formal(key, value)
+        cli.success_table(
+            title='Kaspa Fee Estimation Result',
+            data=estimate.to_dict(),
+        )
+        """Sample output:
+                                                    Kaspa Fee Estimation Result
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃ title                            ┃ value                                                            ┃
+        ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        │ network_id                       │ mainnet                                                          │
+        │ aggregated_utxos                 │ 1                                                                │
+        │ aggregate_fees                   │ 223600                                                           │
+        │ aggregate_mass                   │ 30089                                                            │
+        │ number_of_generated_transactions │ 1                                                                │
+        │ number_of_generated_stages       │ 1                                                                │
+        │ final_transaction_amount         │ 50000000                                                         │
+        │ final_transaction_id             │ 38a5e18bb3a563ad1ed4e9d0ba5f0c8a7433d1305562214435a7fa49ac9608a0 │
+        └──────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
+        """
 
         """
         Result example:

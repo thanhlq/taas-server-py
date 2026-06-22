@@ -1,3 +1,4 @@
+from typing import Any
 from rich.table import Table
 from rich import get_console
 
@@ -105,5 +106,27 @@ class cli:
         table.add_column('title', style='dim')
         table.add_column('value', style='bright_black')
         table.add_row(key, f'[dim]{value}[/]')
+        # table.box = None  # Remove table borders
+        console.print(table)
+
+    @staticmethod
+    def success_table(title: str, data: dict[str, Any]) -> None:
+        # Print table for formal key-value pairs
+        table = Table(title=title)
+        table.add_column('title', style='green')
+        table.add_column('value', style='bright_green')
+        for key, value in data.items():
+            table.add_row(key, f'[bold green]{value}[/]')
+        # table.box = None  # Remove table borders
+        console.print(table)
+
+    @staticmethod
+    def info_table(title: str, data: dict[str, Any]) -> None:
+        # Print table for formal key-value pairs
+        table = Table(title=title)
+        table.add_column('title', style='cyan')
+        table.add_column('value', style='bright_blue')
+        for key, value in data.items():
+            table.add_row(key, f'[bold cyan]{value}[/]')
         # table.box = None  # Remove table borders
         console.print(table)
