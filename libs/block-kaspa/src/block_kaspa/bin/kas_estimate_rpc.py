@@ -1,6 +1,6 @@
 # Original: https://github.com/kaspanet/kaspa-python-sdk/blob/main/examples/transactions/estimate.py
 # uv run python libs/block-kaspa/src/block_kaspa/bin/kas_estimate.py
-# uv run python -m block_kaspa.bin.kas_estimate
+# uv run python -m block_kaspa.bin.kas_estimate_rpc
 
 import datetime
 import json

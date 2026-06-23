@@ -50,6 +50,13 @@ class KaspaFeeEstimator(BaseService):
             self.logger.warning(
                 f'Kaspa address {source_address} has {count} UTXOs, which exceeds the maximum limit of {config.fee_estimator_max_utxos}. Fee estimation may be inaccurate.'
             )
+            """ In fact, This is still not really correct, since:
+                - We only handle for 1k UTXOs
+                - But what about if 2k, 3k, 4k, 5k, 10k, 20k, 50k, 100k UTXOs? We cannot fetch all UTXOs and estimate the fee.
+                - So we need to implement a better solution for this case, e.g.:
+                    - Use the Kaspa RPC to fetch UTXOs in batches (e.g., 1k at a time) and estimate the fee incrementally.
+                    - Or use a different approach to estimate the fee without fetching all UTXOs, e.g., using a statistical model or historical data.
+            """
             return FeeEstimate(
                 compute_mass=0,
                 storage_mass=0,
@@ -60,6 +67,7 @@ class KaspaFeeEstimator(BaseService):
                 n_inputs=0,
                 n_outputs=0,
             )
+
 
 
         # S2: OK, UTX0 count <= 1k records -> fetch all UTXOs and estimate fee

@@ -31,9 +31,11 @@ class KaspaRpcClient:
         if self._client is None:
             config = self.settings
             if config.rpc_url is not None:
+                # Supported as: url1, url2, url3 -> need to split and trim
+                urls = [url.strip() for url in config.rpc_url.split(',') if url.strip()]
                 self.logger.info(f'Connecting to Kaspa, network {config.network_id}, RPC at {config.rpc_url}...')
                 # client = RpcClient(url=config.rpc_url, network_id=self.settings.network_id)
-                client = RpcClient(resolver=Resolver(urls=[config.rpc_url]), network_id=self.settings.network_id)
+                client = RpcClient(resolver=Resolver(urls=urls), network_id=self.settings.network_id)
             else:
                 self.logger.info(f'Connecting to Kaspa, network {config.network_id}, RPC with resolver...')
                 client = RpcClient(resolver=Resolver(), network_id=self.settings.network_id)

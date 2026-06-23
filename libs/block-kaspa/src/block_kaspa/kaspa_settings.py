@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from platform_core.utils.env_utils import get_env
 
-KASPA_TESTNET_NETWORK_ID = 'testnet-10'
+# KASPA_TESTNET_NETWORK_ID = 'testnet-10'
 KASPA_MAINNET_NETWORK_ID = 'mainnet'
 
 KASPA_TESTNET_REST_API_URL = 'https://api-tn10.kaspa.org'
@@ -31,7 +31,7 @@ class KaspaSettings:
     """ Debug Kaspa blockchain """
 
     network_id: str = field(
-        default_factory=get_env('KASPA_NETWORK_ID', KASPA_TESTNET_NETWORK_ID, str)
+        default_factory=get_env('KASPA_NETWORK', None, str)
     )
 
     rpc_url: str | None = field(default_factory=get_env('KASPA_RPC_URL', None, str))
@@ -58,6 +58,9 @@ class KaspaSettings:
     )
 
     def __post_init__(self) -> None:
+        if not self.network_id:
+            raise ValueError('KASPA_NETWORK environment variable is required but not set.')
+
         # Default the REST URL to the network-appropriate public endpoint when unset.
         if not self.rest_url:
             self.rest_url = (
@@ -70,10 +73,10 @@ class KaspaSettings:
             self.fee_estimator_fallback_feerate or KASPA_ESTIMATED_NETWORK_FEE
         )
         # check if not float, then convert str to float
-        if not isinstance(self.fee_estimator_fallback_feerate, float):
+        if not isinstance(self.fee_estimator_fallback_feerate, int):
             print(
                 f'KaspaSettings: fee_estimator_fallback_feerate is not float, converting to float: {self.fee_estimator_fallback_feerate}'
             )
-            self.fee_estimator_fallback_feerate = float(
+            self.fee_estimator_fallback_feerate = int(
                 self.fee_estimator_fallback_feerate
             )

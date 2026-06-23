@@ -1,6 +1,7 @@
 # SHOULD INLUCDE IN local dev/test
 # Contain all core features for testing purpose only
 
+from platform_core.observability.factory import instrument
 from typing import TYPE_CHECKING, Any
 
 import msgspec
@@ -104,8 +105,9 @@ class TestController(BaseController):
     def get_projects_by_id(self, id: int) -> Project:
         return create_success_response[Project](samples_project[id])
 
-    @get(path='/error')
-    def get_project_error(self) -> Project | ErrorResponse:
+    @get(path='/error-trace')
+    @instrument
+    def get_project_error_trace(self) -> Project | ErrorResponse:
         ex = ValidationError(f'Project with id {5} not found')
         return create_error_response( ex, message=str(ex), status=404)
 
