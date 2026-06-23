@@ -120,7 +120,17 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
     Returning a ``Response`` instance from the handler short-circuits
     FastAPI's ``serialize_response`` (and therefore ``jsonable_encoder``),
     letting ``msgspec.json.encode`` run on the raw value.
+
+    The wrapper's public signature is pinned to the (already bound) endpoint's
+    own signature. ``functools.wraps`` copies ``endpoint``'s ``__dict__`` —
+    which, for handlers decorated with ``@functools.wraps``-based decorators
+    such as ``@instrument``, carries a stale ``__signature__`` that still
+    includes ``self`` (it was captured from the *unbound* function). Without
+    re-pinning, FastAPI would read that stale signature and expose ``self`` as
+    a required query parameter. ``inspect.signature(endpoint)`` resolves the
+    bound method's clean signature (``self`` stripped) and overrides it.
     """
+    clean_sig = inspect.signature(endpoint)
     if inspect.iscoroutinefunction(endpoint):
 
         @functools.wraps(endpoint)
@@ -130,6 +140,7 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
                 return result
             return MsgSpecJSONResponse(result)
 
+        async_wrapper.__signature__ = clean_sig  # type: ignore[attr-defined]
         return async_wrapper
 
     @functools.wraps(endpoint)
@@ -139,6 +150,7 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
             return result
         return MsgSpecJSONResponse(result)
 
+    sync_wrapper.__signature__ = clean_sig  # type: ignore[attr-defined]
     return sync_wrapper
 
 

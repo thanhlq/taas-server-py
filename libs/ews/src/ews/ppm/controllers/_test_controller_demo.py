@@ -106,10 +106,16 @@ class TestController(BaseController):
         return create_success_response[Project](samples_project[id])
 
     @get(path='/error-trace')
-    @instrument
+    @instrument()
     def get_project_error_trace(self) -> Project | ErrorResponse:
         ex = ValidationError(f'Project with id {5} not found')
         return create_error_response( ex, message=str(ex), status=404)
+
+    @get(path='/error-throw')
+    @instrument()
+    def get_project_error_trace_throw(self) -> Project | ErrorResponse:
+        ex = ValidationError(f'Project with id {7} not found')
+        raise ex
 
 
     @websocket('/tasks/notifications', name='project_task_notifications')

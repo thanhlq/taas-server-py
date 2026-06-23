@@ -24,7 +24,7 @@ class BaseApiApplication[A](ABC):
     _logger: Logger
     _runtime_path: str
 
-    def __init__(self, settings: Settings, runtime_path: str, instrumentation: InstrumentSettings | None) -> None:
+    def __init__(self, settings: Settings, runtime_path: str, instrumentation: InstrumentSettings | None = None) -> None:
         self._all_settings = settings
         self._config = AppConfig(
             app_name=settings.app.NAME,
