@@ -6,7 +6,7 @@ from uuid import UUID
 import msgspec
 from db.models import TeamRoles
 from platform_core.iam.types import Phone, UserStatus
-from platform_core.serialization._msgspec_model import CamelizedBaseStruct
+from platform_core.serialization._msgspec_model import CamelizedBaseStruct, ApiRequest
 from platform_core.utils.validation import (
     validate_email,
     validate_name,
@@ -81,7 +81,7 @@ class User(CamelizedBaseStruct):
     avatar_url: str | None = None
 
 
-class UserCreate(CamelizedBaseStruct):
+class UserCreate(ApiRequest):
     email: str
     password: str
     name: str | None = None

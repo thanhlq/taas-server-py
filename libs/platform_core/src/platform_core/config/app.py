@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import StrEnum
 
 import enum
 from dataclasses import dataclass, field
@@ -133,6 +134,16 @@ class AppConfig:
     allowed_hosts: AllowedHostsConfig | list[str] | None = field(default=None)
     # """ csrf_config: CSRFConfig | None = field(default=None) """
 
+    def get_instrumentation_settings(self) -> InstrumentSettings:
+        """Return the instrumentation settings for the application.
+
+        Returns:
+            The instrumentation settings.
+        """
+        if not self.instrumentation:
+            self.instrumentation = InstrumentSettings()
+        return self.instrumentation
+
     def __post_init__(self) -> None:
         """Normalize the allowed hosts to be a config or None.
 
@@ -143,7 +154,7 @@ class AppConfig:
             self.allowed_hosts = AllowedHostsConfig(allowed_hosts=self.allowed_hosts)
 
 
-class ExperimentalFeatures(str, enum.Enum):
+class ExperimentalFeatures(StrEnum):
     DTO_CODEGEN = 'DTO_CODEGEN'
     """Enable DTO codegen."""
     FUTURE = 'FUTURE'

@@ -2,7 +2,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
-from platform_core.db.advanced_session_manager import DBConcurrentSessionFactory
+from platform_core.db.advanced_db_manager import DBConcurrentSessionFactory
 from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
 
 CONTROLLER_PARAM_INJECTED_TYPES = {

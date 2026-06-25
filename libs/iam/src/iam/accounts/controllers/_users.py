@@ -7,7 +7,7 @@ from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.service import OffsetPagination
 
 # from fastapi import Depends
-from platform_core.db.advanced_session_manager import (
+from platform_core.db.advanced_db_manager import (
     MainDatabase,
     db_concurrent_session,
     db_context_session,

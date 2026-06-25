@@ -14,6 +14,8 @@ dependencies = [
     "typing_extensions==4.15.0",
     "sniffio==1.3.1",
     "multidict==6.7.1",
+    # advanced-alchemy use this lib for UUIDv7 support
+    "uuid-utils==0.16.2",
     "attrs==26.1.0",
     "pydantic==2.13.4",
     "exceptiongroup==1.3.1",
@@ -45,6 +47,10 @@ dependencies = [
     "opentelemetry-instrumentation-aiokafka==0.63b1",
     "opentelemetry-instrumentation-sqlalchemy==0.63b1",
     "opentelemetry-instrumentation-redis==0.63b1",
+    "opentelemetry-instrumentation-httpx>=0.63b1",
+    "opentelemetry-instrumentation-grpc>=0.63b1",
+    "opentelemetry-instrumentation-urllib3==0.63b1",
+    "opentelemetry-instrumentation-aiohttp-client==0.63b1",
 ]
 
 [build-system]

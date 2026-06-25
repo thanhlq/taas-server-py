@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from http_fastapi.adapters._controller import _retarget_cache_injected_params
 from http_litestar.adapters._dependencies import adapt_handler
-from platform_core.db import advanced_session_manager as asm
+from platform_core.db import advanced_db_manager as asm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

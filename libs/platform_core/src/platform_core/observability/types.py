@@ -281,3 +281,7 @@ class InstrumentSettings:
     aiokafka_consumer_hook: Optional[Any] = None
     redis_instrument: bool = False
     sqlalchemy_instrument: bool = False
+    httpx_instrument: bool = True
+    grpc_instrument: bool = True
+    database_instrument: bool = True
+    cache_instrument: bool = True

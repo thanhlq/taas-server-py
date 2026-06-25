@@ -1,0 +1,41 @@
+{
+  "exp": 1764995739,
+  "iat": 1764995439,
+  "jti": "onrtro:357e8bdf-e9f4-51dc-cc79-9f957e04d2ec",
+  "iss": "https://iam.eworksuite.com/auth/realms/emtrack",
+  "aud": "account",
+  "sub": "2a12990f-4c08-4637-a1b1-05ed337f8be3",
+  "typ": "Bearer",
+  "azp": "emtrack_web",
+  "sid": "59e9c811-6a0d-913a-fc73-2e82fa8c25a1",
+  "acr": "1",
+  "allowed-origins": [
+    "*"
+  ],
+  "realm_access": {
+    "roles": [
+      "offline_access",
+      "default-roles-emtrack",
+      "uma_authorization"
+    ]
+  },
+  "resource_access": {
+    "account": {
+      "roles": [
+        "manage-account",
+        "manage-account-links",
+        "view-profile"
+      ]
+    }
+  },
+  "scope": "openid profile organization email",
+  "email_verified": true,
+  "organization": [
+    "emsa-technology"
+  ],
+  "name": "Thanh Le Quoc",
+  "preferred_username": "thanhlq@gmail.com",
+  "given_name": "Thanh",
+  "family_name": "Le Quoc",
+  "email": "thanhlq@gmail.com"
+}

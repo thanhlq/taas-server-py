@@ -1,0 +1,23 @@
+user = {
+    'id': '0a874f53-0db3-4956-a32a-a2a7f89190a0',
+    'username': 'ngocle1401@gmail.com',
+    'firstName': 'Ngoc',
+    'lastName': 'Le',
+    'email': 'ngocle1401@gmail.com',
+    'emailVerified': False,
+    'attributes': {'origin': ['taas']},
+    'enabled': True,
+    'createdTimestamp': 1764582680758,
+    'totp': False,
+    'disableableCredentialTypes': [],
+    'requiredActions': ['update_user_locale', 'VERIFY_EMAIL'],
+    'notBefore': 0,
+    'access': {
+        'manageGroupMembership': True,
+        'resetPassword': True,
+        'view': True,
+        'mapRoles': True,
+        'impersonate': True,
+        'manage': True,
+    },
+}

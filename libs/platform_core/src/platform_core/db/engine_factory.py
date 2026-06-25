@@ -11,8 +11,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger('EngineFactory')
 
-
 class EngineFactory:
+    """
+    Should be the centralized place to create and manage SQLAlchemy engines. This class is responsible
+    for creating and caching SQLAlchemy engines based on the provided settings. It ensures that only
+    one engine is created per unique database URL, preventing unnecessary resource usage and potential
+    connection issues.
+    """
     _engine: dict[str, AsyncEngine] = {}
 
     @staticmethod
@@ -25,6 +30,10 @@ class EngineFactory:
                 msg=f'🐬 Created new SQLAlchemy engine for URL: {eng.url.render_as_string(hide_password=True)}'
             )
         return eng
+
+    @staticmethod
+    def get_all_engines() -> list[AsyncEngine]:
+        return list(EngineFactory._engine.values())
 
 
 def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':

@@ -22,3 +22,5 @@ type DBAsyncSession = AsyncSession
 #     json_serializer: Callable[[Any], str] = encode_json
 #     """For dialects that support the JSON datatype, this is a Python callable that will render a given object as JSON.
 #     By default, Litestar's encode_json function is used."""
+
+class DBConfig:

@@ -1,0 +1,2 @@
+USER_ATTR_TRUE_VAL = 'true'
+USER_ATTR_FALSE_VAL = 'false'

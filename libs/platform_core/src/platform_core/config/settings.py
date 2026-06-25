@@ -27,17 +27,17 @@ from platform_core.config.otel import OtelSettings
 from platform_core.config.ratelimit import RateLimitConfig
 from platform_core.config.tracing import TracingSettings
 from platform_core.config.wss import WebSocketConfig
-from platform_core.db.db_config import (
+from platform_core.db.sa_config import (
     AlembicAsyncConfig,
     AsyncSessionConfig,
     SQLAlchemyAsyncConfig,
 )
-from platform_core.email import EmailConfig, ResendConfig, SMTPConfig
+from .email_settings import EmailSettings
 from platform_core.utils.env_utils import get_env
 from platform_core.utils.module_loader import module_to_os_path
 
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncEngine
+
+from .db_settings import DatabaseSettings
 
 CONFIG_PREFIX = 'TAAS'
 
@@ -47,105 +47,6 @@ DEFAULT_MODULE_NAME = 'db'  # libs/db
 BASE_DIR: Final[Path] = module_to_os_path(DEFAULT_MODULE_NAME)
 # print(f'Base directory resolved to: {BASE_DIR}')  # noqa: T201
 STATIC_DIR = Path(BASE_DIR / 'server' / 'static' / 'web')
-
-@dataclass
-class DatabaseSettings:
-    """Contain pure user settings from environment variables related to database configuration."""
-
-    ECHO: bool = field(default_factory=get_env('DATABASE_ECHO', False))
-    """Enable SQLAlchemy engine logs."""
-    DEBUG: bool = field(
-        default_factory=get_env(f'{CONFIG_PREFIX}_DEBUG_DATABASE', False, bool)
-    )
-
-    ECHO_POOL: bool = field(default_factory=get_env('DATABASE_ECHO_POOL', False))
-    """Enable SQLAlchemy connection pool logs."""
-    POOL_DISABLED: bool = field(
-        default_factory=get_env('DATABASE_POOL_DISABLED', False, bool)
-    )
-    """Disable SQLAlchemy pool configuration."""
-    POOL_SIZE: int = field(default_factory=get_env('DATABASE_POOL_SIZE', 5))
-    """Pool size for SQLAlchemy connection pool"""
-    POOL_MAX_OVERFLOW: int = field(
-        default_factory=get_env('DATABASE_MAX_POOL_OVERFLOW', 30)
-    )
-    """Max overflow for SQLAlchemy connection pool"""
-    POOL_TIMEOUT: int = field(default_factory=get_env('DATABASE_POOL_TIMEOUT', 30))
-    """Time in seconds for timing connections out of the connection pool."""
-    POOL_RECYCLE: int = field(
-        default_factory=get_env('DATABASE_POOL_RECYCLE', default=300)
-    )  # 1800: 30 minutes, 300: 5 minutes
-    """
-    Recycle below any LB/network idle timeout
-    Amount of time to wait before recycling connections.
-    """
-    POOL_PRE_PING: bool = field(
-        default_factory=get_env('DATABASE_PRE_POOL_PING', False)
-    )
-    """
-    Survive pgdog/pod restarts cleanly.
-    Optionally ping database before fetching a session from the connection pool.
-    """
-    URL: str = field(
-        default_factory=get_env(
-            'DATABASE_URL',
-            'postgresql+psycopg://postgres:Pa55w0rd@localhost:15432/ews_db',
-        )
-    )
-    """SQLAlchemy Database URL."""
-
-    MIGRATION_ENABLED: bool = field(
-        default_factory=get_env('DATABASE_MIGRATION_ENABLED', True, bool)
-    )
-
-    MIGRATION_CONFIG: str = field(
-        default_factory=get_env(
-            'DATABASE_MIGRATION_CONFIG', f'{BASE_DIR}/db/migrations/alembic.ini'
-        )
-    )
-    """The path to the `alembic.ini` configuration file."""
-    MIGRATION_PATH: str = field(
-        default_factory=get_env('DATABASE_MIGRATION_PATH', f'{BASE_DIR}/db/migrations')
-    )
-    """The path to the `alembic` database migrations."""
-    MIGRATION_DDL_VERSION_TABLE: str = field(
-        default_factory=get_env('DATABASE_MIGRATION_DDL_VERSION_TABLE', 'ddl_version')
-    )
-    """The name to use for the `alembic` versions table name."""
-    FIXTURE_PATH: str = field(
-        default_factory=get_env('DATABASE_FIXTURE_PATH', f'{BASE_DIR}/db/fixtures')
-    )
-    """The path to JSON fixture files to load into tables."""
-    _engine_instance: AsyncEngine | None = None
-    """SQLAlchemy engine instance generated from settings."""
-
-    @property
-    def engine(self) -> AsyncEngine:
-        return self.get_engine()
-
-    def get_engine(self) -> AsyncEngine:
-        if self._engine_instance is not None:
-            return self._engine_instance
-        from platform_core.db.engine_factory import EngineFactory
-
-        return EngineFactory.get_sqlalchemy_engine(self)
-
-    def get_config(self) -> SQLAlchemyAsyncConfig:
-        """Get SQLAlchemy configuration.
-
-        Returns:
-            The SQLAlchemy async configuration.
-        """
-        return SQLAlchemyAsyncConfig(
-            engine_instance=self.get_engine(),
-            before_send_handler='autocommit',
-            session_config=AsyncSessionConfig(expire_on_commit=False),
-            alembic_config=AlembicAsyncConfig(
-                version_table_name=self.MIGRATION_DDL_VERSION_TABLE,
-                script_config=self.MIGRATION_CONFIG,
-                script_location=self.MIGRATION_PATH,
-            ),
-        )
 
 
 @dataclass
@@ -168,74 +69,6 @@ class ServerSettings:
     )
     WORKERS: int = field(default_factory=get_env(f'{CONFIG_PREFIX}_WORKERS', 1))
     """Number of worker processes."""
-
-
-@dataclass
-class EmailSettings:
-    """Email configuration.
-
-    Set EMAIL_BACKEND to:
-    - "console" (default) - prints emails to stdout (development)
-    - "memory" - stores in memory (testing)
-    - "smtp" - sends via SMTP server
-    - "resend" - sends via Resend API (production)
-    """
-
-    BACKEND: str = field(default_factory=get_env('EMAIL_BACKEND', 'console'))
-    """Email backend: console, memory, smtp, resend."""
-    FROM_EMAIL: str = field(
-        default_factory=get_env('EMAIL_FROM_ADDRESS', 'noreply@localhost')
-    )
-    """Default from email address."""
-    FROM_NAME: str = field(default_factory=get_env('EMAIL_FROM_NAME', 'Litestar App'))
-    """Default from name."""
-    # SMTP settings (only used when BACKEND="smtp")
-    SMTP_HOST: str = field(default_factory=get_env('EMAIL_SMTP_HOST', 'localhost'))
-    """SMTP server hostname."""
-    SMTP_PORT: int = field(default_factory=get_env('EMAIL_SMTP_PORT', 587, int))
-    """SMTP server port."""
-    SMTP_USER: str = field(default_factory=get_env('EMAIL_SMTP_USER', ''))
-    """SMTP username."""
-    SMTP_PASSWORD: str = field(default_factory=get_env('EMAIL_SMTP_PASSWORD', ''))
-    """SMTP password."""
-    USE_TLS: bool = field(default_factory=get_env('EMAIL_USE_TLS', True))
-    """Use TLS for SMTP connection."""
-    USE_SSL: bool = field(default_factory=get_env('EMAIL_USE_SSL', False))
-    """Use SSL for SMTP connection."""
-    TIMEOUT: int = field(default_factory=get_env('EMAIL_TIMEOUT', 30, int))
-    """SMTP connection timeout in seconds."""
-    # Resend settings (only used when BACKEND="resend")
-    RESEND_API_KEY: str = field(default_factory=get_env('RESEND_API_KEY', ''))
-    """Resend API key for production email sending."""
-
-    def get_config(self) -> EmailConfig:
-        """Return EmailConfig for the litestar-email plugin.
-
-        As of litestar-email v0.3.0, the backend parameter accepts either
-        a string ("console", "memory") or a config object (SMTPConfig,
-        ResendConfig).
-
-        Returns:
-            The email configuration.
-        """
-        backend: str | SMTPConfig | ResendConfig = self.BACKEND
-        if self.BACKEND == 'smtp':
-            backend = SMTPConfig(
-                host=self.SMTP_HOST,
-                port=self.SMTP_PORT,
-                username=self.SMTP_USER,
-                password=self.SMTP_PASSWORD,
-                use_tls=self.USE_TLS,
-                use_ssl=self.USE_SSL,
-                timeout=self.TIMEOUT,
-            )
-        elif self.BACKEND == 'resend':
-            backend = ResendConfig(api_key=self.RESEND_API_KEY)
-        return EmailConfig(
-            backend=backend,
-            from_email=self.FROM_EMAIL,
-            from_name=self.FROM_NAME,
-        )
 
 
 @dataclass

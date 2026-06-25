@@ -31,7 +31,7 @@ _call_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
 logger = logging.getLogger()
 
 
-class AdvancedSessionManager:
+class AdvancedDBManager:
     _sessionmaker: async_sessionmaker[AsyncSession]
 
     def __init__(self, db_settings: DatabaseSettings | None = None):
@@ -45,7 +45,7 @@ class AdvancedSessionManager:
             expire_on_commit=False,
             class_=AsyncSession,
         )
-        logger.debug('🐬 AdvancedSessionManager initialized.')
+        logger.debug('🐬 AdvancedDBManager initialized.')
 
     def session_factory(self) -> async_sessionmaker[AsyncSession]:
         return self._sessionmaker
@@ -56,7 +56,7 @@ class AdvancedSessionManager:
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
         if self._engine is None:
-            raise Exception('AdvancedSessionManager is not initialized')
+            raise Exception('AdvancedDBManager is not initialized')
 
         async with self._engine.begin() as connection:
             try:
@@ -123,24 +123,24 @@ class AdvancedSessionManager:
 
 
 class MainDatabase:
-    _instance: AdvancedSessionManager | None = None
+    _instance: AdvancedDBManager | None = None
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = AdvancedSessionManager()
+            cls._instance = AdvancedDBManager()
         return cls._instance
 
     @classmethod
-    def get_instance(cls) -> 'AdvancedSessionManager':
+    def get_instance(cls) -> 'AdvancedDBManager':
         if cls._instance is None:
-            cls._instance = AdvancedSessionManager()
+            cls._instance = AdvancedDBManager()
         return cls._instance
 
 
 class DBConcurrentSessionFactory:
     _scoped_session_factory: async_scoped_session[AsyncSession]
 
-    def __init__(self, db: AdvancedSessionManager | None = None):
+    def __init__(self, db: AdvancedDBManager | None = None):
         if db is None:
             db = MainDatabase.get_instance()
         self._db = db
