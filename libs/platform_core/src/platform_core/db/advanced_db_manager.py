@@ -2,7 +2,7 @@
 Asynchronous database session manager.
 """
 
-from platform_core.db.types import DBSessionStats
+from .analytics import DBSessionStats
 
 import contextlib
 import contextvars
@@ -34,17 +34,32 @@ logger = logging.getLogger('DB')
 db_debug = False
 
 
-a_session_stats = DBSessionStats()
+session_stats = DBSessionStats(logger, debug=db_debug)
 """
 For tracing of session usage, including creation, commit, rollback, and close operations.
 Normally this is used for db_context_session,
 """
 
-scoped_session_stats = DBSessionStats()
+scoped_session_stats = DBSessionStats(logger, debug=db_debug)
 """ For tracing of session usage, including creation, commit, rollback, and close operations. """
 
+
+class _TrackedScopedSessionFactory:
+    def __init__(self, factory: async_scoped_session[AsyncSession]):
+        self._factory = factory
+
+    def __call__(self) -> AsyncSession:
+        session = self._factory()
+        scoped_session_stats.increment_created()
+        return session
+
+    def __getattr__(self, name: str):
+        return getattr(self._factory, name)
+
+
 class AdvancedDBManager:
-    """ Base class for managing asynchronous database sessions and connections. """
+    """Base class for managing asynchronous database sessions and connections."""
+
     _sessionmaker: async_sessionmaker[AsyncSession]
 
     def __init__(self, db_settings: DatabaseSettings | None = None):
@@ -122,14 +137,25 @@ class AdvancedDBManager:
                 try:
                     yield session
                     if auto_commit:
-                        logger.debug('🐬 [get_session_generator] Committing session')
-                        await session.commit()
+                        await self.commit_session(session)
                 except Exception as e:
-                    await session.rollback()
+                    await self.rollback_session(session)
                     raise e
                 finally:
                     _current_context_session.reset(session_token)
                     # await session.close()
+
+    async def commit_session(self, session: AsyncSession):
+        await session.commit()
+        session_stats.increment_committed()
+
+    async def rollback_session(self, session: AsyncSession):
+        await session.rollback()
+        session_stats.increment_rolled_back()
+
+    async def close_session(self, session: AsyncSession):
+        await session.close()
+        session_stats.increment_closed()
 
     async def close(self):
         if self._engine is not None:
@@ -155,8 +181,9 @@ class MainDatabase:
 
 
 class ConcurrentSessionFactory:
-    """ Centralized factory for managing concurrent database sessions. Each concurrent operation gets its own session, but they are all tracked
-    and can be committed or rolled back together. """
+    """Centralized factory for managing concurrent database sessions. Each concurrent operation gets its own session, but they are all tracked
+    and can be committed or rolled back together."""
+
     _scoped_session_factory: async_scoped_session[AsyncSession]
 
     def __init__(self, db: AdvancedDBManager | None = None):
@@ -166,11 +193,12 @@ class ConcurrentSessionFactory:
         self._scoped_session_factory = async_scoped_session(
             self._db.session_factory(), scopefunc=get_current_task_id
         )
+        self._tracked_scoped_session_factory = _TrackedScopedSessionFactory(
+            self._scoped_session_factory
+        )
 
     def get_session(self) -> AsyncSession:
-        return self._scoped_session_factory()
-
-
+        return self._tracked_scoped_session_factory()
 
     @property
     def scoped_session_factory(self) -> async_scoped_session[AsyncSession]:
@@ -183,14 +211,7 @@ class ConcurrentSessionFactory:
                 # Use the session for database operations
                 ...
         """
-        def wrapper():
-            sf = self._scoped_session_factory()
-            scoped_session_stats.increment_created()
-            return sf
-
-
-        return wrapper
-        # return self._scoped_session_factory
+        return self._tracked_scoped_session_factory
 
     @staticmethod
     async def close_sessions(sessions: Iterable[AsyncSession]):
@@ -242,16 +263,16 @@ def db_session(_func: Union[Callable, None] = None, *, auto_commit: bool = False
                 try:
                     result = await func(*args, session=session, **kwargs)
                     if auto_commit:
-                        await session.commit()
+                        await MainDatabase.get_instance().commit_session(session)
                     return result
                 except Exception as e:
-                    await session.rollback()
+                    await MainDatabase.get_instance().rollback_session(session)
                     logger.error(
                         f"Database operation failed in function '{getattr(func, '__name__', 'unknown')}': {str(e)}"
                     )
                     raise e
                 finally:
-                    await session.close()
+                    await MainDatabase.get_instance().close_session(session)
 
         return wrapper
 
@@ -316,10 +337,10 @@ def db_context_session(
             if existing_session is not None:
                 # Use existing session from context - pass it in kwargs
                 # kwargs['session'] = existing_session
-                print(
-                    f'♻️ 🐬 [db_context_session] Reusing existing session (depth: {current_depth})'
-                )
-
+                if db_debug:
+                    logger.debug(
+                        f'🐬 🗃️ [db_context_session] Reusing existing session (depth: {current_depth})'
+                    )
                 return await func(
                     *args, **{**kwargs, injected_param_name: existing_session}
                 )
@@ -333,12 +354,7 @@ def db_context_session(
                     async with MainDatabase.get_instance().get_session_generator(
                         auto_commit
                     ) as new_session:
-                        global count
-                        print(
-                            f'🐬 [db_session] New session created: {count} (depth: {current_depth + 1})'
-                        )
-                        count += 1
-                        # kwargs['session'] = new_session
+                        session_stats.increment_created()
                         result = await func(
                             *args, **{**kwargs, injected_param_name: new_session}
                         )
@@ -382,10 +398,6 @@ def db_concurrent_session(func):
                 cs_manager.scoped_session_factory
             )
             result = await func(*args, **{**kwargs, injected_param_name: a_session})
-
-            print(
-                f'🐬 ⏰ → [db_concurrent_session] Opened function {func.__name__} (concurrent count: {concurrent_count})'
-            )
             return result
         except Exception as e:
             sessions = cs_manager.scoped_session_factory.registry.registry.values()
@@ -395,8 +407,5 @@ def db_concurrent_session(func):
             sessions = cs_manager.scoped_session_factory.registry.registry.values()
             await ConcurrentSessionFactory.commit_sessions(sessions)
             await ConcurrentSessionFactory.close_sessions(sessions)
-            print(
-                f'🐬 ⏰ ← [db_concurrent_session] Closed all sessions for function {func.__name__} (concurrent count: {concurrent_count})'
-            )
 
     return wrapper

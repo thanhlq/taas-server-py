@@ -22,27 +22,3 @@ type DBAsyncSession = AsyncSession
 #     json_serializer: Callable[[Any], str] = encode_json
 #     """For dialects that support the JSON datatype, this is a Python callable that will render a given object as JSON.
 #     By default, Litestar's encode_json function is used."""
-
-
-class DBSessionStats:
-    """
-    A class to track statistics about database sessions.
-    """
-
-    def __init__(self):
-        self.total_sessions_created: int = 0
-        self.total_sessions_closed: int = 0
-        self.total_sessions_committed: int = 0
-        self.total_sessions_rolled_back: int = 0
-
-    def increment_created(self, count: int = 1):
-        self.total_sessions_created += count
-
-    def increment_closed(self, count: int = 1):
-        self.total_sessions_closed += count
-
-    def increment_committed(self, count: int = 1):
-        self.total_sessions_committed += count
-
-    def increment_rolled_back(self, count: int = 1):
-        self.total_sessions_rolled_back += count

@@ -79,8 +79,8 @@ class UserController(BaseController):
 
     @get('/list_fast')
     @db_concurrent_session
-    @cache(expire=60)  # Cache the response for 60 seconds
-    async def list_users(self, session: DBAsyncScopedSession) -> OffsetPagination[User]:
+    # @cache(expire=60)  # Cache the response for 60 seconds
+    async def list_fast(self, session: DBAsyncScopedSession) -> OffsetPagination[User]:
         users_service = AccountFactory.get_user_service(session)
         results: ListResult[m.User] = await users_service.list_users_fast()
         return users_service.to_schema(

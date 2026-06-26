@@ -78,6 +78,16 @@ class DummyConcurrentFactory:
         return None
 
 
+class DummyTrackedScopedFactory:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.registry = SimpleNamespace(registry=SimpleNamespace(values=lambda: []))
+
+    def __call__(self) -> object:
+        self.calls += 1
+        return object()
+
+
 @pytest.mark.asyncio
 async def test_db_context_session_injects_actual_parameter_name(monkeypatch) -> None:
     session = DummySession()
@@ -123,3 +133,28 @@ def test_litestar_adapter_strips_db_managed_parameter() -> None:
     signature = inspect.signature(adapted)
     assert "session" not in signature.parameters
     assert dependencies == {}
+
+
+def test_concurrent_session_factory_tracks_calls_and_keeps_registry(monkeypatch) -> None:
+    tracked_factory = DummyTrackedScopedFactory()
+
+    monkeypatch.setattr(
+        asm,
+        "async_scoped_session",
+        lambda factory, scopefunc: tracked_factory,
+    )
+    monkeypatch.setattr(asm, "scoped_session_stats", asm.DBSessionStats())
+
+    class DummyDB:
+        def session_factory(self):
+            return object()
+
+    factory = asm.ConcurrentSessionFactory(DummyDB())
+
+    assert factory.scoped_session_factory.registry is tracked_factory.registry
+
+    session = factory.scoped_session_factory()
+
+    assert session is not None
+    assert tracked_factory.calls == 1
+    assert asm.scoped_session_stats.total_sessions_created == 1
