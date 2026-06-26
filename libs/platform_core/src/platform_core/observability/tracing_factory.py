@@ -44,6 +44,7 @@ class TracingFactory:
             return
 
         if _config.database_instrument:
+            self.trace_database()
 
         if _config.fastapi_app:
             self.trace_fastapi_app(_config.fastapi_app)
@@ -65,24 +66,8 @@ class TracingFactory:
             # Instrument every engine via `engines=[...]` (a single `engine=` covers
             # only one, and a second instrument() call is a no-op). Async engines are
             # instrumented through their `.sync_engine`.
-            engines = []
-
-            # Main application DB (e.g. crypto_vn)
-            try:
-                from db. import db as _db
-                if _db._engine is not None:  # type: ignore[attr-defined]
-                    engines.append(_db._engine.sync_engine)  # type: ignore[attr-defined]
-            except Exception:
-                pass
-
-            # Keycloak / identity DB (e.g. crypto_ids) — a separate engine
-            # (core/keycloak/kc_db.py); without it those queries are never traced.
-            try:
-                from core.keycloak.kc_db import db as _kc_db
-                if _kc_db._engine is not None:  # type: ignore[attr-defined]
-                    engines.append(_kc_db._engine.sync_engine)  # type: ignore[attr-defined]
-            except Exception:
-                pass
+            from platform_core.db.engine_factory import EngineFactory
+            engines = EngineFactory.get_all_engines()
 
             if engines:
                 SQLAlchemyInstrumentor().instrument(engines=engines)
@@ -129,3 +114,18 @@ class TracingFactory:
 
         elif is_elk_tracing_enabled():
             pass
+
+def _set_db_peer_service(conn, cursor, statement, parameters, context, executemany):
+    """SQLAlchemy before_cursor_execute hook: stamp peer.service ("<backend>/<db>")
+    on the instrumentor's span (context._otel_span) from the connection's real
+    database, so each DB gets its own dependency node."""
+    try:
+        span = getattr(context, '_otel_span', None)
+        if span is not None and span.is_recording():
+            url = conn.engine.url
+            if url.database:
+                backend = url.get_backend_name() or 'db'
+                span.set_attribute('peer.service', f'{backend}/{url.database}')
+    except Exception:  # never let dependency naming break a query
+        pass
+

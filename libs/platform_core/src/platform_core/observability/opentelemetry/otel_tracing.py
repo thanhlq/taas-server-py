@@ -49,7 +49,7 @@ class OtelTracingManager(ITracingManager):
     _logger: Optional[Logger] = None
 
     def __init__(self, logger: Optional[Logger] = None):
-        super().__init__()
+        super().__init__(logger)
         self.config = OtelConfig()
         # self.default_tracer = None  # Initialize before conditional use
         if self.config.is_tracing_enabled():

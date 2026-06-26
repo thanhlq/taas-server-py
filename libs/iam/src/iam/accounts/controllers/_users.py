@@ -97,8 +97,9 @@ class UserController(BaseController):
 
     # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
-    @db_context_session(transaction=True)
-    async def create_user(self, data: UserCreate, session: DBAsyncSession) -> User:
+    # @db_context_session(transaction=True)
+    @db_concurrent_session
+    async def create_user(self, data: UserCreate, session: DBAsyncScopedSession) -> User:
 
         users_service = AccountFactory.get_user_service(session)
 

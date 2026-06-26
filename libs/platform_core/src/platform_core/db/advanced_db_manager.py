@@ -2,6 +2,8 @@
 Asynchronous database session manager.
 """
 
+from platform_core.db.types import DBSessionStats
+
 import contextlib
 import contextvars
 import inspect
@@ -28,16 +30,30 @@ _call_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
     'call_depth', default=0
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger('DB')
+db_debug = False
 
+
+a_session_stats = DBSessionStats()
+"""
+For tracing of session usage, including creation, commit, rollback, and close operations.
+Normally this is used for db_context_session,
+"""
+
+scoped_session_stats = DBSessionStats()
+""" For tracing of session usage, including creation, commit, rollback, and close operations. """
 
 class AdvancedDBManager:
+    """ Base class for managing asynchronous database sessions and connections. """
     _sessionmaker: async_sessionmaker[AsyncSession]
 
     def __init__(self, db_settings: DatabaseSettings | None = None):
         if db_settings is None:
             # For MAIN DB
             db_settings = get_settings().db
+            if db_settings.DEBUG:
+                global db_debug
+                db_debug = True
         self._engine = db_settings.get_engine()
         self._sessionmaker = async_sessionmaker(
             autocommit=False,
@@ -45,7 +61,8 @@ class AdvancedDBManager:
             expire_on_commit=False,
             class_=AsyncSession,
         )
-        logger.debug('🐬 AdvancedDBManager initialized.')
+        if db_debug:
+            logger.debug('🐬 AdvancedDBManager initialized.')
 
     def session_factory(self) -> async_sessionmaker[AsyncSession]:
         return self._sessionmaker
@@ -137,7 +154,9 @@ class MainDatabase:
         return cls._instance
 
 
-class DBConcurrentSessionFactory:
+class ConcurrentSessionFactory:
+    """ Centralized factory for managing concurrent database sessions. Each concurrent operation gets its own session, but they are all tracked
+    and can be committed or rolled back together. """
     _scoped_session_factory: async_scoped_session[AsyncSession]
 
     def __init__(self, db: AdvancedDBManager | None = None):
@@ -151,20 +170,44 @@ class DBConcurrentSessionFactory:
     def get_session(self) -> AsyncSession:
         return self._scoped_session_factory()
 
+
+
     @property
     def scoped_session_factory(self) -> async_scoped_session[AsyncSession]:
-        return self._scoped_session_factory
+        """
+        Returns a factory that provides a scoped session for concurrent operations.
+
+        Examples:
+            concurrent_session_factory = ConcurrentSessionFactory()
+            async with concurrent_session_factory.scoped_session_factory() as session:
+                # Use the session for database operations
+                ...
+        """
+        def wrapper():
+            sf = self._scoped_session_factory()
+            scoped_session_stats.increment_created()
+            return sf
+
+
+        return wrapper
+        # return self._scoped_session_factory
 
     @staticmethod
     async def close_sessions(sessions: Iterable[AsyncSession]):
-        await gather(*[each_session.close() for each_session in sessions])
+        sessions_list = list(sessions)
+        scoped_session_stats.increment_closed(len(sessions_list))
+        await gather(*[each_session.close() for each_session in sessions_list])
 
     @staticmethod
     async def commit_sessions(sessions: Iterable[AsyncSession]):
+        # sessions_list = list(sessions)
+        scoped_session_stats.increment_committed(len(sessions))
         await gather(*[each_session.commit() for each_session in sessions])
 
     @staticmethod
     async def rollback_sessions(sessions: Iterable[AsyncSession]):
+        # sessions_list = list(sessions)
+        scoped_session_stats.increment_rolled_back(len(sessions))
         await gather(*[each_session.rollback() for each_session in sessions])
 
 
@@ -182,7 +225,7 @@ async def get_db_async_generator() -> AsyncGenerator[AsyncSession]:
 #     return wrapper
 
 
-def db_session(_func: Union[Callable, None] = None, *, transaction: bool = False):
+def db_session(_func: Union[Callable, None] = None, *, auto_commit: bool = False):
     """
     A decorator to provide a database session to the decorated async function.
      - This session is not transactional and will not be committed automatically.
@@ -198,7 +241,7 @@ def db_session(_func: Union[Callable, None] = None, *, transaction: bool = False
             async with MainDatabase.get_instance().get_session_generator() as session:
                 try:
                     result = await func(*args, session=session, **kwargs)
-                    if transaction:
+                    if auto_commit:
                         await session.commit()
                     return result
                 except Exception as e:
@@ -218,10 +261,9 @@ def db_session(_func: Union[Callable, None] = None, *, transaction: bool = False
         return decorator(_func)
 
 
-count = 0
-
-
-def _resolve_injected_param_name(func: Callable, target_type: type, fallback: str) -> str:
+def _resolve_injected_param_name(
+    func: Callable, target_type: type, fallback: str
+) -> str:
     signature = inspect.signature(func)
     try:
         hints = get_type_hints(func, include_extras=True)
@@ -249,7 +291,7 @@ def _resolve_injected_param_name(func: Callable, target_type: type, fallback: st
 
 
 def db_context_session(
-    _func: Union[Callable, None] = None, *, transaction: bool = False
+    _func: Union[Callable, None] = None, *, auto_commit: bool = False
 ):
     """
     Context-aware decorator that automatically reuses existing session from context
@@ -261,7 +303,9 @@ def db_context_session(
     """
 
     def decorator(func: Callable) -> Callable:
-        injected_param_name = _resolve_injected_param_name(func, AsyncSession, 'session')
+        injected_param_name = _resolve_injected_param_name(
+            func, AsyncSession, 'session'
+        )
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -287,7 +331,7 @@ def db_context_session(
                 depth_token = _call_depth.set(current_depth + 1)
                 try:
                     async with MainDatabase.get_instance().get_session_generator(
-                        transaction
+                        auto_commit
                     ) as new_session:
                         global count
                         print(
@@ -312,17 +356,16 @@ def db_context_session(
         return decorator(_func)
 
 
-
 # ref https://medium.com/@lironbenyeda/fastapi-sqlalchemy-and-parallel-queries-walk-into-a-bar-86dfe40aa878
 async def get_db_concurrent_sesson_manager() -> AsyncGenerator[
-    DBConcurrentSessionFactory
+    ConcurrentSessionFactory
 ]:
-    cs_manager = DBConcurrentSessionFactory()
+    cs_manager = ConcurrentSessionFactory()
     try:
         yield cs_manager
     finally:
         sessions = cs_manager.scoped_session_factory.registry.registry.values()
-        await DBConcurrentSessionFactory.close_sessions(sessions)
+        await ConcurrentSessionFactory.close_sessions(sessions)
 
 
 def db_concurrent_session(func):
@@ -332,19 +375,28 @@ def db_concurrent_session(func):
 
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        cs_manager = DBConcurrentSessionFactory()
+        cs_manager = ConcurrentSessionFactory()
         kwargs.pop(injected_param_name, None)
         try:
-            a_session: async_scoped_session[AsyncSession] = cs_manager.scoped_session_factory
+            a_session: async_scoped_session[AsyncSession] = (
+                cs_manager.scoped_session_factory
+            )
             result = await func(*args, **{**kwargs, injected_param_name: a_session})
+
+            print(
+                f'🐬 ⏰ → [db_concurrent_session] Opened function {func.__name__} (concurrent count: {concurrent_count})'
+            )
             return result
         except Exception as e:
             sessions = cs_manager.scoped_session_factory.registry.registry.values()
-            await DBConcurrentSessionFactory.rollback_sessions(sessions)
+            await ConcurrentSessionFactory.rollback_sessions(sessions)
             raise e
         finally:
             sessions = cs_manager.scoped_session_factory.registry.registry.values()
-            await DBConcurrentSessionFactory.commit_sessions(sessions)
-            await DBConcurrentSessionFactory.close_sessions(sessions)
+            await ConcurrentSessionFactory.commit_sessions(sessions)
+            await ConcurrentSessionFactory.close_sessions(sessions)
+            print(
+                f'🐬 ⏰ ← [db_concurrent_session] Closed all sessions for function {func.__name__} (concurrent count: {concurrent_count})'
+            )
 
     return wrapper

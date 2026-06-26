@@ -164,6 +164,9 @@ class ITracingManager(ABC):
     """
 
     @abstractmethod
+    def __init__(self, logger: Optional[Logger] = None): ...
+
+    @abstractmethod
     def get_context_tracer(self) -> type[IContextTracer]:
         """
         Get the context tracer class.

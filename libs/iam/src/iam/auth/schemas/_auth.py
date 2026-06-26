@@ -6,7 +6,6 @@ from datetime import datetime
 from uuid import UUID
 
 import msgspec
-from db.models import TeamRoles
 from platform_core.iam.types import Phone, UserStatus
 from platform_core.serialization._msgspec_model import ApiRequest
 from platform_core.utils.validation import (

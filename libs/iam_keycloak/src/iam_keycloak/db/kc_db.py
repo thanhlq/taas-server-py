@@ -9,20 +9,16 @@ from typing import Union
 from platform_core.db.advanced_db_manager import AdvancedDBManager
 
 
-class KeycloakDBManager:
+from .kc_db_settings import get_keycloak_db_settings
+
+
+class KeycloakDBManager(AdvancedDBManager):
     _instance = None
 
-    def __new__(cls):
-        if cls._instance is None:
-            settings = get_app_settings()
-            cls._instance = DBAsyncSessionManager(settings.KEYCLOAK_DATABASE_URI_ASYNC)
-        return cls._instance
+    def __init__(self):
+        settings = get_keycloak_db_settings()
+        super().__init__(settings)
 
-    @classmethod
-    def get_instance(cls) -> 'DBAsyncSessionManager':
-        if cls._instance is None:
-            cls._instance = DBAsyncSessionManager()
-        return cls._instance
 
 
 db = KeycloakDBManager()
@@ -69,7 +65,9 @@ def kc_db_session_async(
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # current_depth = _call_depth.get()
-            existing_session = KeycloakDBManager.get_instance().get_current_context_session()
+            existing_session = (
+                KeycloakDBManager.get_instance().get_current_context_session()
+            )
 
             if existing_session is not None:
                 # Use existing session from context - pass it in kwargs

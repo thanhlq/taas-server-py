@@ -99,7 +99,7 @@ async def test_db_concurrent_session_injects_actual_parameter_name(monkeypatch) 
     monkeypatch.setattr(asm, "DBConcurrentSessionFactory", DummyConcurrentFactory)
 
     @asm.db_concurrent_session
-    async def work(*, manager: asm.DBConcurrentSessionFactory) -> object:
+    async def work(*, manager: asm.ConcurrentSessionFactory) -> object:
         return manager
 
     result = await work()

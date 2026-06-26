@@ -8,7 +8,7 @@ from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ._team_roles import TeamRoles
+from platform_core.iam.types import TeamRoles
 from .constants import TEAM_MEMBER_TABLE, TEAM_TABLE, USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ import db.models.core as m
 from advanced_alchemy.extensions.fastapi import repository, service
 from iam.accounts.schemas._user import UserCreate, UserStatus
 from iam.constants import Roles
-from platform_core.db.types import DBAsyncScopedSession
+from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
 from platform_core.models import ListResult
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
@@ -25,17 +25,33 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
     default_role = Roles.USER
     match_fields = ['email']
 
-    async def create_user(self, user: UserCreate) -> m.User:
+    def get_session(self) -> DBAsyncSession:
+        """Get the current database session."""
+        s = self.repository.session
+        if isinstance(s, async_scoped_session):
+            # print('⏰. async_scoped_session session')
+            return s()
+        return s
+
+    async def create_user(self, user: UserCreate, **kwargs) -> m.User:
         """Create a new user with the default role."""
         user_row = self.user_create_to_db_user(user)
-        return await self.create(user_row)
+        return await self.create(user_row, **kwargs)
 
-    async def do_list_users(self, session: AsyncSession | async_scoped_session[AsyncSession], limit: int = 100, offset: int = 0) -> list[m.User]:
-        _session: AsyncSession
-        if isinstance(session, async_scoped_session):
-            _session = session()
-        else:
-            _session = session
+    async def list_users_fast(
+        self, limit: int = 100, offset: int = 0
+    ) -> ListResult[m.User]:
+        async with asyncio.TaskGroup() as tg:
+            t_select = tg.create_task(self.do_list_users(limit, offset))
+            t_count = tg.create_task(self.count_fast())
+
+        return ListResult(
+            data=t_select.result(),
+            total_count=t_count.result(),
+        )
+
+    async def do_list_users(self, limit: int = 100, offset: int = 0) -> list[m.User]:
+        _session = self.get_session()
 
         query = select(self.repository.model_type).order_by(m.User.created_at.desc())
         query = query.limit(limit).offset(offset)
@@ -45,30 +61,13 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
 
         return result
 
-    async def list_users_fast(self, limit: int = 100, offset: int = 0) -> ListResult[m.User]:
-        session: DBAsyncScopedSession = self.repository.session
-        async with asyncio.TaskGroup() as tg:
-            t_select = tg.create_task(self.do_list_users(session, limit, offset))
-            t_count = tg.create_task(self.count_fast(session))
-
-        return ListResult(
-            data=t_select.result(),
-            total_count=t_count.result(),
-        )
-
-
-    async def count_fast(self, session: AsyncSession | async_scoped_session[AsyncSession]) -> int:
+    async def count_fast(self) -> int:
         """
         Fastest count by using this sql:
         SELECT reltuples::bigint FROM pg_class WHERE relname = 'taas_user_account';
         """
-        _session: AsyncSession
-        if isinstance(session, async_scoped_session):
-            _session = session()
-        else:
-            _session = session
-
-        sql = f'SELECT reltuples::bigint FROM pg_class WHERE relname = \'{self.repository.model_type.__tablename__}\';'
+        _session: AsyncSession = self.get_session()
+        sql = f"SELECT reltuples::bigint FROM pg_class WHERE relname = '{self.repository.model_type.__tablename__}';"
         query = text(sql)
         result = await _session.scalar(query)
         return int(result)
