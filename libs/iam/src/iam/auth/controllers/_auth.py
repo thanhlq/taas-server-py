@@ -34,7 +34,7 @@ from iam.auth.services._users import UserService
 
 def get_user_service(session) -> UserService:
 
-    return UserService(session=session or MainDatabase.get_instance().get_session())
+    return UserService(session=session or MainDatabase.get_instance().new_session())
 
 
 class UserController(BaseController):

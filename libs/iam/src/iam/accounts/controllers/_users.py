@@ -34,7 +34,7 @@ from iam.accounts.services._users import UserService
 
 def get_user_service(session) -> UserService:
 
-    return UserService(session=session or MainDatabase.get_instance().get_session())
+    return UserService(session=session)
 
 
 class UserController(BaseController):
@@ -97,8 +97,8 @@ class UserController(BaseController):
 
     # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
-    # @db_context_session(transaction=True)
-    @db_concurrent_session
+    @db_context_session(auto_commit=True)
+    # @db_concurrent_session
     async def create_user(self, data: UserCreate, session: DBAsyncScopedSession) -> User:
 
         users_service = AccountFactory.get_user_service(session)

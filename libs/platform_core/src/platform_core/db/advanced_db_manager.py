@@ -8,7 +8,7 @@ import contextlib
 import contextvars
 import inspect
 import logging
-from asyncio import gather
+from asyncio import gather, current_task
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable
 from functools import wraps
 from typing import Optional, Union, get_args, get_type_hints
@@ -22,26 +22,17 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
-_current_context_session: contextvars.ContextVar[Optional[AsyncSession]] = (
+
+_current_context_session: contextvars.ContextVar[Optional[tuple[int, AsyncSession]]] = (
     contextvars.ContextVar('current_db_session', default=None)
 )
+
 # Context variable to track call depth
 _call_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
     'call_depth', default=0
 )
 
 logger = logging.getLogger('DB')
-db_debug = False
-
-
-session_stats = DBSessionStats(logger, debug=db_debug)
-"""
-For tracing of session usage, including creation, commit, rollback, and close operations.
-Normally this is used for db_context_session,
-"""
-
-scoped_session_stats = DBSessionStats(logger, debug=db_debug)
-""" For tracing of session usage, including creation, commit, rollback, and close operations. """
 
 
 class _TrackedScopedSessionFactory:
@@ -61,14 +52,14 @@ class AdvancedDBManager:
     """Base class for managing asynchronous database sessions and connections."""
 
     _sessionmaker: async_sessionmaker[AsyncSession]
+    _debug: bool = False
 
     def __init__(self, db_settings: DatabaseSettings | None = None):
         if db_settings is None:
             # For MAIN DB
             db_settings = get_settings().db
             if db_settings.DEBUG:
-                global db_debug
-                db_debug = True
+                self._debug = True
         self._engine = db_settings.get_engine()
         self._sessionmaker = async_sessionmaker(
             autocommit=False,
@@ -76,14 +67,21 @@ class AdvancedDBManager:
             expire_on_commit=False,
             class_=AsyncSession,
         )
-        if db_debug:
+        self.session_stats = DBSessionStats(logger, debug=self._debug)
+        """
+        For tracing of session usage, including creation, commit, rollback, and close operations.
+        Normally this is used for db_context_session,
+        """
+        if self._debug:
             logger.debug('🐬 AdvancedDBManager initialized.')
 
     def session_factory(self) -> async_sessionmaker[AsyncSession]:
         return self._sessionmaker
 
-    def get_session(self) -> AsyncSession:
-        return self._sessionmaker()
+    def new_session(self) -> AsyncSession:
+        s = self._sessionmaker()
+        self.session_stats.increment_created()
+        return s
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
@@ -112,9 +110,24 @@ class AdvancedDBManager:
         """Returns True if currently within a db_transaction context."""
         return _current_context_session.get() is not None
 
-    def get_current_context_session(self) -> AsyncSession | None:
-        # global _current_context_session
-        return _current_context_session.get()
+    # def get_current_context_session(self) -> AsyncSession | None:
+    #     # global _current_context_session
+    #     return _current_context_session.get()
+
+    def get_current_context_session(self) -> Optional[AsyncSession]:
+        ctx = _current_context_session.get()
+        if ctx is None:
+            return None
+        task_id, session = ctx
+        # If we're in a different task (e.g., a child task spawned by asyncio.gather
+        # that inherited the parent's ContextVar copy), don't reuse the parent's session.
+        current_task_id = id(current_task())
+        if task_id != current_task_id:
+            return None
+
+        self.session_stats.increment_reused()
+
+        return session
 
     @contextlib.asynccontextmanager
     async def get_session_generator(
@@ -125,15 +138,16 @@ class AdvancedDBManager:
         The returned session can be shared across multiple calls.
         """
         # global _current_context_session
-        existing_session = _current_context_session.get()
+        existing_session = self.get_current_context_session()
 
         if existing_session is not None:
             # Already in transaction context, reuse session
             yield existing_session
         else:
             # Start new transaction
-            async with self.get_session() as session:
-                session_token = _current_context_session.set(session)
+            async with self.new_session() as session:
+                session_token = _current_context_session.set((id(current_task()), session))
+                # session_token = _db_current_session.set((id(current_task()), session))
                 try:
                     yield session
                     if auto_commit:
@@ -147,15 +161,15 @@ class AdvancedDBManager:
 
     async def commit_session(self, session: AsyncSession):
         await session.commit()
-        session_stats.increment_committed()
+        self.session_stats.increment_committed()
 
     async def rollback_session(self, session: AsyncSession):
         await session.rollback()
-        session_stats.increment_rolled_back()
+        self.session_stats.increment_rolled_back()
 
     async def close_session(self, session: AsyncSession):
         await session.close()
-        session_stats.increment_closed()
+        self.session_stats.increment_closed()
 
     async def close(self):
         if self._engine is not None:
@@ -181,14 +195,20 @@ class MainDatabase:
 
 
 class ConcurrentSessionFactory:
-    """Centralized factory for managing concurrent database sessions. Each concurrent operation gets its own session, but they are all tracked
-    and can be committed or rolled back together."""
+    """
+    Centralized factory for managing concurrent database sessions. Each concurrent operation gets its own session, but they are all tracked
+    and can be committed or rolled back together.
+    """
 
     _scoped_session_factory: async_scoped_session[AsyncSession]
+    # class variable to track session statistics
+    scoped_session_stats: DBSessionStats = None
+    _debug: bool = False
 
     def __init__(self, db: AdvancedDBManager | None = None):
         if db is None:
             db = MainDatabase.get_instance()
+            self._debug = db._debug
         self._db = db
         self._scoped_session_factory = async_scoped_session(
             self._db.session_factory(), scopefunc=get_current_task_id
@@ -197,8 +217,15 @@ class ConcurrentSessionFactory:
             self._scoped_session_factory
         )
 
-    def get_session(self) -> AsyncSession:
-        return self._tracked_scoped_session_factory()
+        if not ConcurrentSessionFactory.scoped_session_stats:
+            ConcurrentSessionFactory.scoped_session_stats = DBSessionStats(
+                logger, debug=self._db._debug
+            )
+
+    def new_scoped_session(self) -> AsyncSession:
+        s = self._tracked_scoped_session_factory()
+        ConcurrentSessionFactory.scoped_session_stats.increment_created()
+        return s
 
     @property
     def scoped_session_factory(self) -> async_scoped_session[AsyncSession]:
@@ -216,75 +243,35 @@ class ConcurrentSessionFactory:
     @staticmethod
     async def close_sessions(sessions: Iterable[AsyncSession]):
         sessions_list = list(sessions)
-        scoped_session_stats.increment_closed(len(sessions_list))
+        ConcurrentSessionFactory.scoped_session_stats.increment_closed(
+            len(sessions_list)
+        )
         await gather(*[each_session.close() for each_session in sessions_list])
 
     @staticmethod
     async def commit_sessions(sessions: Iterable[AsyncSession]):
         # sessions_list = list(sessions)
-        scoped_session_stats.increment_committed(len(sessions))
+        ConcurrentSessionFactory.scoped_session_stats.increment_committed(len(sessions))
         await gather(*[each_session.commit() for each_session in sessions])
 
     @staticmethod
     async def rollback_sessions(sessions: Iterable[AsyncSession]):
         # sessions_list = list(sessions)
-        scoped_session_stats.increment_rolled_back(len(sessions))
+        ConcurrentSessionFactory.scoped_session_stats.increment_rolled_back(
+            len(sessions)
+        )
         await gather(*[each_session.rollback() for each_session in sessions])
 
 
-async def get_db_async_generator() -> AsyncGenerator[AsyncSession]:
-    async with MainDatabase.get_instance().get_session_generator() as session:
-        yield session
-
-
-# def db_session(func: Callable) -> Callable:
-#     @wraps(func)
-#     async def wrapper(*args, **kwargs):
-#         async with MainDBAsyncSessionManager.get_instance().get_session_generator() as session:
-#             return await func(*args, session=session, **kwargs)
-
-#     return wrapper
-
-
-def db_session(_func: Union[Callable, None] = None, *, auto_commit: bool = False):
-    """
-    A decorator to provide a database session to the decorated async function.
-     - This session is not transactional and will not be committed automatically.
-     - The user of this decorator is responsible for committing or rolling back the session.
-     - This session will be instantiated and not reused from context (Local Thread).
-
-    🔥 IMPORTANT: consider using `db_context_session` for automatic context-aware session management.
-    """
-
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            async with MainDatabase.get_instance().get_session_generator() as session:
-                try:
-                    result = await func(*args, session=session, **kwargs)
-                    if auto_commit:
-                        await MainDatabase.get_instance().commit_session(session)
-                    return result
-                except Exception as e:
-                    await MainDatabase.get_instance().rollback_session(session)
-                    logger.error(
-                        f"Database operation failed in function '{getattr(func, '__name__', 'unknown')}': {str(e)}"
-                    )
-                    raise e
-                finally:
-                    await MainDatabase.get_instance().close_session(session)
-
-        return wrapper
-
-    if _func is None:
-        return decorator
-    else:
-        return decorator(_func)
+# async def get_db_async_generator() -> AsyncGenerator[AsyncSession]:
+#     async with MainDatabase.get_instance().get_session_generator() as session:
+#         yield session
 
 
 def _resolve_injected_param_name(
     func: Callable, target_type: type, fallback: str
 ) -> str:
+    """What is the purpose of this function? It inspects the signature of a function to find the parameter name that matches a given target type. If no matching parameter is found, it returns a fallback name."""
     signature = inspect.signature(func)
     try:
         hints = get_type_hints(func, include_extras=True)
@@ -354,7 +341,6 @@ def db_context_session(
                     async with MainDatabase.get_instance().get_session_generator(
                         auto_commit
                     ) as new_session:
-                        session_stats.increment_created()
                         result = await func(
                             *args, **{**kwargs, injected_param_name: new_session}
                         )
@@ -394,10 +380,12 @@ def db_concurrent_session(func):
         cs_manager = ConcurrentSessionFactory()
         kwargs.pop(injected_param_name, None)
         try:
-            a_session: async_scoped_session[AsyncSession] = (
+            _scoped_session_fac: async_scoped_session[AsyncSession] = (
                 cs_manager.scoped_session_factory
             )
-            result = await func(*args, **{**kwargs, injected_param_name: a_session})
+            result = await func(
+                *args, **{**kwargs, injected_param_name: _scoped_session_fac}
+            )
             return result
         except Exception as e:
             sessions = cs_manager.scoped_session_factory.registry.registry.values()
