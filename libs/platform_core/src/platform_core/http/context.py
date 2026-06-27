@@ -6,7 +6,7 @@ from fast_query_parsers import parse_url_encoded_dict
 from starlette.requests import Request
 from starlette.responses import Response
 
-from platform_core.models.auth import AuthUser
+from platform_core.iam import AuthUser
 
 
 @dataclass

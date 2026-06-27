@@ -9,8 +9,6 @@ from ._payrate import Payrate
 from ._payrate_adjustment import PayrateAdjustment
 from ._payroll import Payroll
 from ._payrun import Payrun
-from ._ppm_tag import PpmTag
-from ._ppm_tag_mapping import PpmTagMapping
 from ._project import Project
 from ._project_action import ProjectAction
 from ._project_audit_log import ProjectAuditLog
@@ -40,8 +38,6 @@ __all__ = [
     'PayrateAdjustment',
     'Payroll',
     'Payrun',
-    'PpmTag',
-    'PpmTagMapping',
     'Project',
     'ProjectAction',
     'ProjectComment',

@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .constants import ROLE_TABLE, USER_ACCOUNT_ROLE_TABLE, USER_ACCOUNT_TABLE
+from .constants import ROLE_TABLE, USER_ACCOUNT_ROLE_TABLE, USER_ACCOUNT_TABLE, ORGANIZATION_TABLE
 
 if TYPE_CHECKING:
     from ._role import Role
@@ -26,6 +26,10 @@ class UserRole(UUIDv7AuditBase):
     )
     role_id: Mapped[UUID] = mapped_column(
         ForeignKey(f'{ROLE_TABLE}.id', ondelete='cascade'), nullable=False
+    )
+    # Role in a specific organization context (optional). If None, the role is global / tenant-wide.
+    org_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(f'{ORGANIZATION_TABLE}.org_id', ondelete='cascade'), nullable=True
     )
     assigned_at: Mapped[datetime] = mapped_column(default=datetime.now(UTC))
 

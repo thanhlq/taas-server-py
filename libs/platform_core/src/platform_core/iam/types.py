@@ -1,6 +1,7 @@
 """Global types for IAM module."""
 
 from __future__ import annotations
+from platform_core.serialization import BaseModel
 
 
 from datetime import datetime
@@ -36,3 +37,22 @@ class OrganizationRoles(StrEnum):
 
     ADMIN = 'ADMIN'
     MEMBER = 'MEMBER'
+
+
+
+class AuthUser(BaseModel):
+    """
+    Represents an authenticated user.
+    """
+
+    id: str
+    name: str | None = None
+    username: str | None = None
+    # family_name: str  # last_name
+    # given_name: str  # first_name
+    last_name: str = ''
+    first_name: str = ''
+    # preferred_username: str
+    sub: str = ''
+    email_verified: bool = False
+    roles: list[str] = []

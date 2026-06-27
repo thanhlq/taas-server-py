@@ -1,4 +1,6 @@
 from __future__ import annotations
+from ews.core import RepoFactory
+from typing import TYPE_CHECKING
 
 import asyncio
 
@@ -12,16 +14,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from sqlalchemy.sql import text
 
+if TYPE_CHECKING:
+    from iam.accounts.services._role import RoleService
 
 class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
     """Handles database operations for users."""
 
-    class Repo(repository.SQLAlchemyAsyncRepository[m.User]):
-        """User SQLAlchemy Repository."""
 
-        model_type = m.User
-
-    repository_type = Repo
+    repository_type = RepoFactory.user_repo()
     default_role = Roles.USER
     match_fields = ['email']
 
@@ -33,10 +33,32 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
             return s()
         return s
 
+    def role_service(self) -> 'RoleService':
+        from iam.accounts.services._role import RoleService
+
+        return RoleService(session=self.get_session())
+
     async def create_user(self, user: UserCreate, **kwargs) -> m.User:
         """Create a new user with the default role."""
         user_row = self.user_create_to_db_user(user)
         return await self.create(user_row, **kwargs)
+
+    async def addRoleToUser(self, user_id: int, role_name: str | None, role_id: str | None, org_id: int) -> m.UserRole:
+        if role_name is None and role_id is None:
+            raise ValueError("Either role_name or role_id must be provided.")
+
+        if role_id is None:
+            role_id = await self.role_service().get_role_id_by_name(role_name)
+
+        db_row = m.UserRole(
+            user_id=user_id,
+            role_id=role_id,
+            org_id=org_id
+        )
+        rs = self.role_service()
+        role = await rs.create(db_row)
+        return role
+
 
     async def list_users_fast(
         self, limit: int = 100, offset: int = 0

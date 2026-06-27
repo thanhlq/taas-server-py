@@ -10,6 +10,7 @@ from ._password_reset_token import PasswordResetToken
 from ._refresh_token import RefreshToken
 from ._role import Role
 from ._tag import Tag
+from ._tag_mapping import TagMapping
 from ._team import Team
 from ._team_invitation import TeamInvitation
 from ._team_member import TeamMember
@@ -26,6 +27,7 @@ __all__ = [
     'RefreshToken',
     'Role',
     'Tag',
+    'TagMapping',
     'Team',
     'TeamInvitation',
     'TeamMember',

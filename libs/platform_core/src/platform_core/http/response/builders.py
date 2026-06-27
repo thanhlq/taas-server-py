@@ -10,7 +10,7 @@ from platform_core.http.response.responses import (
     ResponseStatus,
     ValidationErrorDetail,
 )
-from platform_core.models.commons import ListResult
+from platform_core.models import ListResult
 from platform_core.utils.validation import ValidationError
 
 _DEFAULT_PAGE = 1

@@ -44,5 +44,6 @@ PAYRUN_TABLE = f'{TABLE_PREFIX}payruns'
 TAG_TABLE = f'{TABLE_PREFIX}tags'
 TAG_MAPPING_TABLE = f'{TABLE_PREFIX}tags_mapping'
 CATEGORY_TABLE = f'{TABLE_PREFIX}categories'
+PROJECT_WIKI_TABLE = f'{TABLE_PREFIX}project_wiki'
 
 # Auth and permissions

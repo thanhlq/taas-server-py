@@ -322,12 +322,6 @@ def db_context_session(
             kwargs.pop(injected_param_name, None)
 
             if existing_session is not None:
-                # Use existing session from context - pass it in kwargs
-                # kwargs['session'] = existing_session
-                if db_debug:
-                    logger.debug(
-                        f'🐬 🗃️ [db_context_session] Reusing existing session (depth: {current_depth})'
-                    )
                 return await func(
                     *args, **{**kwargs, injected_param_name: existing_session}
                 )
@@ -341,14 +335,17 @@ def db_context_session(
                     async with MainDatabase.get_instance().get_session_generator(
                         auto_commit
                     ) as new_session:
-                        result = await func(
+                        return await func(
                             *args, **{**kwargs, injected_param_name: new_session}
                         )
-                        return result
                 finally:
-                    # await new_session.close()
+                    # The session created by get_session_generator is closed when
+                    # its `async with self.get_session()` block exits (above). This
+                    # finally runs after that, so it is the point at which the
+                    # context-owned session is done — count it once here, mirroring
+                    # the increment_created() at session creation.
+                    MainDatabase.get_instance().session_stats.increment_closed()
                     _call_depth.reset(depth_token)
-                    # new_session.close()
 
         return wrapper
 
