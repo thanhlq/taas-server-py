@@ -1,3 +1,7 @@
+from platform_core.utils.dt_utils import (
+    convert_datetime_to_gmt_iso,
+    convert_date_to_iso,
+)
 import datetime
 import json
 from typing import Any
@@ -45,42 +49,3 @@ def from_json(value: bytes | str) -> Any:
         The decoded object.
     """
     return _msgspec_json_decoder.decode(value)
-
-
-def convert_datetime_to_gmt_iso(dt: datetime.datetime) -> str:
-    """Handle datetime serialization for nested timestamps.
-
-    Returns:
-        The ISO formatted datetime string.
-
-    Examples:
-        >>> convert_datetime_to_gmt_iso(datetime.datetime(2024, 1, 1, 12, 0, 0))
-        '2024-01-01T12:00:00Z'
-    """
-    dt = dt.replace(tzinfo=datetime.UTC) if not dt.tzinfo else dt.astimezone(datetime.UTC)
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-def convert_datetime_to_utc_iso(dt: datetime.datetime) -> str:
-    """Handle datetime serialization for nested timestamps.
-
-    Returns:
-        The ISO formatted datetime string.
-
-    Examples:
-        >>> convert_datetime_to_utc_iso(datetime.datetime(2024, 1, 1, 12, 0, 0))
-        '2024-01-01T12:00:00Z'
-    """
-    dt = dt.replace(tzinfo=datetime.UTC) if not dt.tzinfo else dt.astimezone(datetime.UTC)
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-def convert_date_to_iso(dt: datetime.date) -> str:
-    """Handle date serialization for nested timestamps.
-
-    Returns:
-        The ISO formatted date string.
-
-    Examples:
-        >>> convert_date_to_iso(datetime.date(2024, 1, 1))
-        '2024-01-01'
-    """
-    return dt.isoformat()

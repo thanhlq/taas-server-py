@@ -1,6 +1,6 @@
 from ews.ppm.schemas import Project
 
-from platform_core.utils.datetime_utils import now_in_utc
+from platform_core.utils import now_in_utc
 
 samples_project: list[Project] = [
     Project(id=1, name="Sample Project", created_at=now_in_utc()),

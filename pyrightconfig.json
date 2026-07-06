@@ -20,10 +20,14 @@
     "libs/db/src",
     "libs/ews/src",
     "libs/http_fastapi/src",
-    "apps/ews_api_litestar/src",
     "libs/platform_core/src",
+    "libs/slowapi_advanced/src",
+    "libs/store_memcached/src",
+    "libs/store_redis/src",
+    "libs/http_litestar/src",
     "libs/banking_core/src",
     "libs/iam/src",
+    "libs/iam_keycloak/src",
     "libs/resiliant/src",
     "libs/block-kaspa/src",
     "apps/ews_api/src",
@@ -33,6 +37,26 @@
   "executionEnvironments": [
     {
       "root": "libs/platform_core",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/db",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/slowapi_advanced",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/store_memcached",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/store_redis",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
@@ -47,17 +71,17 @@
       "extraPaths": ["src"]
     },
     {
-      "root": "libs/db",
-      "pythonVersion": "3.14",
-      "extraPaths": ["src"]
-    },
-    {
       "root": "libs/banking_core",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
     {
       "root": "libs/iam",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/iam_keycloak",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },
@@ -73,6 +97,16 @@
     },
     {
       "root": "libs/block-kaspa",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/messaging_kafka",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/messaging_faststream",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },

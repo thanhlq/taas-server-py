@@ -12,7 +12,7 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
-from platform_core.utils.datetime_utils import now_in_utc
+from platform_core.utils import now_in_utc
 
 if TYPE_CHECKING:
     from platform_core.http._socketio import SocketIOSession

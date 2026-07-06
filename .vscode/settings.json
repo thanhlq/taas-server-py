@@ -27,19 +27,81 @@
   "python.analysis.includeInSetting": [
     "**/*.py"
   ],
-  "python.analysis.exclude": [
-    "**/node_modules",
-    "**/.venv",
-    "**/venv",
-    "**/__pycache__"
-  ],
   "python.analysis.importFormat": "absolute",
-  "python.analysis.diagnosticSeverityOverrides": {
-    "reportUnusedImport": "warning",
-    "reportUnusedVariable": "warning",
-    "reportUnusedFunction": "warning",
-    "reportUnusedClass": "warning"
-  },
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "platform_core",
+      "depth": 3
+    },
+    {
+      "name": "db",
+      "depth": 3
+    },
+    {
+      "name": "slowapi_advanced",
+      "depth": 3
+    },
+    {
+      "name": "store_memcached",
+      "depth": 3
+    },
+    {
+      "name": "store_redis",
+      "depth": 3
+    },
+    {
+      "name": "http_fastapi",
+      "depth": 3
+    },
+    {
+      "name": "http_litestar",
+      "depth": 3
+    },
+    {
+      "name": "banking_core",
+      "depth": 3
+    },
+    {
+      "name": "iam",
+      "depth": 3
+    },
+    {
+      "name": "iam_keycloak",
+      "depth": 3
+    },
+    {
+      "name": "ews",
+      "depth": 3
+    },
+    {
+      "name": "resiliant",
+      "depth": 3
+    },
+    {
+      "name": "block-kaspa",
+      "depth": 3
+    },
+    {
+      "name": "ews_api",
+      "depth": 3
+    },
+    {
+      "name": "ews_worker",
+      "depth": 3
+    },
+    {
+      "name": "ews_api_litestar",
+      "depth": 3
+    },
+    {
+      "name": "messaging_kafka",
+      "depth": 3
+    },
+    {
+      "name": "messaging_faststream",
+      "depth": 3
+    }
+  ],
   "search.exclude": {
     "**/.ruff_cache": true,
     "**/.venv": true,

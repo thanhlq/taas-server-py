@@ -1,7 +1,7 @@
 from platform_core.config import Settings
 from platform_core.http import BaseController, get
 from platform_core.http.context import Context
-from platform_core.utils.datetime_utils import now_as_iso
+from platform_core.utils import now_as_iso
 
 
 class PlatformController(BaseController):

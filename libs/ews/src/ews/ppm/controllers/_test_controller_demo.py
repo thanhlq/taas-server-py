@@ -22,7 +22,7 @@ from platform_core.http.response import (
     create_paginated_response,
     create_success_response,
 )
-from platform_core.utils.datetime_utils import now_in_utc
+from platform_core.utils import now_in_utc
 from platform_core.utils.validation import ValidationError
 
 if TYPE_CHECKING:
