@@ -1,29 +1,31 @@
 # .venv/lib/python3.13/site-packages/litestar_email/message.py
 
 from __future__ import annotations
-from platform_core.cli import cli
 
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-from platform_core.utils.env_utils import _UNSET, UnsetType, get_env
+from platform_core.cli import cli
+from platform_core.utils.env_utils import UnsetType, get_env
 from platform_core.utils.module_loader import module_to_os_path
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
+
     from platform_core.db.sa_config import SQLAlchemyAsyncConfig
 
 DEFAULT_MODULE_NAME = 'db'  # libs/db
 # TODO: to improve since deploying in evironemtn as cloudflare workers,
 # the file system is read only, we need to find a better way to handle static files in that case.
 BASE_DIR: Final[Path] = module_to_os_path(DEFAULT_MODULE_NAME)
-cli.info_formal('BASE_DIR', (BASE_DIR))
+cli.info_formal('BASE_DIR', (str(BASE_DIR)))
 
 
-def _env_field(
-    env_key: str, default: Any, type_hint: type | UnsetType = _UNSET
-) -> Any:
+_UNSET = UnsetType()
+
+
+def _env_field(env_key: str, default: Any, type_hint: type | UnsetType = _UNSET) -> Any:
     """Declare a setting backed by the ``env_key`` environment variable.
 
     With no ``prefix`` the unprefixed ``env_key`` is read (preserving the
@@ -101,9 +103,7 @@ class DatabaseSettings:
         'DATABASE_MIGRATION_DDL_VERSION_TABLE', 'ddl_version'
     )
     """The name to use for the `alembic` versions table name."""
-    FIXTURE_PATH: str = _env_field(
-        'DATABASE_FIXTURE_PATH', f'{BASE_DIR}/db/fixtures'
-    )
+    FIXTURE_PATH: str = _env_field('DATABASE_FIXTURE_PATH', f'{BASE_DIR}/db/fixtures')
     """The path to JSON fixture files to load into tables."""
     _engine_instance: AsyncEngine | None = None
     """SQLAlchemy engine instance generated from settings."""

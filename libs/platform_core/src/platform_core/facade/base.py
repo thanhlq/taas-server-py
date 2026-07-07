@@ -1,3 +1,5 @@
+""" core service types """
+
 from logging import Logger
 
 

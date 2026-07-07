@@ -8,7 +8,15 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    # Messaging & Serialization
+    "fastavro>=1.9.0",
     "msgspec==0.21.1",
+    # Legacy / for testing only
+    "dataclasses-avroschema==0.70.0",
+    "python-schema-registry-client==2.6.1",
+
+    # Database
+    "fastnanoid==0.4.3",
     "sqlalchemy==2.0.50",
     "advanced-alchemy[cryptography]==1.11.0",
     "typing_extensions==4.15.0",
