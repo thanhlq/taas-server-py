@@ -50,7 +50,6 @@ Lifecycle
 """
 
 from __future__ import annotations
-from core.common.singleton import singleton
 
 import asyncio
 import uuid

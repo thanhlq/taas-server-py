@@ -15,12 +15,16 @@ packages = ["src/messaging_faststream"]
 
 requires-python = ">=3.14"
 dependencies = [
+    # Workspace modules
+    "platform_core",
+
     # 🌐 Web Framework & Server
     "fastapi==0.128.6",
     "fastapi-cache2==0.2.2",
 
     # Message queuing and streaming
-    "faststream[kafka]==0.6.7",
+    "aiokafka==0.14.0",
+    "faststream[kafka]==0.7.1",
 
     # �️ Confluent Schema Registry (Avro support)
     # Pure-Python async HTTP client — no librdkafka required

@@ -36,6 +36,8 @@ members = [
     "libs/iam",
     "libs/banking_core",
     "libs/block-kaspa",
+    "libs/messaging_kafka",
+    "libs/messaging_faststream",
     "apps/ews_api",
     "apps/ews_api_litestar",
     "apps/ews_worker",
@@ -52,6 +54,8 @@ http_litestar = { workspace = true }
 ews_api = { workspace = true }
 ews_api_litestar = { workspace = true }
 ews_worker = { workspace = true }
+messaging_kafka = { workspace = true }
+messaging_faststream = { workspace = true }
 store_redis = { workspace = true }
 store_memcached = { workspace = true }
 slowapi_advanced = { workspace = true }

@@ -16,9 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-
-from core.messaging.utils.msg_encoder import MsgDecoderError, MsgEncoder
-from core.messaging.utils.messaging_config import MessagingConfig
+from platform_core.messaging.utils.messaging_config import MessagingConfig
+from platform_core.messaging.utils.msg_encoder import MsgEncoder
 
 from ..conftest import make_base_event, make_mock_config
 
@@ -377,7 +376,6 @@ class TestEventProcessorDispatch:
     @pytest.mark.asyncio
     async def test_decode_error_increments_failed_stats(self, started_service):
         """A corrupt message should increment messages_failed and NOT raise."""
-        from faststream.kafka.message import KafkaMessage
 
         before = started_service.stats['messages_failed']
         # Pass garbage bytes that MsgEncoder cannot decode
@@ -391,7 +389,6 @@ class TestEventProcessorDispatch:
     @pytest.mark.asyncio
     async def test_null_message_is_skipped(self, started_service):
         """A None raw message should be skipped without error."""
-        from faststream.kafka.message import KafkaMessage
 
         before = started_service.stats['messages_failed']
         await started_service._process_message(
@@ -530,10 +527,10 @@ class TestSchemaRegistryIntegration:
     @pytest.mark.asyncio
     async def test_publish_uses_schema_registry_encoder(self, mock_config):
         """When schema_registry_config is set, AsyncSchemaRegistryEncoder is used."""
+        from core.messaging.sr.schema_registry_fast import SchemaRegistryConfig
         from messaging_faststream.faststream_aiokafka_impl import (
             FastStreamKafkaMessagingService,
         )
-        from core.messaging.sr.schema_registry_fast import SchemaRegistryConfig
 
         sr_config = SchemaRegistryConfig(url='http://localhost:8081')
         avro_schema = {
