@@ -79,6 +79,7 @@ Testing
 """
 
 from __future__ import annotations
+from platform_core.exceptions.report_error import report_error
 
 import asyncio
 import uuid
@@ -544,10 +545,6 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingPubSubServ
 
         # Why this func is not invoked?
         async def _direct_handler(raw: bytes, message: KafkaMessage) -> None:
-            print(f"msg type: {type(raw)}")
-            print(f"Received message in dynamic subscriber for topic {channel}: {raw}")
-            print(f"Full KafkaMessage: {message}")
-
             try:
                 # In tests (TestKafkaBroker) the payload may already be decoded;
                 # in production it is raw bytes.

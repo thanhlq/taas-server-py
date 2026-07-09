@@ -26,18 +26,20 @@ package = false
 [tool.uv.workspace]
 members = [
     "libs/platform_core",
-    "libs/http_fastapi",
     "libs/db",
     "libs/ews",
+    "libs/banking_core",
+    "libs/block-kaspa",
+    "libs/http_fastapi",
     "libs/http_litestar",
     "libs/store_redis",
     "libs/store_memcached",
     "libs/slowapi_advanced",
     "libs/iam",
-    "libs/banking_core",
-    "libs/block-kaspa",
+    "libs/iam_keycloak",
     "libs/messaging_kafka",
     "libs/messaging_faststream",
+    "libs/resilient",
     "apps/ews_api",
     "apps/ews_api_litestar",
     "apps/ews_worker",
@@ -60,8 +62,10 @@ store_redis = { workspace = true }
 store_memcached = { workspace = true }
 slowapi_advanced = { workspace = true }
 iam = { workspace = true }
+iam_keycloak = { workspace = true }
 banking_core = { workspace = true }
 block_kaspa = { workspace = true }
+resilient = { workspace = true }
 
 
 [dependency-groups]

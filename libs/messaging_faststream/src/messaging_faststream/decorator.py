@@ -42,14 +42,14 @@ Implementation notes
 """
 
 from __future__ import annotations
-from core.observability.log_factory import LogFactory
-from core.messaging.types import IMessagingDecorators
-from core.observability.error_reporter import report_error
 
-from typing import Awaitable, Callable, Literal, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
-from core.messaging.utils.msg_encoder import MsgDecoderError
 from faststream.kafka import KafkaMessage
+from platform_core.exceptions.report_error import report_error
+from platform_core.messaging.types import IMessagingDecorators
+from platform_core.messaging.utils.msg_encoder import MsgDecoderError
+from platform_core.observability.log_factory import LogFactory
 
 if TYPE_CHECKING:
     from .faststream_aiokafka_impl import FastStreamKafkaMessagingService
