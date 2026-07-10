@@ -8,7 +8,7 @@ from typing import Annotated, Any, Callable, get_args
 import msgspec
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRoute
-from platform_core.http.exceptions import ApplicationError
+from foundation.http.exceptions import ApplicationError
 from starlette.requests import Request
 from starlette.responses import Response
 

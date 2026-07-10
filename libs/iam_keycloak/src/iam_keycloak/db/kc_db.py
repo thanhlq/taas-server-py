@@ -6,7 +6,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Union
 
-from platform_core.db.advanced_db_manager import AdvancedDBManager
+from foundation.db.advanced_db_manager import AdvancedDBManager
 
 
 from .kc_db_settings import get_keycloak_db_settings

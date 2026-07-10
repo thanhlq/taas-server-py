@@ -4,7 +4,7 @@ Containing app configuration for FastAPI.
 
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from platform_core.http import AppConfig
+from foundation.http import AppConfig
 
 from http_fastapi.fastapi_msgspec.openapi import install_msgspec_openapi
 from http_fastapi.middewares.request_context import RequestContextMiddleware

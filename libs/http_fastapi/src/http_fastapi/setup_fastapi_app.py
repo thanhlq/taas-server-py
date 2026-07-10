@@ -1,7 +1,7 @@
 """
 This module sets up the FastAPI application with necessary configurations, including:
 - Installing a custom OpenAPI schema generator that merges msgspec component schemas.
-- Adding exception handlers that translate platform_core exceptions to HTTP responses.
+- Adding exception handlers that translate foundation exceptions to HTTP responses.
 - Adding a global exception handler that logs unhandled exceptions and returns a generic error response.
 - Applying needed middleware
 """
@@ -10,9 +10,9 @@ import logging
 import traceback
 
 from fastapi import FastAPI, Request
-from platform_core.exceptions import HTTPException as PlatformHTTPException
-from platform_core.http.exceptions import ApplicationClientError, ApplicationError
-from platform_core.status_codes import (
+from foundation.exceptions import HTTPException as PlatformHTTPException
+from foundation.http.exceptions import ApplicationClientError, ApplicationError
+from foundation.status_codes import (
     HTTP_400_BAD_REQUEST,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
@@ -47,7 +47,7 @@ def setup_fastapi_app(app: FastAPI, settings: object | None = None) -> FastAPI:
     async def platform_http_exception_handler( # pyright: ignore[reportUnusedFunction]
         request: Request, exc: PlatformHTTPException
     ) -> MsgSpecJSONResponse:
-        """Map platform_core HTTPException (and subclasses) to JSON responses.
+        """Map foundation HTTPException (and subclasses) to JSON responses.
 
         Uses each exception's declared ``status_code`` and ``detail``. Covers
         ``ClientException`` (400), ``NotFoundException`` (404), etc.

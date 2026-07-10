@@ -11,7 +11,7 @@
 # - Used by docker-compose-litestar-prod.yml for production deployment
 # - This dockerfile is using libs/http_litestar package and apps/ews_api_litestar for Litestar api based service.
 #   + Installation is scoped with `uv sync --package ews_api_litestar`, whose dependency closure is:
-#     platform_core, ews, http_litestar, db, iam, store_redis
+#     foundation, ews, http_litestar, db, iam, store_redis
 #   + This means: the following packages are NOT installed into the final image: libs/http_fastapi, apps/ews_api
 # - The final image size should be small and clean and best practices for production deployment should be followed.
 #   Non-root user, tini as PID 1, bytecode pre-compiled, only the runtime venv is copied into the final stage.
@@ -54,7 +54,7 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=libs/platform_core/pyproject.toml,target=libs/platform_core/pyproject.toml \
+    --mount=type=bind,source=libs/foundation/pyproject.toml,target=libs/foundation/pyproject.toml \
     --mount=type=bind,source=libs/http_fastapi/pyproject.toml,target=libs/http_fastapi/pyproject.toml \
     --mount=type=bind,source=libs/http_litestar/pyproject.toml,target=libs/http_litestar/pyproject.toml \
     --mount=type=bind,source=libs/db/pyproject.toml,target=libs/db/pyproject.toml \

@@ -1,7 +1,7 @@
 """
 Kaspa fee estimator by using official Kaspa Wasm SDK: https://github.com/kaspanet/kaspa-python-sdk
 """
-from platform_core.bootstrap import load_environment
+from foundation.bootstrap import load_environment
 load_environment()
 
 

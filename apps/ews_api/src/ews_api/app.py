@@ -12,23 +12,23 @@ import socketio
 from ews import conrrollers as ews_conrrollers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
+from foundation.cli import cli_print_info
+from foundation.config import Settings
+from foundation.config.wss import WebSocketConfig
+from foundation.facade.cache import ICacheService
+from foundation.http._websocket_redis_manager import build_websocket_redis_manager
+from foundation.http.base_app import AppConfig, BaseApiApplication
+from foundation.state.service_registry import register_service
 from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import iam_controllers
-from platform_core.cli import cli_print_info
-from platform_core.config import Settings
-from platform_core.config.wss import WebSocketConfig
-from platform_core.facade.cache import ICacheService
-from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
-from platform_core.http.base_app import AppConfig, BaseApiApplication
-from platform_core.state.service_registry import register_service
 from store_redis import RedisStore, create_redis_client
 
 from .bootstrap import root_path, settings
 
 if TYPE_CHECKING:
-    from platform_core.observability.types import InstrumentSettings
+    from foundation.observability.types import InstrumentSettings
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):
@@ -45,7 +45,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
 
     def instrument_settings(self) -> 'InstrumentSettings':
-        from platform_core.observability.types import InstrumentSettings
+        from foundation.observability.types import InstrumentSettings
         if not hasattr(self, '_instrument_settings'):
             self._instrument_settings = InstrumentSettings()
         return self._instrument_settings

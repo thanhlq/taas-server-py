@@ -2,7 +2,7 @@
 
 Unlike the raw-WebSocket adapter (``_websocket.py``), Socket.IO is its own
 ASGI application. The neutral server + handler registration lives in
-``platform_core.http._socketio``; here we only mount that server in front of
+``foundation.http._socketio``; here we only mount that server in front of
 the Litestar app so both share one ASGI entry point.
 
 The returned object is the ASGI app you hand to uvicorn — Socket.IO traffic on
@@ -14,12 +14,12 @@ from __future__ import annotations
 from typing import Any
 
 import socketio
-from litestar import Litestar
-from platform_core.http import BaseController, BaseApiApplication
-from platform_core.http._socketio import (
+from foundation.http import BaseApiApplication, BaseController
+from foundation.http._socketio import (
     build_socketio_server,
     register_controller,
 )
+from litestar import Litestar
 
 
 def create_socketio_asgi_app(

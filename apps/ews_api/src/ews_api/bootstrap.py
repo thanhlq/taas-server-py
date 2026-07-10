@@ -13,10 +13,10 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from platform_core.config import CONFIG_PREFIX
+from foundation.config import CONFIG_PREFIX
 
 if TYPE_CHECKING:
-    from platform_core.config import Settings
+    from foundation.config import Settings
 
 settings: Settings
 root_path: str
@@ -26,7 +26,7 @@ def setup_environment(env_file: str = '.env') -> tuple[Settings, str]:
     """Configure the environment variables and path."""
     current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
     sys.path.append(str(current_path))
-    from platform_core.config import get_settings
+    from foundation.config import get_settings
 
     root_path = current_path.as_posix()
     settings = get_settings(env_file=env_file, home_path=root_path)
@@ -37,7 +37,7 @@ def setup_environment(env_file: str = '.env') -> tuple[Settings, str]:
     # original_format_help = LitestarExtensionGroup.format_help
 
     # Init Logging (triggered by importing the factory, which is used by the app config and the app itself)
-    from platform_core.observability.factory import LogFactory
+    from foundation.observability.factory import LogFactory
 
     LogFactory().logger.info('Environment setup complete. Starting application...')
 

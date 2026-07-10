@@ -6,7 +6,7 @@ from uuid import UUID
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedText
-from platform_core.config.settings import get_settings
+from foundation.config.settings import get_settings
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship

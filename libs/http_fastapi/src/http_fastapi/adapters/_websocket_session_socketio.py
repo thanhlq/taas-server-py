@@ -1,6 +1,6 @@
 """
 FastAPI/Starlette implementation of the framework-neutral
-:class:`platform_core.http.WebSocketSession`.
+:class:`foundation.http.WebSocketSession`.
 
 This use socketio instead of native FastAPI WebSockets, so it can be used alongside
 """
@@ -13,7 +13,7 @@ from typing import Any
 # FIXME
 class SocketIOWebSocketSession:
     """Thin wrapper exposing a Starlette ``WebSocket`` as a
-    :class:`platform_core.http.WebSocketSession`."""
+    :class:`foundation.http.WebSocketSession`."""
 
     _socket: socketio.AsyncServer
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from platform_core.utils.env_utils import get_env
+from foundation.utils.env_utils import get_env
 
 # KASPA_TESTNET_NETWORK_ID = 'testnet-10'
 KASPA_MAINNET_NETWORK_ID = 'mainnet'

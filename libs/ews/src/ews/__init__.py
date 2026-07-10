@@ -1,4 +1,4 @@
-from platform_core.http import BaseController
+from foundation.http import BaseController
 
 from ews.platform.controller._platform import PlatformController
 

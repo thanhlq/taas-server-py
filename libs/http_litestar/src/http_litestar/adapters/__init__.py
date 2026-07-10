@@ -1,4 +1,4 @@
-"""Adapters that bridge framework-agnostic ``platform_core.http`` definitions
+"""Adapters that bridge framework-agnostic ``foundation.http`` definitions
 into Litestar primitives."""
 from http_litestar.adapters._controller import (
     build_handler_for_route,

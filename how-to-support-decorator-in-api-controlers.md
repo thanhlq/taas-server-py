@@ -9,10 +9,10 @@ A practical guide for adding a decorator (like `@instrument`, `@cache`,
 ## 1. Background: how the layers fit together
 
 ```
-libs/ews (business)         ──>  declares controllers using platform_core.http
+libs/ews (business)         ──>  declares controllers using foundation.http
                                  (@get/@post, @cache, @instrument, ...)
                                        │
-platform_core.http               framework-agnostic route metadata + decorators
+foundation.http               framework-agnostic route metadata + decorators
    ├─ decorator.py               @get/@post/@websocket → attach a Route to the fn
    ├─ route.py                   Route / WebSocketRoute / SocketIOHandler dataclasses
    ├─ controller.py              BaseController.get_routes() binds handlers to self
@@ -26,12 +26,12 @@ libs/http_fastapi                              libs/http_litestar
 ```
 
 The business layer (`libs/ews`) never imports a web framework. It only uses
-`platform_core.http`. Each adapter reads the framework-agnostic `Route` objects
+`foundation.http`. Each adapter reads the framework-agnostic `Route` objects
 and registers them with the real framework.
 
 So when you add a decorator, the work is split:
 
-- **platform_core**: define the decorator (or its marker).
+- **foundation**: define the decorator (or its marker).
 - **each adapter**: make sure the decorator survives signature introspection
   and behaves correctly.
 
@@ -44,7 +44,7 @@ So when you add a decorator, the work is split:
 They **do not wrap** the function. They attach metadata via `setattr`:
 
 ```python
-# platform_core/http/decorator.py
+# foundation/http/decorator.py
 setattr(func, ROUTE_ATTR, Route(...))   # "__platform_core_route__"
 return func                              # SAME function object returned
 ```
@@ -118,8 +118,8 @@ FastAPI helpers set `__signature__` explicitly.
 ## 4. Case study: how `@instrument` was supported
 
 `@instrument` is defined in
-`platform_core/observability/opentelemetry/decorator.py` and resolved through
-`platform_core/observability/factory.py` (real OTEL impl when tracing is
+`foundation/observability/opentelemetry/decorator.py` and resolved through
+`foundation/observability/factory.py` (real OTEL impl when tracing is
 enabled, a no-op otherwise). The business side just writes:
 
 ```python
@@ -185,7 +185,7 @@ signature must survive.
 
 ## 6. Checklist for adding a new wrapper decorator
 
-1. **Define the decorator** in `platform_core` (and, if it's optional
+1. **Define the decorator** in `foundation` (and, if it's optional
    infra like tracing, give it a no-op fallback in a factory).
 
 2. **Decide marker vs wrapper** (§2). If config-only, add a `Route` field and

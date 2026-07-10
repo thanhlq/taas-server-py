@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from db import BaseAsyncRepository
 import db.models.ews as ews_models
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
+from db import BaseAsyncRepository
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from ._category_repo import CategoryRepository
 from ._checklist_template_item_repo import ChecklistTemplateItemRepository

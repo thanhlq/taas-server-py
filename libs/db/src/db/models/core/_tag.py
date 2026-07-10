@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey, UniqueMixin
 from advanced_alchemy.utils.text import slugify
-from platform_core.models.common import ObjectScope, ObjectStatus
+from foundation.models.common import ObjectScope, ObjectStatus
 from sqlalchemy import (
     ColumnElement,
     Integer,

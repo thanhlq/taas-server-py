@@ -1,4 +1,4 @@
-"""Register :class:`platform_core.http.Controller` instances with FastAPI."""
+"""Register :class:`foundation.http.Controller` instances with FastAPI."""
 
 from __future__ import annotations
 
@@ -6,9 +6,10 @@ import inspect
 from typing import Any, Callable, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter, Depends, FastAPI
-from platform_core.http import BaseController, Route, WebSocketRoute
-from platform_core.http.cache import RequestLike, ResponseLike
-from platform_core.http.context import Context
+from foundation.http import BaseController, Route, WebSocketRoute
+from foundation.http.cache import RequestLike, ResponseLike
+from foundation.http.context import Context
+from foundation.http.types import CONTROLLER_PARAM_INJECTED_TYPES
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.websockets import WebSocket
@@ -16,7 +17,6 @@ from starlette.websockets import WebSocket
 from http_fastapi.adapters._websocket import FastAPIWebSocketSession
 from http_fastapi.fastapi_msgspec.routing import MsgSpecRoute
 from http_fastapi.middewares.request_context import get_request_context
-from platform_core.http.types import CONTROLLER_PARAM_INJECTED_TYPES
 
 # Bare names of the injected types, used to match string (forward-ref)
 # annotations where we only have the textual name to compare against.

@@ -14,7 +14,7 @@ Commands:
     stamp <revision>              Mark the DB as being at <revision> without
                                   running migrations (use after manual fixes)
 
-Reads the DB URL from ``Settings.db.URL`` (via platform_core.config), which in
+Reads the DB URL from ``Settings.db.URL`` (via foundation.config), which in
 turn reads ``DATABASE_URL`` from the project's .env. Override per-invocation
 with ``DATABASE_URL=... uv run python -m db.migrations ...``.
 """
@@ -29,7 +29,7 @@ from alembic import command as alembic_command
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from platform_core.config import get_settings
+from foundation.config import get_settings
 
 
 _HERE = Path(__file__).resolve().parent

@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from platform_core.messaging.utils.messaging_config import MessagingConfig
-from platform_core.messaging.utils.msg_encoder import MsgEncoder
+from foundation.messaging.utils.messaging_config import MessagingConfig
+from foundation.messaging.utils.msg_encoder import MsgEncoder
 
 from ..conftest import make_base_event, make_mock_config
 

@@ -1,7 +1,8 @@
-from typing import Optional
 from datetime import datetime
-from platform_core.serialization import ApiResponse
-from platform_core.serialization._serializer_pydantic import BaseEntityPydantic
+from typing import Optional
+
+from foundation.serialization import ApiResponse
+from foundation.serialization._serializer_pydantic import BaseEntityPydantic
 
 
 class Project(ApiResponse):

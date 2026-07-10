@@ -25,7 +25,7 @@ package = false
 
 [tool.uv.workspace]
 members = [
-    "libs/platform_core",
+    "libs/foundation",
     "libs/db",
     "libs/ews",
     "libs/banking_core",
@@ -48,7 +48,7 @@ members = [
 # exclude = ["services/nodejs-worker"]
 
 [tool.uv.sources]
-platform_core = { workspace = true }
+foundation = { workspace = true }
 db = { workspace = true }
 ews = { workspace = true }
 http_fastapi = { workspace = true }

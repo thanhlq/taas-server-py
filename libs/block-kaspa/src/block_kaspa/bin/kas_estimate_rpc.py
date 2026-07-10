@@ -9,13 +9,11 @@ from kaspa import (
     Address,
     Generator,
     PaymentOutput,
-    Resolver,
-    RpcClient,
     kaspa_to_sompi,
     UtxoEntries,
 )
 
-from platform_core.bootstrap import load_environment
+from foundation.bootstrap import load_environment
 load_environment()
 
 from ..client_rpc.kaspa_rpc_client import KaspaRpcClient

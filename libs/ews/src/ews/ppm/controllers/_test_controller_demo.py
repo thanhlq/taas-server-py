@@ -1,13 +1,12 @@
 # SHOULD INLUCDE IN local dev/test
 # Contain all core features for testing purpose only
 
-from platform_core.observability.factory import instrument
 from typing import TYPE_CHECKING, Any
 
 import msgspec
 from ews.ppm.schemas import Project, TaskNotification, TaskNotificationEvent
 from ews.ppm.schemas._project import ProjectEntityPy
-from platform_core.http import (
+from foundation.http import (
     BaseController,
     WebSocketSession,
     cache,
@@ -15,18 +14,19 @@ from platform_core.http import (
     socketio_event,
     websocket,
 )
-from platform_core.http.response import (
+from foundation.http.response import (
     ErrorResponse,
     PaginatedResponse,
     create_error_response,
     create_paginated_response,
     create_success_response,
 )
-from platform_core.utils import now_in_utc
-from platform_core.utils.validation import ValidationError
+from foundation.observability.factory import instrument
+from foundation.utils import now_in_utc
+from foundation.utils.validation import ValidationError
 
 if TYPE_CHECKING:
-    from platform_core.http._socketio import SocketIOSession
+    from foundation.http._socketio import SocketIOSession
 
 
 def _project_room(project_id: int) -> str:

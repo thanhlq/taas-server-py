@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedString
-from platform_core.config import Settings, get_settings
-from platform_core.iam.types import UserStatus
+from foundation.config import Settings, get_settings
+from foundation.iam.types import UserStatus
 from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship

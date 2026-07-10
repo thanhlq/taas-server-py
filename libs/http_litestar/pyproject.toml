@@ -10,7 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     'litestar==2.22.0',
     'uvicorn==0.34.0',
-    'platform_core',
+    'foundation',
 
     # ⏱️ Rate limiting (per-route ``ratelimit=`` enforcement)
     'limits==5.8.0',

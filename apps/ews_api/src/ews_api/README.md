@@ -1,6 +1,6 @@
 # ews_api
 
-The api service integration by using fastapi and platform_core and ews (core api / business)
+The api service integration by using fastapi and foundation and ews (core api / business)
 
 ## Structure
 

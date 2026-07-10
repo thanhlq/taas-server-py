@@ -79,7 +79,6 @@ Testing
 """
 
 from __future__ import annotations
-from platform_core.exceptions.report_error import report_error
 
 import asyncio
 import uuid
@@ -89,8 +88,9 @@ from typing import Any, Optional, Union
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from faststream.kafka import KafkaBroker, KafkaMessage
-from platform_core.messaging.base_messaging import BaseMessagingService
-from platform_core.messaging.types import (
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.base_messaging import BaseMessagingService
+from foundation.messaging.types import (
     BaseEvent,
     BaseSendableMessage,
     DlqEvent,
@@ -100,9 +100,9 @@ from platform_core.messaging.types import (
     MessageServiceStats,
     MessagingProvider,
 )
-from platform_core.messaging.utils.msg_encoder import MsgDecoderError
-from platform_core.utils.icons import Icons
-from platform_core.utils.singleton import singleton
+from foundation.messaging.utils.msg_encoder import MsgDecoderError
+from foundation.utils.icons import Icons
+from foundation.utils.singleton import singleton
 
 from .helper import FastStreamHelper
 

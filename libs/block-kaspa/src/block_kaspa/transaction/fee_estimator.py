@@ -4,22 +4,19 @@ Kaspa fee estimator by using official Kaspa Wasm SDK: https://github.com/kaspane
 See sample: https://github.com/kaspanet/kaspa-python-sdk/blob/main/examples/transactions/estimate.py
 """
 
-from typing import Dict, Any
-from platform_core import BaseService
+from typing import Any
+from foundation import BaseService
 from block_kaspa.kaspa_factory import KaspaFactory
 from block_kaspa.client_rest import KaspaRestClient
-from block_kaspa.types import UtxoModel, FeeEstimate, UtxoResponse
+from block_kaspa.types import FeeEstimate, UtxoResponse
 from block_kaspa import KaspaSettings
 from kaspa import (
     Generator,
-    PrivateKey,
-    Resolver,
-    RpcClient,
     kaspa_to_sompi,
     GeneratorSummary,
 )
 
-from platform_core.cli import cli
+from foundation.cli import cli
 
 
 class KaspaFeeEstimator(BaseService):

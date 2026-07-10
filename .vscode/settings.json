@@ -30,7 +30,7 @@
   "python.analysis.importFormat": "absolute",
   "python.analysis.packageIndexDepths": [
     {
-      "name": "platform_core",
+      "name": "foundation",
       "depth": 3
     },
     {

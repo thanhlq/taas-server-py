@@ -46,10 +46,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from faststream.kafka import KafkaMessage
-from platform_core.exceptions.report_error import report_error
-from platform_core.messaging.types import IMessagingDecorators
-from platform_core.messaging.utils.msg_encoder import MsgDecoderError
-from platform_core.observability.log_factory import LogFactory
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.types import IMessagingDecorators
+from foundation.messaging.utils.msg_encoder import MsgDecoderError
+from foundation.observability.log_factory import LogFactory
 
 if TYPE_CHECKING:
     from .faststream_aiokafka_impl import FastStreamKafkaMessagingService

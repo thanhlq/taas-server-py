@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
-from platform_core.http.context import Context
-from platform_core.http.context_state import (
+from foundation.http.context import Context
+from foundation.http.context_state import (
     require_request_context,
     set_request_context,
 )

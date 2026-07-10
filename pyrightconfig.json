@@ -20,7 +20,7 @@
     "libs/db/src",
     "libs/ews/src",
     "libs/http_fastapi/src",
-    "libs/platform_core/src",
+    "libs/foundation/src",
     "libs/slowapi_advanced/src",
     "libs/store_memcached/src",
     "libs/store_redis/src",
@@ -38,7 +38,7 @@
   ],
   "executionEnvironments": [
     {
-      "root": "libs/platform_core",
+      "root": "libs/foundation",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },

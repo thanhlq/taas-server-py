@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 import asyncio
 
 import db.models.core as m
-from advanced_alchemy.extensions.fastapi import repository, service
+from advanced_alchemy.extensions.fastapi import service
 from iam.accounts.schemas._user import UserCreate, UserStatus
 from iam.constants import Roles
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
-from platform_core.models import ListResult
+from foundation.db.types import DBAsyncSession
+from foundation.models import ListResult
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from sqlalchemy.sql import text

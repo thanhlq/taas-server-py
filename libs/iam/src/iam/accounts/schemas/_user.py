@@ -4,16 +4,16 @@ from datetime import datetime
 from uuid import UUID
 
 import msgspec
-from platform_core.iam.types import Phone, UserStatus
-from platform_core.serialization._msgspec_model import CamelizedBaseStruct, ApiRequest
-from platform_core.utils.validation import (
+from foundation.iam.types import Phone, UserStatus
+from foundation.serialization._msgspec_model import CamelizedBaseStruct, ApiRequest
+from foundation.utils.validation import (
     validate_email,
     validate_name,
     validate_password,
     validate_phone,
     validate_username,
 )
-from platform_core.iam.types import TeamRoles
+from foundation.iam.types import TeamRoles
 
 class UserTeam(CamelizedBaseStruct):
     """Holds team details for a user.
@@ -29,7 +29,7 @@ class UserTeam(CamelizedBaseStruct):
     def __post_init__(self) -> None:
         """Set default role if not provided."""
         if self.role is None:
-            from platform_core.iam.types import TeamRoles
+            from foundation.iam.types import TeamRoles
 
             self.role = TeamRoles.MEMBER
 

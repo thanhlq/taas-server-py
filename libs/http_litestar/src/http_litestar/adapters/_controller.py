@@ -1,12 +1,12 @@
-"""Register :class:`platform_core.http.BaseController` instances with Litestar."""
+"""Register :class:`foundation.http.BaseController` instances with Litestar."""
 from __future__ import annotations
 
 import inspect
 from typing import Any, Callable, Iterable
 
+from foundation.http import BaseController, Route, WebSocketRoute
 from litestar import Litestar, Router, WebSocket
 from litestar.handlers import HTTPRouteHandler, WebsocketRouteHandler
-from platform_core.http import BaseController, Route, WebSocketRoute
 
 from http_litestar.adapters._dependencies import adapt_handler, typed_path
 from http_litestar.adapters._websocket import LitestarWebSocketSession
@@ -17,7 +17,7 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     """Convert a framework-agnostic :class:`Route` to a Litestar handler.
 
     Sync handlers are not offloaded to a thread by default — the contracts in
-    ``platform_core.http`` describe lightweight route handlers; explicit
+    ``foundation.http`` describe lightweight route handlers; explicit
     offloading can be set per-route via ``extra={'sync_to_thread': True}``.
     """
     handler, dependencies = adapt_handler(route.handler)

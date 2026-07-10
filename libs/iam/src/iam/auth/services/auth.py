@@ -1,17 +1,10 @@
 from __future__ import annotations
 from iam.auth.schemas import SignupRequest
 
-import asyncio
 
 import db.models.core as m
 from advanced_alchemy.extensions.fastapi import repository, service
-from iam.accounts.schemas._user import UserCreate, UserStatus
 from iam.constants import Roles
-from platform_core.db.types import DBAsyncScopedSession
-from platform_core.models import ListResult
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
-from sqlalchemy.sql import text
 
 
 class AuthService(service.SQLAlchemyAsyncRepositoryService[m.User]):

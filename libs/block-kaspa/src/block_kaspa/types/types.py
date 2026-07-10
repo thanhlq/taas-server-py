@@ -1,5 +1,4 @@
-from platform_core.serialization import BaseModel
-from dataclasses import dataclass
+from foundation.serialization import BaseModel
 
 
 

@@ -1,6 +1,6 @@
 # ews_api_litestart
 
-The api service integration by using Litestar and platform_core and ews (core api / business)
+The api service integration by using Litestar and foundation and ews (core api / business)
 
 ## Structure
 

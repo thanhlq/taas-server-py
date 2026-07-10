@@ -63,7 +63,7 @@ RUN pip install --no-cache-dir uv
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=libs/platform_core/pyproject.toml,target=libs/platform_core/pyproject.toml \
+    --mount=type=bind,source=libs/foundation/pyproject.toml,target=libs/foundation/pyproject.toml \
     --mount=type=bind,source=libs/http_fastapi/pyproject.toml,target=libs/http_fastapi/pyproject.toml \
     --mount=type=bind,source=libs/http_litestar/pyproject.toml,target=libs/http_litestar/pyproject.toml \
     --mount=type=bind,source=libs/db/pyproject.toml,target=libs/db/pyproject.toml \

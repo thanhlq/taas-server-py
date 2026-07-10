@@ -3,7 +3,7 @@ from typing import Callable, Optional
 import redis.asyncio as aioredis
 import redis.asyncio.cluster as redis_cluster
 import redis.asyncio.sentinel as sentinel
-from platform_core.config.redis_config import RedisConfig
+from foundation.config.redis_config import RedisConfig
 from redis.asyncio.cluster import ClusterNode
 
 type GET_ENV = Callable[[str, Optional[str]], str]

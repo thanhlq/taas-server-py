@@ -1,7 +1,7 @@
 """Per-route rate limiting for Litestar, mirroring the FastAPI adapter.
 
 The framework-agnostic ``@get(..., ratelimit='3/minute')`` decorator records a
-limit string on each :class:`platform_core.http.Route`. The FastAPI adapter
+limit string on each :class:`foundation.http.Route`. The FastAPI adapter
 enforces it via ``slowapi`` (which only works on Starlette ``Request`` objects).
 Litestar has its own request model, so ``slowapi``'s endpoint-wrapping approach
 does not apply.
@@ -24,13 +24,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 import anyio.to_thread
+from foundation.cli import cli_print_info
+from foundation.config.ratelimit import RateLimitConfig
+from foundation.config.redis_config import RedisConfig
 from limits import RateLimitItem, parse
 from limits.storage import storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
 from litestar.exceptions import TooManyRequestsException
-from platform_core.cli import cli_print_info
-from platform_core.config.ratelimit import RateLimitConfig
-from platform_core.config.redis_config import RedisConfig
 
 if TYPE_CHECKING:
     from litestar import Litestar

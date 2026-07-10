@@ -9,7 +9,7 @@ import os
 # Top level import: configures environment + settings before anything else.
 from .bootstrap import settings
 
-from platform_core.utils.uvicorn import run_uvicorn
+from foundation.utils.uvicorn import run_uvicorn
 
 
 def main() -> None:

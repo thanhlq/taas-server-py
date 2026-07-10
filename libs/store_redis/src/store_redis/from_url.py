@@ -1,9 +1,9 @@
 from typing import Any, Optional
 import redis.asyncio as aioredis
-from platform_core.config.redis_config import (
+from foundation.config.redis_config import (
     RedisConfig,
 )
-from platform_core.config import get_settings, Settings, ServerSettings
+from foundation.config import get_settings, Settings, ServerSettings
 
 from .redis_client import create_redis_client
 from .redis_client import build_redis_config_from_env

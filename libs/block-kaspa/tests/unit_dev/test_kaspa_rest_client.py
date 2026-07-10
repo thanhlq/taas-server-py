@@ -30,7 +30,7 @@ import respx
 
 from block_kaspa.client_rest.kaspa_rest_client import KaspaRestClient
 from block_kaspa.types import TxModel, UtxoModel
-from platform_core.exceptions import NotFoundException
+from foundation.exceptions import NotFoundException
 
 # Resolved at collection time (conftest has already loaded .env on import).
 _NETWORK = "mainnet" if "main" in (os.environ.get("KASPA_NETWORK") or "testnet").lower() else "testnet"

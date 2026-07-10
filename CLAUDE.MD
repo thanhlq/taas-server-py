@@ -8,7 +8,7 @@ The is the uv workspace which include the following libraries, applications and 
 
 | Project | Description |
 | --- | --- |
-| libs/platform_core | Contain all core definitions and common utils for building of application |
+| libs/foundation | Contain all core definitions and common utils for building of application |
 | libs/db | Contain all db models and migrations. |
 | libs/ews | Core eworksuite business (ddd patterns): api definitions which can be used for building apps as: `ews_api` (Fastapi, adapter: libs/http_fastapi) and `ews_api_litestar` (Litestar, adapter: libs/http_litestar) |
 | libs/banking_core | Banking domain core, including crypto factory/utilities |

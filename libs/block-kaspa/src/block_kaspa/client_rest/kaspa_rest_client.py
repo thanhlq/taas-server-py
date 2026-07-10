@@ -1,14 +1,12 @@
-from platform_core import BaseService
-from platform_core.types.protocols import Logger
-from platform_core.utils.singleton import singleton
-from block_kaspa.types import ScriptPublicKeyModel, UtxoModel, UtxoResponse, TxModel
-import msgspec
+from foundation import BaseService
+from foundation.utils.singleton import singleton
+from block_kaspa.types import UtxoResponse, TxModel
 import httpx
 from block_kaspa import KaspaSettings
-from platform_core.exceptions import NotFoundException
+from foundation.exceptions import NotFoundException
 from typing import Dict, Any
 
-from platform_core.serialization import decode_json
+from foundation.serialization import decode_json
 
 
 @singleton

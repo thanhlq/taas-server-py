@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from platform_core.http.context import Context
-from platform_core.http.context_state import (
+from foundation.http.context import Context
+from foundation.http.context_state import (
     require_request_context,
     set_request_context,
 )
-from platform_core.types import ASGIApp, Scope
-from platform_core.types.asgi_types import Receive, Send
+from foundation.types import ASGIApp, Scope
+from foundation.types.asgi_types import Receive, Send
 from starlette.requests import Request
 from starlette.responses import Response
 

@@ -1,4 +1,4 @@
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from banking_core.crypto.services import CryptoTokenService
 

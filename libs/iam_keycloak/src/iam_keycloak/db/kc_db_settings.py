@@ -1,5 +1,5 @@
 from functools import lru_cache
-from platform_core.config.db_settings import DatabaseSettings
+from foundation.config.db_settings import DatabaseSettings
 
 
 @lru_cache(maxsize=1)

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from platform_core.http import AppConfig
+from foundation.http import AppConfig
 
 from http_fastapi.fastapi_msgspec.responses import MsgSpecJSONResponse
 
@@ -31,7 +31,7 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
     )
 
     # 3. Tracing
-    from platform_core.observability.tracing_factory import TracingFactory
+    from foundation.observability.tracing_factory import TracingFactory
     config.instrumentation.fastapi_app = app  # type: ignore
     TracingFactory().init_instrumentation(config)
 

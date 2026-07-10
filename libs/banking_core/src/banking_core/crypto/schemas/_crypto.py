@@ -1,7 +1,7 @@
 from typing import Any
 
 import msgspec
-from platform_core.serialization import BaseModel
+from foundation.serialization import BaseModel
 
 required_fields = [
     'name',

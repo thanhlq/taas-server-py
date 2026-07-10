@@ -1,6 +1,6 @@
-from platform_core.utils.singleton import singleton
+from foundation.utils.singleton import singleton
 from dataclasses import field, dataclass
-from platform_core.utils import get_env
+from foundation.utils import get_env
 
 
 @singleton

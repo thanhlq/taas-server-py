@@ -1,6 +1,6 @@
 """Bridge FastAPI-style handler signatures into Litestar primitives.
 
-The framework-agnostic controllers in ``platform_core.http`` are sometimes
+The framework-agnostic controllers in ``foundation.http`` are sometimes
 authored against FastAPI conventions:
 
 * dependency injection via :func:`fastapi.Depends` (often hidden inside an
@@ -15,7 +15,7 @@ expects:
 * ``Depends`` markers are stripped from the signature and re-expressed as a
   Litestar ``dependencies`` mapping of :class:`litestar.di.Provide`,
 * synthetic ``request``/``response`` params injected by
-  ``platform_core.http.cache`` are removed,
+  ``foundation.http.cache`` are removed,
 * path parameters are given an explicit Litestar type based on the handler's
   annotation.
 
@@ -32,9 +32,9 @@ from decimal import Decimal
 from typing import Any, Callable, cast, get_args, get_origin, get_type_hints
 from uuid import UUID
 
+from foundation.http.context import Context
+from foundation.http.types import CONTROLLER_PARAM_INJECTED_TYPES
 from litestar.di import Provide
-from platform_core.http.context import Context
-from platform_core.http.types import CONTROLLER_PARAM_INJECTED_TYPES
 
 from http_litestar.middewares.request_context import get_request_context
 

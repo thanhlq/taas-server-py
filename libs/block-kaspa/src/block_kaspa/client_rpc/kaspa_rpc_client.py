@@ -1,7 +1,7 @@
 from logging import Logger
-from platform_core.utils.singleton import singleton
+from foundation.utils.singleton import singleton
 from block_kaspa import KaspaSettings
-from kaspa import Generator, PrivateKey, Resolver, RpcClient, kaspa_to_sompi
+from kaspa import Resolver, RpcClient
 
 
 @singleton
@@ -16,7 +16,7 @@ class KaspaRpcClient:
     @property
     def logger(self):
         if self._logger is None:
-             from platform_core.logger import logger
+             from foundation.logger import logger
              self._logger = logger
         return self._logger
 

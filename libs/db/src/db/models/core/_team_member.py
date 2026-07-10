@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from advanced_alchemy.base import UUIDv7AuditBase
+from foundation.iam.types import TeamRoles
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from platform_core.iam.types import TeamRoles
 from .constants import TEAM_MEMBER_TABLE, TEAM_TABLE, USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:

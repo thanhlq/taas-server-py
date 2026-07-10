@@ -1,20 +1,9 @@
 # uv run python -m block_kaspa.bin.kas_estimate_rest_generator
-from platform_core.bootstrap import load_environment
+from foundation.bootstrap import load_environment
 
 load_environment()
 
-import datetime
-import json
 import asyncio
-from kaspa import (
-    Address,
-    Generator,
-    PaymentOutput,
-    Resolver,
-    RpcClient,
-    kaspa_to_sompi,
-    UtxoEntries,
-)
 
 
 from block_kaspa.transaction.fee_estimator import KaspaFeeEstimator

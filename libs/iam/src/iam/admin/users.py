@@ -1,21 +1,15 @@
 # SHOULD INLUCDE IN local dev/test
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-import msgspec
-from ews.ppm.schemas import Project, TaskNotification, TaskNotificationEvent
-from ews.ppm.schemas._project import ProjectEntityPy
-from platform_core.http import (
+from ews.ppm.schemas import Project
+from foundation.http import (
     BaseController,
-    WebSocketSession,
     get,
-    socketio_event,
-    websocket,
 )
-from platform_core.utils import now_in_utc
 
 if TYPE_CHECKING:
-    from platform_core.http._socketio import SocketIOSession
+    pass
 
 class ProjectController(BaseController):
     api_prefix = '/api/v1/projects'

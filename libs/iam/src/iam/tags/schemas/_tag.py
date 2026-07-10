@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from platform_core.serialization._msgspec_model import CamelizedBaseStruct
+from foundation.serialization._msgspec_model import CamelizedBaseStruct
 
 
 

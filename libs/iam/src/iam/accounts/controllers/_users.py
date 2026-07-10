@@ -7,15 +7,14 @@ from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.service import OffsetPagination
 
 # from fastapi import Depends
-from platform_core.db.advanced_db_manager import (
-    MainDatabase,
+from foundation.db.advanced_db_manager import (
     db_concurrent_session,
     db_context_session,
 )
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
-from platform_core.http import BaseController, cache, delete, get, patch, post, status
-from platform_core.http.context import Context
-from platform_core.models import ListResult
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.http import BaseController, delete, get, patch, post, status
+from foundation.http.context import Context
+from foundation.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from iam.accounts.accounts_factory import AccountFactory

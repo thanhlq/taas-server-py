@@ -1,9 +1,9 @@
 # Integration of slowapi_advanced for rate limiting in FastAPI
 
 from fastapi import FastAPI
-from platform_core.config.ratelimit import RateLimitConfig
-from platform_core.config.redis_config import RedisConfig
-from platform_core.logger import logger
+from foundation.config.ratelimit import RateLimitConfig
+from foundation.config.redis_config import RedisConfig
+from foundation.logger import logger
 from slowapi_advanced import Limiter, _rate_limit_exceeded_handler
 from slowapi_advanced.errors import RateLimitExceeded
 from slowapi_advanced.middleware import SlowAPIMiddleware

@@ -1,20 +1,10 @@
 """User-related account schemas."""
 from typing import Literal, TypedDict
-from platform_core.serialization import BaseModel
+from foundation.serialization import BaseModel
 
-from datetime import datetime
-from uuid import UUID
 
-import msgspec
-from platform_core.iam.types import Phone, UserStatus
-from platform_core.serialization._msgspec_model import ApiRequest
-from platform_core.utils.validation import (
-    validate_email,
-    validate_name,
-    validate_password,
-    validate_phone,
-    validate_username,
-)
+from foundation.iam.types import Phone
+from foundation.serialization._msgspec_model import ApiRequest
 
 
 class SignupRequest(ApiRequest):

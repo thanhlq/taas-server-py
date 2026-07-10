@@ -1,10 +1,10 @@
 """
 FastAPI/Starlette implementation of the framework-neutral
-:class:`platform_core.http.WebSocketSession`.
+:class:`foundation.http.WebSocketSession`.
 
 By using natively supported WebSockets, this adapter allows you to leverage FastAPI's
 full feature set (e.g. dependency injection) in your WebSocket endpoints, while still
-adhering to the framework-neutral :class:`platform_core.http.WebSocketSession` interface.
+adhering to the framework-neutral :class:`foundation.http.WebSocketSession` interface.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from starlette.websockets import WebSocket
 
 class FastAPIWebSocketSession:
     """Thin wrapper exposing a Starlette ``WebSocket`` as a
-    :class:`platform_core.http.WebSocketSession`."""
+    :class:`foundation.http.WebSocketSession`."""
 
     def __init__(self, socket: WebSocket) -> None:
         self._socket = socket

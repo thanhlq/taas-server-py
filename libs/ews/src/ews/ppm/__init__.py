@@ -1,4 +1,4 @@
-from platform_core.http import BaseController
+from foundation.http import BaseController
 
 from .controllers._test_controller_demo import TestController
 from .repos import RepoFactory

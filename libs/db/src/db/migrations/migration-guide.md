@@ -30,7 +30,7 @@ uv run python -m db.migrations stamp head
 
 ## How it's wired
 
-- **Config source**: `Settings.db.URL` (from `platform_core.config.get_settings`),
+- **Config source**: `Settings.db.URL` (from `foundation.config.get_settings`),
   read from `taas-server-py/.env` via `DATABASE_URL`.
 - **Version table**: `Settings.db.MIGRATION_DDL_VERSION_TABLE` (default `ddl_version`).
 - **Models**: `db.models.__init__` is imported in `env.py`, so any class
@@ -119,5 +119,5 @@ docker compose run --rm \
   optionally re-exported) from `libs/db/src/db/models/__init__.py` — `env.py`
   imports that package to populate `metadata_registry`.
 - **`Error getting version: No package metadata was found for litestar`** —
-  cosmetic; comes from `platform_core/utils/version.py` falling back to
+  cosmetic; comes from `foundation/utils/version.py` falling back to
   `'litestar'` when `APP_MODULE_NAME` isn't set. Doesn't affect migrations.

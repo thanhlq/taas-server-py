@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     # Workspace modules
-    "platform_core",
+    "foundation",
 
     # Message queuing and streaming
     "aiokafka==0.14.0",

@@ -1,4 +1,4 @@
-"""Adapters that bridge framework-agnostic ``platform_core.http`` definitions
+"""Adapters that bridge framework-agnostic ``foundation.http`` definitions
 into FastAPI primitives."""
 from http_fastapi.adapters._controller import (
     build_router_for_controller,

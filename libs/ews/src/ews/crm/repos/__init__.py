@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from db import BaseAsyncRepository
 import db.models.ews as ews_models
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
+from db import BaseAsyncRepository
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from ._crm_account_address_repo import CrmAccountAddressRepository
 from ._crm_account_repo import CrmAccountRepository
-
 
 type SessionLike = DBAsyncSession | DBAsyncScopedSession
 

@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
-from platform_core.exceptions import ImproperlyConfiguredException
-from platform_core.facade.cache import ICacheService
-from platform_core.stores.base import NamespacedStore
-from platform_core.types import Empty, EmptyType
-from platform_core.utils.empty import value_or_default
+from foundation.exceptions import ImproperlyConfiguredException
+from foundation.facade.cache import ICacheService
+from foundation.stores.base import NamespacedStore
+from foundation.types import Empty, EmptyType
+from foundation.utils.empty import value_or_default
 from redis import RedisCluster
 
 # from redis.asyncio import Redis

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from db import BaseAsyncRepository
 import db.models.core as core_models
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
+from db import BaseAsyncRepository
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from ._audit_log_repo import AuditLogRepository
 from ._casbin_rule_repo import CasbinRuleRepository

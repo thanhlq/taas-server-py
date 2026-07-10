@@ -1,7 +1,7 @@
 """ A factory class for instantiating the Account related classes. """
 
 
-from platform_core.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from iam.accounts.services._users import UserService
 

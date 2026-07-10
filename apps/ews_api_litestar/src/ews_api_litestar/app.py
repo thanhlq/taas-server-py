@@ -15,6 +15,13 @@ from typing import Any, Optional
 
 import socketio
 from ews import conrrollers as ews_conrrollers
+from foundation.cli import cli_print_info
+from foundation.config import Settings
+from foundation.config.wss import WebSocketConfig
+from foundation.facade.cache import ICacheService
+from foundation.http._websocket_redis_manager import build_websocket_redis_manager
+from foundation.http.base_app import BaseApiApplication
+from foundation.state.service_registry import register_service
 from http_litestar.adapters import (
     build_router_for_controller,
     create_socketio_asgi_app,
@@ -25,13 +32,6 @@ from iam import iam_controllers
 from litestar import Litestar
 from litestar.response import Response
 from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
-from platform_core.cli import cli_print_info
-from platform_core.config import Settings
-from platform_core.config.wss import WebSocketConfig
-from platform_core.facade.cache import ICacheService
-from platform_core.http._websocket_redis_manager import build_websocket_redis_manager
-from platform_core.http.base_app import BaseApiApplication
-from platform_core.state.service_registry import register_service
 from store_redis import RedisStore, create_redis_client
 
 from .bootstrap import root_path, settings

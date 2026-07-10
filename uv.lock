@@ -15,12 +15,13 @@ members = [
     "ews-api",
     "ews-api-litestar",
     "ews-worker",
+    "foundation",
     "http-fastapi",
     "http-litestar",
     "iam",
+    "iam-keycloak",
     "messaging-faststream",
     "messaging-kafka",
-    "platform-core",
     "slowapi-advanced",
     "store-memcached",
     "store-redis",
@@ -45,6 +46,15 @@ wheels = [
 [package.optional-dependencies]
 cryptography = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "aiofiles"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2", size = 46354, upload-time = "2025-10-09T20:51:04.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695", size = 14668, upload-time = "2025-10-09T20:51:03.174Z" },
 ]
 
 [[package]]
@@ -271,7 +281,7 @@ version = "0.1.0"
 source = { editable = "libs/banking_core" }
 dependencies = [
     { name = "db" },
-    { name = "platform-core" },
+    { name = "foundation" },
 ]
 
 [package.dev-dependencies]
@@ -285,7 +295,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "db", editable = "libs/db" },
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
 ]
 
 [package.metadata.requires-dev]
@@ -310,14 +320,14 @@ name = "block-kaspa"
 version = "0.1.0"
 source = { editable = "libs/block-kaspa" }
 dependencies = [
+    { name = "foundation" },
     { name = "kaspa" },
-    { name = "platform-core" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "foundation", editable = "libs/foundation" },
     { name = "kaspa", specifier = "==2.0.1" },
-    { name = "platform-core", editable = "libs/platform_core" },
 ]
 
 [[package]]
@@ -576,7 +586,7 @@ source = { editable = "libs/db" }
 dependencies = [
     { name = "advanced-alchemy", extra = ["cryptography"] },
     { name = "alembic" },
-    { name = "platform-core" },
+    { name = "foundation" },
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlalchemy" },
 ]
@@ -590,9 +600,9 @@ dev = [
 requires-dist = [
     { name = "advanced-alchemy", extras = ["cryptography"], specifier = "==1.11.0" },
     { name = "alembic", specifier = ">=1.18.4" },
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
-    { name = "sqlalchemy", specifier = ">=2.0.50" },
+    { name = "sqlalchemy", specifier = "==2.0.51" },
 ]
 
 [package.metadata.requires-dev]
@@ -608,6 +618,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/49/85/12f0a49a7c4ffb70572b6c2ef13c90c88fd190debda93b23f026b25f9634/deprecated-1.3.1.tar.gz", hash = "sha256:b1b50e0ff0c1fddaa5708a2c6b0a6588bb09b892825ab2b214ac9ea9d92a5223", size = 2932523, upload-time = "2025-10-30T08:19:02.757Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/84/d0/205d54408c08b13550c733c4b85429e7ead111c7f0014309637425520a9a/deprecated-1.3.1-py2.py3-none-any.whl", hash = "sha256:597bfef186b6f60181535a29fbe44865ce137a5079f295b479886c82729d5f3f", size = 11298, upload-time = "2025-10-30T08:19:00.758Z" },
+]
+
+[[package]]
+name = "deprecation"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/d3/8ae2869247df154b64c1884d7346d412fed0c49df84db635aab2d1c40e62/deprecation-2.1.0.tar.gz", hash = "sha256:72b3bde64e5d778694b0cf68178aed03d15e15477116add3fb773e581f9518ff", size = 173788, upload-time = "2020-04-20T14:23:38.738Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/c3/253a89ee03fc9b9682f1541728eb66db7db22148cd94f89ab22528cd1e1b/deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a", size = 11178, upload-time = "2020-04-20T14:23:36.581Z" },
 ]
 
 [[package]]
@@ -649,15 +671,15 @@ name = "ews"
 version = "0.1.0"
 source = { editable = "libs/ews" }
 dependencies = [
+    { name = "foundation" },
     { name = "msgspec" },
-    { name = "platform-core" },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "foundation", editable = "libs/foundation" },
     { name = "msgspec", specifier = "==0.21.1" },
-    { name = "platform-core", editable = "libs/platform_core" },
     { name = "pydantic", specifier = "==2.13.4" },
 ]
 
@@ -669,9 +691,9 @@ dependencies = [
     { name = "db" },
     { name = "ews" },
     { name = "fastapi" },
+    { name = "foundation" },
     { name = "http-fastapi" },
     { name = "iam" },
-    { name = "platform-core" },
     { name = "redis" },
     { name = "store-redis" },
     { name = "uvicorn" },
@@ -682,9 +704,9 @@ requires-dist = [
     { name = "db", editable = "libs/db" },
     { name = "ews", editable = "libs/ews" },
     { name = "fastapi", specifier = "==0.136.1" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "http-fastapi", editable = "libs/http_fastapi" },
     { name = "iam", editable = "libs/iam" },
-    { name = "platform-core", editable = "libs/platform_core" },
     { name = "redis", specifier = "==7.4.0" },
     { name = "store-redis", editable = "libs/store_redis" },
     { name = "uvicorn", specifier = "==0.34.0" },
@@ -698,10 +720,10 @@ dependencies = [
     { name = "db" },
     { name = "ews" },
     { name = "fastapi" },
+    { name = "foundation" },
     { name = "http-litestar" },
     { name = "iam" },
     { name = "litestar" },
-    { name = "platform-core" },
     { name = "redis" },
     { name = "store-redis" },
     { name = "uvicorn" },
@@ -712,10 +734,10 @@ requires-dist = [
     { name = "db", editable = "libs/db" },
     { name = "ews", editable = "libs/ews" },
     { name = "fastapi", specifier = "==0.136.1" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "http-litestar", editable = "libs/http_litestar" },
     { name = "iam", editable = "libs/iam" },
     { name = "litestar", specifier = "==2.22.0" },
-    { name = "platform-core", editable = "libs/platform_core" },
     { name = "redis", specifier = "==7.4.0" },
     { name = "store-redis", editable = "libs/store_redis" },
     { name = "uvicorn", specifier = "==0.34.0" },
@@ -887,6 +909,97 @@ wheels = [
 ]
 
 [[package]]
+name = "foundation"
+version = "0.1.0"
+source = { editable = "libs/foundation" }
+dependencies = [
+    { name = "advanced-alchemy", extra = ["cryptography"] },
+    { name = "attrs" },
+    { name = "cachetools" },
+    { name = "dataclasses-avroschema" },
+    { name = "dotenv" },
+    { name = "exceptiongroup" },
+    { name = "fast-query-parsers" },
+    { name = "fastavro" },
+    { name = "fastnanoid" },
+    { name = "importlib-metadata" },
+    { name = "jinja2" },
+    { name = "msgspec" },
+    { name = "multidict" },
+    { name = "opentelemetry-distro" },
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-instrumentation-aiohttp-client" },
+    { name = "opentelemetry-instrumentation-aiokafka" },
+    { name = "opentelemetry-instrumentation-asyncio" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-grpc" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-instrumentation-logging" },
+    { name = "opentelemetry-instrumentation-redis" },
+    { name = "opentelemetry-instrumentation-sqlalchemy" },
+    { name = "opentelemetry-instrumentation-urllib3" },
+    { name = "pydantic" },
+    { name = "python-schema-registry-client" },
+    { name = "python-socketio" },
+    { name = "rich" },
+    { name = "sniffio" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+    { name = "uuid-utils" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "advanced-alchemy", extras = ["cryptography"], specifier = "==1.11.0" },
+    { name = "attrs", specifier = "==26.1.0" },
+    { name = "cachetools", specifier = "==7.1.4" },
+    { name = "dataclasses-avroschema", specifier = "==0.70.0" },
+    { name = "dotenv", specifier = "==0.9.9" },
+    { name = "exceptiongroup", specifier = "==1.3.1" },
+    { name = "fast-query-parsers", specifier = ">=1.0.3" },
+    { name = "fastavro", specifier = ">=1.9.0" },
+    { name = "fastnanoid", specifier = "==0.4.3" },
+    { name = "importlib-metadata", specifier = "==9.0.0" },
+    { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "msgspec", specifier = "==0.21.1" },
+    { name = "multidict", specifier = "==6.7.1" },
+    { name = "opentelemetry-distro", specifier = "==0.63b1" },
+    { name = "opentelemetry-exporter-otlp", specifier = "==1.42.1" },
+    { name = "opentelemetry-instrumentation", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-aiohttp-client", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-aiokafka", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-asyncio", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-grpc", specifier = ">=0.63b1" },
+    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.63b1" },
+    { name = "opentelemetry-instrumentation-logging", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-redis", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = "==0.63b1" },
+    { name = "opentelemetry-instrumentation-urllib3", specifier = "==0.63b1" },
+    { name = "pydantic", specifier = "==2.13.4" },
+    { name = "python-schema-registry-client", specifier = "==2.6.1" },
+    { name = "python-socketio", specifier = "==5.16.2" },
+    { name = "rich", specifier = "==15.0.0" },
+    { name = "sniffio", specifier = "==1.3.1" },
+    { name = "sqlalchemy", specifier = "==2.0.51" },
+    { name = "typing-extensions", specifier = "==4.15.0" },
+    { name = "uuid-utils", specifier = "==0.16.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = "==9.0.2" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1012,7 +1125,7 @@ source = { editable = "libs/http_fastapi" }
 dependencies = [
     { name = "fastapi" },
     { name = "fastapi-cache2" },
-    { name = "platform-core" },
+    { name = "foundation" },
     { name = "python-socketio" },
     { name = "slowapi-advanced" },
     { name = "uvicorn" },
@@ -1022,7 +1135,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "fastapi-cache2", specifier = "==0.2.2" },
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "python-socketio", specifier = "==5.16.2" },
     { name = "slowapi-advanced", editable = "libs/slowapi_advanced" },
     { name = "uvicorn", specifier = "==0.34.0" },
@@ -1033,18 +1146,18 @@ name = "http-litestar"
 version = "0.1.0"
 source = { editable = "libs/http_litestar" }
 dependencies = [
+    { name = "foundation" },
     { name = "limits" },
     { name = "litestar" },
-    { name = "platform-core" },
     { name = "python-socketio" },
     { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "foundation", editable = "libs/foundation" },
     { name = "limits", specifier = "==5.8.0" },
     { name = "litestar", specifier = "==2.22.0" },
-    { name = "platform-core", editable = "libs/platform_core" },
     { name = "python-socketio", specifier = "==5.16.2" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]
@@ -1083,13 +1196,48 @@ version = "0.1.0"
 source = { editable = "libs/iam" }
 dependencies = [
     { name = "db" },
-    { name = "platform-core" },
+    { name = "foundation" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "db", editable = "libs/db" },
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
+]
+
+[[package]]
+name = "iam-keycloak"
+version = "0.1.0"
+source = { editable = "libs/iam_keycloak" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "foundation" },
+    { name = "pydantic" },
+    { name = "python-keycloak" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.104.0" },
+    { name = "foundation", editable = "libs/foundation" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "python-keycloak", specifier = "==7.1.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.24.0" },
+    { name = "pytest", specifier = "==9.0.2" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "pytest-cov", specifier = "==7.0.0" },
 ]
 
 [[package]]
@@ -1177,6 +1325,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
+]
+
+[[package]]
+name = "jwcrypto"
+version = "1.5.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/7e/53c14813521693e931e420d9db00efe317419ff194495903bce03402275e/jwcrypto-1.5.8.tar.gz", hash = "sha256:c3d7114b6f6e65b52f6b7da817eb8cb8423e1da31e1ef13508447c81ecbdcc34", size = 90772, upload-time = "2026-06-24T19:36:50.782Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/7c/f87c5db042c4f7b4476346fc0d22f1025a777fee08eebde3720d3b9c4eb5/jwcrypto-1.5.8-py3-none-any.whl", hash = "sha256:85aeb475f808d56bbc2f2ed1f6f73e6a317c4011a4321505f02f0aed695a3742", size = 96133, upload-time = "2026-06-24T19:36:49.519Z" },
 ]
 
 [[package]]
@@ -1344,8 +1505,8 @@ dependencies = [
     { name = "aiokafka" },
     { name = "fastavro" },
     { name = "faststream", extra = ["kafka"] },
+    { name = "foundation" },
     { name = "httpx" },
-    { name = "platform-core" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-schema-registry-client" },
@@ -1365,8 +1526,8 @@ requires-dist = [
     { name = "aiokafka", specifier = "==0.14.0" },
     { name = "fastavro", specifier = ">=1.9.0" },
     { name = "faststream", extras = ["kafka"], specifier = "==0.7.1" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "platform-core", editable = "libs/platform_core" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "pydantic-settings", specifier = "==2.14.1" },
     { name = "python-schema-registry-client", specifier = "==2.6.1" },
@@ -1387,7 +1548,7 @@ version = "0.1.0"
 source = { editable = "libs/messaging_kafka" }
 dependencies = [
     { name = "aiokafka" },
-    { name = "platform-core" },
+    { name = "foundation" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
 ]
@@ -1403,7 +1564,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", specifier = "==0.14.0" },
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "pydantic-settings", specifier = "==2.14.1" },
 ]
@@ -1904,97 +2065,6 @@ wheels = [
 ]
 
 [[package]]
-name = "platform-core"
-version = "0.1.0"
-source = { editable = "libs/platform_core" }
-dependencies = [
-    { name = "advanced-alchemy", extra = ["cryptography"] },
-    { name = "attrs" },
-    { name = "cachetools" },
-    { name = "dataclasses-avroschema" },
-    { name = "dotenv" },
-    { name = "exceptiongroup" },
-    { name = "fast-query-parsers" },
-    { name = "fastavro" },
-    { name = "fastnanoid" },
-    { name = "importlib-metadata" },
-    { name = "jinja2" },
-    { name = "msgspec" },
-    { name = "multidict" },
-    { name = "opentelemetry-distro" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-instrumentation-aiohttp-client" },
-    { name = "opentelemetry-instrumentation-aiokafka" },
-    { name = "opentelemetry-instrumentation-asyncio" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-grpc" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-instrumentation-logging" },
-    { name = "opentelemetry-instrumentation-redis" },
-    { name = "opentelemetry-instrumentation-sqlalchemy" },
-    { name = "opentelemetry-instrumentation-urllib3" },
-    { name = "pydantic" },
-    { name = "python-schema-registry-client" },
-    { name = "python-socketio" },
-    { name = "rich" },
-    { name = "sniffio" },
-    { name = "sqlalchemy" },
-    { name = "typing-extensions" },
-    { name = "uuid-utils" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "advanced-alchemy", extras = ["cryptography"], specifier = "==1.11.0" },
-    { name = "attrs", specifier = "==26.1.0" },
-    { name = "cachetools", specifier = "==7.1.4" },
-    { name = "dataclasses-avroschema", specifier = "==0.70.0" },
-    { name = "dotenv", specifier = "==0.9.9" },
-    { name = "exceptiongroup", specifier = "==1.3.1" },
-    { name = "fast-query-parsers", specifier = ">=1.0.3" },
-    { name = "fastavro", specifier = ">=1.9.0" },
-    { name = "fastnanoid", specifier = "==0.4.3" },
-    { name = "importlib-metadata", specifier = "==9.0.0" },
-    { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "msgspec", specifier = "==0.21.1" },
-    { name = "multidict", specifier = "==6.7.1" },
-    { name = "opentelemetry-distro", specifier = "==0.63b1" },
-    { name = "opentelemetry-exporter-otlp", specifier = "==1.42.1" },
-    { name = "opentelemetry-instrumentation", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-aiohttp-client", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-aiokafka", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-asyncio", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-grpc", specifier = ">=0.63b1" },
-    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.63b1" },
-    { name = "opentelemetry-instrumentation-logging", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-redis", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = "==0.63b1" },
-    { name = "opentelemetry-instrumentation-urllib3", specifier = "==0.63b1" },
-    { name = "pydantic", specifier = "==2.13.4" },
-    { name = "python-schema-registry-client", specifier = "==2.6.1" },
-    { name = "python-socketio", specifier = "==5.16.2" },
-    { name = "rich", specifier = "==15.0.0" },
-    { name = "sniffio", specifier = "==1.3.1" },
-    { name = "sqlalchemy", specifier = "==2.0.50" },
-    { name = "typing-extensions", specifier = "==4.15.0" },
-    { name = "uuid-utils", specifier = "==0.16.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = "==9.0.2" },
-    { name = "pytest-asyncio", specifier = ">=1.3.0" },
-]
-
-[[package]]
 name = "platformdirs"
 version = "4.9.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2337,6 +2407,23 @@ wheels = [
 ]
 
 [[package]]
+name = "python-keycloak"
+version = "7.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "deprecation" },
+    { name = "httpx" },
+    { name = "jwcrypto" },
+    { name = "requests" },
+    { name = "requests-toolbelt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/e3/963aae33e9177b496def0ba47d2290391e9391d9f76a3f69cfde8c44c8b8/python_keycloak-7.1.1.tar.gz", hash = "sha256:38973e54694a656fe6f3f8fc2af0b89c78136863f928261f0d243445e9e486bc", size = 78907, upload-time = "2026-02-15T08:45:58.139Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/9f/569a8bbdb0859498d33d8b86273bc82849bd0b445ac01416ad34996ca3d8/python_keycloak-7.1.1-py3-none-any.whl", hash = "sha256:d8295bec6c4805ab7335b03bc92753c8c6258d5511b080cac061da20ae77f61c", size = 87607, upload-time = "2026-02-15T08:45:57.054Z" },
+]
+
+[[package]]
 name = "python-schema-registry-client"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2435,6 +2522,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
+]
+
+[[package]]
+name = "requests-toolbelt"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f3/61/d7545dafb7ac2230c70d38d31cbfe4cc64f7144dc41f6e4e4b78ecd9f5bb/requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6", size = 206888, upload-time = "2023-05-01T04:11:33.229Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/51/d4db610ef29373b879047326cbf6fa98b6c1969d6f6dc423279de2b1be2c/requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06", size = 54481, upload-time = "2023-05-01T04:11:28.427Z" },
 ]
 
 [[package]]
@@ -2614,29 +2713,29 @@ wheels = [
 
 [[package]]
 name = "sqlalchemy"
-version = "2.0.50"
+version = "2.0.51"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/57/da/6fbf010c8ebb347679d0d100b22fe9ba5e13fd04046c5df7280d2f0bf706/sqlalchemy-2.0.50.tar.gz", hash = "sha256:af5607d11ef90fd6a5c0549fe0045dce1663d427426bcfb506dcb5346a85a3b9", size = 9907424, upload-time = "2026-05-24T19:20:04.018Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/f1/a7a892f18d4d224e6b26f706531eafccc41e37594d37d304786969ee13cb/sqlalchemy-2.0.51.tar.gz", hash = "sha256:804dccd8a4a6242c4e30ad961e540e18a588f6527202f2d6791b01845d59fdc9", size = 9912201, upload-time = "2026-06-15T15:41:20.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/32/10ac51b4be7cdecd7e93d069251c86dfbf70b7adbd7c67b48ccea6c49e1c/sqlalchemy-2.0.50-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:c966932507a4d7d0a37314927dbfcd89720e3f37d2a1e3352e7ae7939fa8e8a0", size = 2158519, upload-time = "2026-05-24T19:27:56.472Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/76/e703d2f7681d7d66c4c891af3f07c7ccf4c76ad7f18351de035b5eda007a/sqlalchemy-2.0.50-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:faffef4bcc20a1892e65e155293d99d60855bbbc79250ab712819cfd56a8e6bb", size = 3282063, upload-time = "2026-05-24T20:09:38.57Z" },
-    { url = "https://files.pythonhosted.org/packages/31/26/ef168b184a25701f9995e8fb7e503fafd7a99c1c77cda1bc1a26ea2ed486/sqlalchemy-2.0.50-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6c206aec519a2e7bd08abbfb33436e325fd22c632d9c21a9047e376ce241646e", size = 3287069, upload-time = "2026-05-24T20:17:21.942Z" },
-    { url = "https://files.pythonhosted.org/packages/c2/15/765acc2bc693bccc43ca4a95d5b69750da8aaf6db1b5c616536e087f8920/sqlalchemy-2.0.50-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:bef4ac756363227ef6402a75fee025a4bc690f92328e825868939b3b3a446a6d", size = 3230453, upload-time = "2026-05-24T20:09:40.398Z" },
-    { url = "https://files.pythonhosted.org/packages/63/61/08e03c3adbf5db0087a0b6816746fec8f3032fb2f7fc899a9bb9b2a48ce4/sqlalchemy-2.0.50-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:96fbee6b19c19cd1556c8bf9419447cf2ec149ffcab7ab64348c23e54ef8547f", size = 3252413, upload-time = "2026-05-24T20:17:24.067Z" },
-    { url = "https://files.pythonhosted.org/packages/03/0c/370a1f2db38436c615e10134c8a37de3688e74084792380695f3f5083860/sqlalchemy-2.0.50-cp314-cp314-win32.whl", hash = "sha256:8f00e3eb43ba30eb1b238ee03a8a62309486d1321eda3328bb611e0340033ad8", size = 2120063, upload-time = "2026-05-24T19:50:11.08Z" },
-    { url = "https://files.pythonhosted.org/packages/7f/a0/fe92bb9817863bc13ba093bda931979a26cc2ca69f8e8f26d07add3d7c6f/sqlalchemy-2.0.50-cp314-cp314-win_amd64.whl", hash = "sha256:15708c613cd5005b7dffe1f66ee6a63ee8f5e46799f71c70ebad74178c676a39", size = 2145830, upload-time = "2026-05-24T19:50:12.452Z" },
-    { url = "https://files.pythonhosted.org/packages/cc/ff/e5640a98a0b2f491eb8fde10fb6c773621a2e44340de231fafcc9370f4a9/sqlalchemy-2.0.50-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:3699dac4be410e97049a1658e9480da9cde956594aa0f3aebc60b88f21c5ba70", size = 2178435, upload-time = "2026-05-24T19:42:58.889Z" },
-    { url = "https://files.pythonhosted.org/packages/b7/85/337116e186f1236375b5fb70c21cfac98e8e8ab0d3a47be838dc47a59e08/sqlalchemy-2.0.50-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f96233858e3df43932ac11589e22520da6e8aeb624b03fedfeebb0e8ea213086", size = 3566059, upload-time = "2026-05-24T20:01:20.848Z" },
-    { url = "https://files.pythonhosted.org/packages/96/34/bb0e190e161c3c2c24314a65add57218be14a4a9486886b7f5047c1ff7c8/sqlalchemy-2.0.50-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c4e70c46fad30c3bcc6a4708bc0130a3173e11a5b25f0ea4a9d8911b450f1f52", size = 3535366, upload-time = "2026-05-24T20:03:56.768Z" },
-    { url = "https://files.pythonhosted.org/packages/df/5a/a7f759f97e4fd499c5d4e4488c760d5a7fbecf3028b465a04274fcd52384/sqlalchemy-2.0.50-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:1918a3cf564d16d95bca7301005f41ab2ad50b07cd3b9da50d3ed986db148d6a", size = 3474879, upload-time = "2026-05-24T20:01:23.058Z" },
-    { url = "https://files.pythonhosted.org/packages/9d/d9/2907ea38eb60687d297bf9c39e5ee58053c87b57fe8a9cae97090cecbf10/sqlalchemy-2.0.50-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:b00098cdbdbd38c7be3d568b0c9c3122b8c0ec62b911b57cd5e6e0254d60a76d", size = 3486117, upload-time = "2026-05-24T20:03:59.052Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/e3/5aa06f167559f8c0bdae487e297d23ba548150ab016a3418265d617a4985/sqlalchemy-2.0.50-cp314-cp314t-win32.whl", hash = "sha256:1fbd55a969d7ac44a98e3dec75016074f809fa08f871585ace58dde110d1bf3e", size = 2150823, upload-time = "2026-05-24T20:08:58.644Z" },
-    { url = "https://files.pythonhosted.org/packages/65/9b/112fb8f977582d7489d036e409e3723948bcf5320b3ac465f3c481bbe8f9/sqlalchemy-2.0.50-cp314-cp314t-win_amd64.whl", hash = "sha256:c5c3cdb753a9004183e1ccb634b41611654c989e61bc68617ce878e46d6f1e51", size = 2185794, upload-time = "2026-05-24T20:09:00.319Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/10/f7220e9b784d295d241c86ed99aeb537f92afcd469a64861f2717e9bb077/sqlalchemy-2.0.50-py3-none-any.whl", hash = "sha256:92064363517a3ff8212b5a93b8c62876579d8dfd1ca5b561335f30152d884fa9", size = 1943861, upload-time = "2026-05-24T19:59:01.119Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/49/a739be2e1d02a96a658eb71ab45d921c874249252358ad24a5bffdd02525/sqlalchemy-2.0.51-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:6ea306caaae6bd5afd0a46050003c88f6bf33227377a49298c498c3cb88ff491", size = 2158999, upload-time = "2026-06-15T16:08:51.759Z" },
+    { url = "https://files.pythonhosted.org/packages/23/6b/2e0e38cf75c8780eca78d9b2e78164f8bcfd70125e5caa588ff5cbb9c9f4/sqlalchemy-2.0.51-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c45a496d6bc05dec41dcd4c3a2b183723f47473255c159cd80b503c8f246424d", size = 3282539, upload-time = "2026-06-15T16:19:51.065Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/a1/e77854cb5336fd37dc3c6ae3b71de242c98caac5725120be0b526b31cbd0/sqlalchemy-2.0.51-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4004ada0aafe8ae1991b2cd1d99c6d9146126e123bd6f883c260d974aa012e54", size = 3287545, upload-time = "2026-06-15T16:26:44.735Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/ab/9e17272fd4dac8df3b83c4fbe52b998a1c9d89a843c8c35ff29b74ff7364/sqlalchemy-2.0.51-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:0f6bcad487aee1c638d707235682fc96f741de00663619881ab235400d03289e", size = 3230929, upload-time = "2026-06-15T16:19:52.625Z" },
+    { url = "https://files.pythonhosted.org/packages/02/3c/52f408ea701781caee975606beccc48845f2aee8711ac29843d612c0306c/sqlalchemy-2.0.51-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:39a76529db6305693d8d4affa58ad5b5e2e18edd62daea628b29b97930b3513d", size = 3252888, upload-time = "2026-06-15T16:26:46.454Z" },
+    { url = "https://files.pythonhosted.org/packages/24/16/3efd2ee6bc4ca4693a30a1dd17a91b606cae15d517d2a4746611d9b73ce8/sqlalchemy-2.0.51-cp314-cp314-win32.whl", hash = "sha256:08a204d8b5638717c26a24df18fcf40af45a6b22e35b70b1d62f0113c2e278e8", size = 2120551, upload-time = "2026-06-15T16:23:15.629Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/78/55b12e70f45bccc40d9e483925c065027b3b98ea4cbbdf6f8c2546feaf6c/sqlalchemy-2.0.51-cp314-cp314-win_amd64.whl", hash = "sha256:96747bfbadb055466e5b46d572618170046b45ce5a4879167f50d70a5319a499", size = 2146318, upload-time = "2026-06-15T16:23:17.108Z" },
+    { url = "https://files.pythonhosted.org/packages/21/db/a9574ed40fed418924b1b1a3e54f47ee3963053b3d3d325a0d36b41f2c08/sqlalchemy-2.0.51-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:e5ea1a213be1fcd5e49d9904c3b9939211ded90bc2a64e93f4c01963474285de", size = 2178920, upload-time = "2026-06-15T15:59:56.285Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/90/a1bb5c7cbba76b7bc1fbd586d0a5479a7bc9c27b4a8298f22ec9423b2bb3/sqlalchemy-2.0.51-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7c6b36ed71f41942bdcd2ad2522be46bfce09d5705be5640ecf19bbc7660e4b7", size = 3566534, upload-time = "2026-06-15T15:58:35.024Z" },
+    { url = "https://files.pythonhosted.org/packages/15/4b/481f1fed30e0e9e8dd24aecbb49f29eb57fe7657ece5cf06ee9b84bb97d8/sqlalchemy-2.0.51-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0c2c62877097e1a0db401fba5cb4debee33265e5b2a55c4ccb489c02c53b4f72", size = 3535844, upload-time = "2026-06-15T16:02:43.973Z" },
+    { url = "https://files.pythonhosted.org/packages/02/71/0aa64aeda645510af0a43f7d9ee70932f0d1dc4263aed34c50ee891d9df3/sqlalchemy-2.0.51-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:0378d055e9e8cd6ce4d8dff683bdd3d7d413533c4ee51d67a2b1e0f9eacc0f23", size = 3475355, upload-time = "2026-06-15T15:58:36.592Z" },
+    { url = "https://files.pythonhosted.org/packages/05/db/6061db32316446135a3abae5f308d144ab988a34234726042da3e58b1c63/sqlalchemy-2.0.51-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:6e46fc36029eff666391e0531e5387b62ce6c4f1d8e50b3fb3099eaca1b42522", size = 3486591, upload-time = "2026-06-15T16:02:45.346Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/c9/f14fdf71bb8957e0c7e39db69bbdf12b5c80f4ef775fdfa127bf4e0d6760/sqlalchemy-2.0.51-cp314-cp314t-win32.whl", hash = "sha256:9161cfc9efce70d1715f47d6ff40f79c6778c00d53be4fbc09d70301e4b83ba7", size = 2151313, upload-time = "2026-06-15T16:03:39.127Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/c6/673e618e6f4f297e126d9b56ea2f6478708f6c1af4e3223835c22e2c3697/sqlalchemy-2.0.51-cp314-cp314t-win_amd64.whl", hash = "sha256:159bb6ba32059f57ad7375a8f50d844dd2f19d14954ecf820cd33e20debd46b2", size = 2186280, upload-time = "2026-06-15T16:03:40.569Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/22/dbf013a12ec759e54a34a119e9e217435b3f71b2dd5c61a7ade0a25dae87/sqlalchemy-2.0.51-py3-none-any.whl", hash = "sha256:bb024d8b621d0be75f4f44ecc7c950450026e76d66dc8f791bb5331d7fed59d5", size = 1944334, upload-time = "2026-06-15T16:09:22.418Z" },
 ]
 
 [[package]]
@@ -2670,13 +2769,13 @@ name = "store-redis"
 version = "0.1.0"
 source = { editable = "libs/store_redis" }
 dependencies = [
-    { name = "platform-core" },
+    { name = "foundation" },
     { name = "redis" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "platform-core", editable = "libs/platform_core" },
+    { name = "foundation", editable = "libs/foundation" },
     { name = "redis", specifier = "==7.4.0" },
 ]
 

@@ -7,7 +7,7 @@ import os
 # Top level import
 from .bootstrap import settings
 
-from platform_core.utils.uvicorn import run_uvicorn
+from foundation.utils.uvicorn import run_uvicorn
 
 
 def main():

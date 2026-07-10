@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from advanced_alchemy.base import UUIDv7AuditBase
+from foundation.iam.types import TeamRoles
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from platform_core.iam.types import TeamRoles
 from .constants import TEAM_INVITATION_TABLE, TEAM_TABLE, USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:

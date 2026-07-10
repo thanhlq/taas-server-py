@@ -5,7 +5,7 @@ Generated from kaspa restapi spec: https://api.kaspa.org
 
 Notes
 -----
-- Every model is a ``msgspec.Struct`` via :class:`platform_core.serialization.BaseModel`.
+- Every model is a ``msgspec.Struct`` via :class:`foundation.serialization.BaseModel`.
 - Field names are kept EXACTLY as the wire/JSON keys (the OpenAPI spec mixes
   camelCase and snake_case), so structs decode real API responses as-is.
 - TypeScript ``number`` maps to ``int | float`` (``Number``) to accept either
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from platform_core.serialization import BaseModel
+from foundation.serialization import BaseModel
 
 # TypeScript `number` is float64; the API uses it for both integers and decimals.
 Number = int | float

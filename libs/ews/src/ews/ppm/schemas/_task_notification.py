@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from platform_core.serialization import ApiResponse
+from foundation.serialization import ApiResponse
 
 
 class TaskNotificationEvent(str, Enum):

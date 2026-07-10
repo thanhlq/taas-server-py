@@ -1,5 +1,5 @@
 """Litestar implementation of the framework-neutral
-:class:`platform_core.http.WebSocketSession`."""
+:class:`foundation.http.WebSocketSession`."""
 from __future__ import annotations
 
 from typing import Any
@@ -9,7 +9,7 @@ from litestar import WebSocket
 
 class LitestarWebSocketSession:
     """Thin wrapper exposing a Litestar ``WebSocket`` as a
-    :class:`platform_core.http.WebSocketSession`."""
+    :class:`foundation.http.WebSocketSession`."""
 
     def __init__(self, socket: WebSocket) -> None:
         self._socket = socket

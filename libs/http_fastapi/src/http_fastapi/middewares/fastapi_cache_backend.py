@@ -1,10 +1,10 @@
 from typing import Optional, Tuple
 
 from fastapi_cache import Backend
-from platform_core import BaseService
-from platform_core.config import get_settings
-from platform_core.config.cache import CacheConfig
-from platform_core.config.settings import Settings
+from foundation import BaseService
+from foundation.config import get_settings
+from foundation.config.cache import CacheConfig
+from foundation.config.settings import Settings
 from store_redis import Redis, RedisStore, create_redis_client
 
 _SCAN_COUNT = 500
