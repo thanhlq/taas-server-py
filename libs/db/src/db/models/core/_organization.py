@@ -11,7 +11,6 @@ from datetime import datetime
 from typing import Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from advanced_alchemy.mixins import SlugKey
 from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,7 +19,7 @@ from db.models.core.constants import ORGANIZATION_TABLE
 from db.models.core.enums import OrganizationStatus
 
 
-class OrganizationTable(UUIDv7AuditBase, SlugKey, SoftDeleteColumns):
+class OrganizationTable(UUIDv7AuditBase, SoftDeleteColumns):
     """Organization"""
 
     __tablename__ = ORGANIZATION_TABLE

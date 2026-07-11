@@ -10,7 +10,6 @@ from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .constants import (
-    ORGANIZATION_TABLE,
     ROLE_TABLE,
     USER_ACCOUNT_ROLE_TABLE,
     USER_ACCOUNT_TABLE,
@@ -19,7 +18,6 @@ from .constants import (
 if TYPE_CHECKING:
     from ._role import Role
     from ._user import User
-
 
 class UserRole(UUIDv7AuditBase):
     """User Role."""
@@ -34,13 +32,17 @@ class UserRole(UUIDv7AuditBase):
     )
     # Role in a specific organization context (optional). If None, the role is global / tenant-wide.
     org_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey(f'{ORGANIZATION_TABLE}.id', ondelete='cascade'), nullable=True
+        # ForeignKey(f'{ORGANIZATION_TABLE}.id', ondelete='cascade'),
+        nullable=True
     )
     assigned_at: Mapped[datetime] = mapped_column(default=datetime.now(UTC))
 
     user: Mapped[User] = relationship(
         back_populates='roles', innerjoin=True, uselist=False, lazy='joined'
     )
+    # org: Mapped[OrganizationTable] = relationship(
+    #     back_populates='user_roles', innerjoin=True, uselist=False, lazy='joined'
+    # )
     user_name: AssociationProxy[str] = association_proxy('user', 'name')
     user_email: AssociationProxy[str] = association_proxy('user', 'email')
     role: Mapped[Role] = relationship(
