@@ -6,14 +6,14 @@ from typing import List, Optional
 
 from db import DBUtils
 from db.models.resiliant import OutboxEventTable
-from foundation.observability.log_factory import LogFactory
+from foundation import BaseService
 from foundation.resiliant.outbox import IOutboxRepository, OutboxConfig, OutboxStatus
 from foundation.utils import now_in_utc
 from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class OutboxRepository(IOutboxRepository):
+class OutboxRepository(IOutboxRepository, BaseService):
     """
     Repository for outbox event database operations.
 
@@ -21,8 +21,9 @@ class OutboxRepository(IOutboxRepository):
     """
 
     def __init__(self, config: OutboxConfig):
+        super().__init__()
         self.config = config
-        self.logger = LogFactory().get_logger(self.__class__.__name__)
+        # self.logger = LogFactory().get_logger(self.__class__.__name__)
 
     async def save(
         self,
