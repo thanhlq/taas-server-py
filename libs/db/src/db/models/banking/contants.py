@@ -1,4 +1,4 @@
-TABLE_PREFIX = 'taas_'
+from ..config import TABLE_PREFIX
 
 
 CRYPTO_TOKEN_TABLE = f'{TABLE_PREFIX}crypto_token'

@@ -1,5 +1,4 @@
-TABLE_PREFIX = 'taas_'
-
+from ..config import TABLE_PREFIX
 
 CRM_ACCOUNTS_TABLE = f'{TABLE_PREFIX}crm_accounts'
 CRM_ACCOUNTS_ADDRESSES_TABLE = f'{TABLE_PREFIX}crm_accounts_addresses'

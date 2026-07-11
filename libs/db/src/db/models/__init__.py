@@ -54,6 +54,12 @@ from .ews import (
     Workflow,
     WorkflowStage,
 )
+from .resiliant import (
+    DLQEventArchiveTable,
+    DLQEventTable,
+    OutboxEventArchiveTable,
+    OutboxEventTable,
+)
 
 # from sqlalchemy.orm import DeclarativeBase
 
@@ -75,6 +81,12 @@ __all__ = [
     'UserRole',
     'team_tag',
     'CasbinRule',
+
+    # Resiliant
+    'DLQEventTable',
+    'DLQEventArchiveTable',
+    'OutboxEventTable',
+    'OutboxEventArchiveTable',
 
     # CRM
     'CrmAccount',

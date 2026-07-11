@@ -1,9 +1,10 @@
 from ._dlq_models import DLQEventArchiveTable, DLQEventTable
-from ._outbox_models import OutboxEventTable, OutboxStatus
+from ._outbox_models import OutboxEventArchiveTable, OutboxEventTable, OutboxStatus
 
 __all__ = [
     'OutboxEventTable',
     'OutboxStatus',
+    'OutboxEventArchiveTable',
     'DLQEventTable',
     'DLQEventArchiveTable',
 ]

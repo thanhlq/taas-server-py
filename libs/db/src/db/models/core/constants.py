@@ -1,4 +1,5 @@
-TABLE_PREFIX = 'taas_'
+from ..config import TABLE_PREFIX
+
 # Core tables
 TENANT_TABLE = f'{TABLE_PREFIX}tenants'
 ORGANIZATION_TABLE = f'{TABLE_PREFIX}organizations'

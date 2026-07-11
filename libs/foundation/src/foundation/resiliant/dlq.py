@@ -20,7 +20,7 @@ import time
 import uuid
 from collections.abc import Sequence
 from enum import StrEnum
-from typing import Protocol, runtime_checkable
+from typing import Dict, Protocol, runtime_checkable
 
 import msgspec
 
@@ -113,10 +113,107 @@ class DeadLetterMessage(BaseEntity):
 
 
 class DeadLetterConfig(msgspec.Struct, frozen=True):
-    """Policy for the DLQ."""
+    """
+    Configuration for DLQ (Dead Letter Queue) retry pattern.
 
-    # Max messages returned per `list_messages` call.
-    page_size: int = 100
+    This configuration controls all aspects of DLQ behavior including
+    polling intervals, retry limits, archiving, and metrics.
+
+    Attributes:
+        enabled: Enable/disable DLQ functionality
+        poll_interval_ms: Base polling interval in milliseconds
+        initial_poll_interval_ms: Initial interval for adaptive polling
+        max_poll_interval_ms: Maximum interval for adaptive polling
+        batch_size: Number of events to fetch per poll
+        concurrent_workers: Number of concurrent retry workers
+        max_retries: Default maximum retry attempts per event
+        retry_backoff_multiplier: Multiplier for exponential backoff
+        retry_max_interval_ms: Maximum interval between retries
+        use_skip_locked: Use FOR UPDATE SKIP LOCKED for concurrent safety
+        archive_after_days: Archive events older than N days
+        auto_archive_enabled: Enable automatic archiving
+        enable_metrics: Enable metrics collection
+        handler_retry_enabled: Enable handler-specific retry logic
+        handler_max_retries: Per-handler retry limits
+
+    Example:
+        >>> config = DLQConfig(
+        ...     enabled=True,
+        ...     batch_size=50,
+        ...     max_retries=3,
+        ...     archive_after_days=30,
+        ... )
+        >>> dlq_service = DLQService(config)
+
+    Note:
+        For production, tune poll_interval_ms and batch_size based on
+        your event volume and processing latency requirements.
+    """
+
+    # Enable/disable DLQ
+    enabled: bool = True
+    """Enable or disable DLQ functionality globally."""
+
+    # Polling configuration
+    poll_interval_ms: int = 5000
+    """Base polling interval in milliseconds (5 seconds default)."""
+
+    initial_poll_interval_ms: int = 1000
+    """Initial interval for adaptive polling (1 second default)."""
+
+    max_poll_interval_ms: int = 30000
+    """Maximum interval for adaptive polling (30 seconds default)."""
+
+    batch_size: int = 50
+    """Number of events to fetch and process per poll."""
+
+    concurrent_workers: int = 2
+    """Number of concurrent retry workers (2 default for safety)."""
+
+    # Retry configuration
+    max_retries: int = 3
+    """Default maximum retry attempts per event."""
+
+    retry_backoff_multiplier: float = 2.0
+    """Multiplier for exponential backoff (2x each retry)."""
+
+    retry_max_interval_ms: int = 60000
+    """Maximum interval between retries (60 seconds default)."""
+
+    # Database configuration
+    use_skip_locked: bool = True
+    """
+    Use FOR UPDATE SKIP LOCKED for concurrent safety.
+
+    When True, concurrent workers will skip locked rows instead of waiting,
+    preventing deadlocks and improving throughput.
+    """
+
+    # Archive configuration
+    archive_after_days: int = 30
+    """Archive events older than this many days."""
+
+    auto_archive_enabled: bool = True
+    """Enable automatic archiving of old events."""
+
+    # Metrics configuration
+    enable_metrics: bool = True
+    """Enable metrics collection and reporting."""
+
+    # Handler-specific retry configuration
+    handler_retry_enabled: bool = True
+    """Enable handler-specific retry logic."""
+
+    handler_max_retries: Dict[str, int] = {}
+    """
+    Per-handler maximum retry limits.
+
+    Example:
+        >>> config.handler_max_retries = {
+        ...     'OrderHandler': 5,  # More retries for critical handlers
+        ...     'NotificationHandler': 2,  # Fewer for non-critical
+        ... }
+    """
 
 
 # --------------------------------------------------------------------------- #

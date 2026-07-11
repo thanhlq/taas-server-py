@@ -1,3 +1,4 @@
-# dlq (dead letter queue)
+# outbox
 
-dlq implementattion
+Outbox implementation:
+- The definitions are in libs/foundation/src/foundation/resiliant/outbox.py

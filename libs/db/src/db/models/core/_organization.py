@@ -16,7 +16,7 @@ from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.models.base import JSONB, SoftDeleteColumns
-from db.models.ews.constants import ORGANIZATION_TABLE
+from db.models.core.constants import ORGANIZATION_TABLE
 from db.models.core.enums import OrganizationStatus
 
 
