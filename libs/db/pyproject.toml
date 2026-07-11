@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "advanced-alchemy[cryptography]==1.11.0",
-    "alembic>=1.18.4",
+    "alembic>=1.18.5",
     'foundation',
     "psycopg[binary]>=3.2",
     "sqlalchemy==2.0.51",
