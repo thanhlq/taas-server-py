@@ -24,18 +24,22 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.models.base import SoftDeleteColumns
-
 # from .types import OutboxStatus
 
 
-class OutboxEventTable(UUIDv7AuditBase, SoftDeleteColumns):
+class OutboxEventTable(UUIDv7AuditBase):
     """
     Outbox event model for reliable event publishing.
 
     This table stores events that need to be published to messaging systems.
     Events are inserted in the same transaction as business data, ensuring
     transactional guarantees.
+
+    Note:
+        The outbox relies on explicit archiving / hard-deletion (see
+        ``OutboxEventArchiveTable`` and the repository ``archive_*`` / cleanup
+        routines) rather than soft-deletion, so no ``deleted_at`` column is
+        used here.
 
     Indexes:
         - idx_outbox_pending: Fast lookup for pending events

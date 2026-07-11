@@ -22,7 +22,7 @@ import enum
 import time
 import uuid
 from collections.abc import Sequence
-from typing import Literal, Protocol, runtime_checkable, Optional
+from typing import Any, Literal, Optional, Protocol, runtime_checkable
 
 import msgspec
 
@@ -214,6 +214,55 @@ class IOutboxPublisher(Protocol):
     async def publish(self, message: OutboxMessage) -> None: ...
 
 
+@runtime_checkable
+class IOutboxService(Protocol):
+    """
+    Application-facing contract for the transactional outbox.
+
+    Unlike :class:`OutboxService` (the in-memory relay primitive above), this
+    protocol describes the *database-backed* service used in production: events
+    are persisted inside the caller's business transaction (same
+    ``AsyncSession``) so the write and the message enqueue commit atomically.
+
+    Implementations live in the ``resiliant`` library and are wired through
+    ``ResiliantFactory``. Session/event/return types are intentionally left
+    loose (``Any``) so this definitions module stays free of SQLAlchemy and
+    persistence-layer imports.
+    """
+
+    async def save_event(
+        self,
+        session: Any,
+        event: Any,
+        channel: str,
+        *,
+        partition_key: str | None = None,
+        headers: dict[str, Any] | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
+        """Persist a domain event to the outbox within ``session``."""
+        ...
+
+    async def save_raw_message(
+        self,
+        session: Any,
+        *,
+        channel: str,
+        payload: dict[str, Any],
+        event_type: str,
+        partition_key: str | None = None,
+        headers: dict[str, Any] | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
+        """Persist a raw (already-serialised) message to the outbox."""
+        ...
+
+    async def get_stats(self, session: Any) -> dict[str, Any]:
+        """Return counters describing the current outbox backlog."""
+        ...
+
+
+
 # --------------------------------------------------------------------------- #
 # Service
 # --------------------------------------------------------------------------- #
@@ -263,7 +312,7 @@ class OutboxService:
             try:
                 await self._publisher.publish(message)
             except Exception as exc:  # noqa: BLE001 - boundary
-                terminal = attempts >= cfg.max_attempts
+                terminal = attempts >= cfg.max_retries
                 await self._repository.mark_failed(
                     message.id,
                     attempts=attempts,
@@ -307,6 +356,7 @@ class OutboxFactory:
 __all__ = [
     "IOutboxPublisher",
     "IOutboxRepository",
+    "IOutboxService",
     "OutboxConfig",
     "OutboxError",
     "OutboxFactory",

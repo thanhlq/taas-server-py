@@ -39,7 +39,7 @@ members = [
     "libs/iam_keycloak",
     "libs/messaging_kafka",
     "libs/messaging_faststream",
-    "libs/resilient",
+    "libs/resiliant",
     "apps/ews_api",
     "apps/ews_api_litestar",
     "apps/ews_worker",
@@ -65,7 +65,7 @@ iam = { workspace = true }
 iam_keycloak = { workspace = true }
 banking_core = { workspace = true }
 block_kaspa = { workspace = true }
-resilient = { workspace = true }
+resiliant = { workspace = true }
 
 
 [dependency-groups]

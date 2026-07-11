@@ -20,7 +20,7 @@ import time
 import uuid
 from collections.abc import Sequence
 from enum import StrEnum
-from typing import Dict, Protocol, runtime_checkable
+from typing import Any, Dict, Protocol, runtime_checkable
 
 import msgspec
 
@@ -167,6 +167,9 @@ class DeadLetterConfig(msgspec.Struct, frozen=True):
     batch_size: int = 50
     """Number of events to fetch and process per poll."""
 
+    page_size: int = 100
+    """Default page size for listing/paginating DLQ messages (``list``)."""
+
     concurrent_workers: int = 2
     """Number of concurrent retry workers (2 default for safety)."""
 
@@ -241,6 +244,50 @@ class IDeadLetterReplayer(Protocol):
     """Sink used to replay a DLQ message back into the system."""
 
     async def replay(self, message: DeadLetterMessage) -> None: ...
+
+
+@runtime_checkable
+class IDLQService(Protocol):
+    """
+    Application-facing contract for the *database-backed* dead letter queue.
+
+    Distinct from :class:`DeadLetterQueueService` (the in-memory primitive
+    below), this describes the production service that persists poison messages
+    to a relational store so operators can inspect, retry, or abandon them.
+
+    Implementations live in the ``resiliant`` library and are wired through
+    ``ResiliantFactory``. Session/return types are left loose (``Any``) so this
+    definitions module stays free of persistence-layer imports.
+    """
+
+    async def save_event(
+        self,
+        session: Any,
+        *,
+        event_id: str,
+        event_type: str,
+        handler_name: str,
+        payload: dict[str, Any],
+        error: str,
+        source_destination: str | None = None,
+        headers: dict[str, Any] | None = None,
+        max_retries: int | None = None,
+        correlation_id: str | None = None,
+    ) -> Any:
+        """Persist a failed event to the DLQ."""
+        ...
+
+    async def get(self, session: Any, dlq_id: Any) -> Any:
+        """Return a single DLQ record by id (or ``None``)."""
+        ...
+
+    async def list_pending(self, session: Any, *, limit: int | None = None) -> Any:
+        """Return pending DLQ records awaiting retry."""
+        ...
+
+    async def get_stats(self, session: Any) -> dict[str, Any]:
+        """Return counters describing the current DLQ backlog."""
+        ...
 
 
 # --------------------------------------------------------------------------- #
@@ -353,6 +400,8 @@ __all__ = [
     "DeadLetterQueueFactory",
     "DeadLetterQueueService",
     "DeadLetterReplayError",
+    "DLQStatus",
     "IDeadLetterReplayer",
     "IDeadLetterRepository",
+    "IDLQService",
 ]

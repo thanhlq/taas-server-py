@@ -1,29 +1,30 @@
 """
 Outbox repository for database operations.
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import List, Optional
 
-from db import DBUtils
 from db.models.resiliant import OutboxEventTable
 from foundation import BaseService
-from foundation.resiliant.outbox import IOutboxRepository, OutboxConfig, OutboxStatus
+from foundation.resiliant.outbox import OutboxConfig, OutboxStatus
 from foundation.utils import now_in_utc
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class OutboxRepository(IOutboxRepository, BaseService):
+class OutboxRepository(BaseService):
     """
     Repository for outbox event database operations.
 
     Provides optimized queries with proper indexing and locking strategies.
+    All methods operate on a caller-supplied :class:`AsyncSession` so writes can
+    participate in the surrounding business transaction (the core guarantee of
+    the transactional-outbox pattern).
     """
 
     def __init__(self, config: OutboxConfig):
         super().__init__()
         self.config = config
-        # self.logger = LogFactory().get_logger(self.__class__.__name__)
 
     async def save(
         self,
@@ -63,14 +64,14 @@ class OutboxRepository(IOutboxRepository, BaseService):
             List of outbox events ready for processing
         """
         batch_size = batch_size or self.config.batch_size
-        cutoff = datetime.now() - timedelta(days=7)
+        cutoff = now_in_utc() - timedelta(days=7)
 
         # Build query
         query = (
             select(OutboxEventTable)
             .where(
                 and_(
-                    OutboxEventTable.status == OutboxStatus.PENDING,  # ty:ignore[unresolved-reference]
+                    OutboxEventTable.status == OutboxStatus.PENDING,
                     OutboxEventTable.retry_count < OutboxEventTable.max_retries,
                     OutboxEventTable.created_at >= cutoff,
                 )
@@ -94,7 +95,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
                 .where(OutboxEventTable.id.in_(event_ids))
                 .values(
                     status=OutboxStatus.PROCESSING,
-                    updated_at=DBUtils.now(),
+                    updated_at=now_in_utc(),
                 )
             )
             await session.commit()
@@ -119,7 +120,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
             .values(
                 status=OutboxStatus.PUBLISHED,
                 processed_at=now_in_utc().replace(tzinfo=None),
-                updated_at=now_in_utc().replace(tzinfo=None),
+                updated_at=now_in_utc(),
             )
         )
         await session.commit()
@@ -174,7 +175,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
                 status=new_status,
                 retry_count=new_retry_count,
                 last_error=error[:1000],  # Truncate error message
-                updated_at=DBUtils.now(),
+                updated_at=now_in_utc(),
             )
         )
         await session.commit()
@@ -197,9 +198,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
             Number of events reset
         """
         timeout_seconds = timeout_seconds or self.config.processing_timeout_seconds
-        threshold = (now_in_utc() - timedelta(seconds=timeout_seconds)).replace(
-            tzinfo=None
-        )
+        threshold = now_in_utc() - timedelta(seconds=timeout_seconds)
 
         result = await session.execute(
             update(OutboxEventTable)
@@ -211,7 +210,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
             )
             .values(
                 status=OutboxStatus.PENDING,
-                updated_at=DBUtils.now(),
+                updated_at=now_in_utc(),
             )
         )
 
@@ -220,106 +219,6 @@ class OutboxRepository(IOutboxRepository, BaseService):
 
         if count > 0:
             self.logger.warning(f'Reset {count} stale processing events')
-
-        return count
-
-    async def archive_published_events(
-        self,
-        session: AsyncSession,
-        days: Optional[int] = None,
-    ) -> int:
-        """
-        Move published events to archive table.
-
-        Args:
-            session: Database session
-            days: Archive events older than N days (defaults to config)
-
-        Returns:
-            Number of events archived
-        """
-        days = days or self.config.archive_after_days
-        threshold = (now_in_utc() - timedelta(days=days)).replace(tzinfo=None)
-
-        # Find events to archive
-        result = await session.execute(
-            select(OutboxEventTable).where(
-                and_(
-                    OutboxEventTable.status == OutboxStatus.PUBLISHED,
-                    OutboxEventTable.processed_at < threshold,
-                )
-            )
-        )
-        events = result.scalars().all()
-
-        if not events:
-            return 0
-
-        # Insert into archive
-        for event in events:
-            archive = OutboxEventArchiveTable(
-                id=event.id,
-                event_id=event.event_id,
-                event_type=event.event_type,
-                channel=event.channel,
-                partition_key=event.partition_key,
-                payload=event.payload,
-                headers=event.headers,
-                status=event.status,
-                retry_count=event.retry_count,
-                max_retries=event.max_retries,
-                last_error=event.last_error,
-                created_at=event.created_at,
-                updated_at=event.updated_at,
-                processed_at=event.processed_at,
-                source_service=event.source_service,
-                correlation_id=event.correlation_id,
-                user_id=event.user_id,
-                tenant_id=event.tenant_id,
-                archived_at=now_in_utc().replace(tzinfo=None),
-            )
-            session.add(archive)
-
-        # Delete from main table
-        event_ids = [e.id for e in events]
-        await session.execute(
-            delete(OutboxEventTable).where(OutboxEventTable.id.in_(event_ids))
-        )
-
-        await session.commit()
-
-        self.logger.info(f'Archived {len(events)} published events')
-        return len(events)
-
-    async def cleanup_archive(
-        self,
-        session: AsyncSession,
-        days: Optional[int] = None,
-    ) -> int:
-        """
-        Delete old archived events.
-
-        Args:
-            session: Database session
-            days: Delete archived events older than N days (defaults to config)
-
-        Returns:
-            Number of events deleted
-        """
-        days = days or self.config.cleanup_archive_after_days
-        threshold = (now_in_utc() - timedelta(days=days)).replace(tzinfo=None)
-
-        result = await session.execute(
-            delete(OutboxEventArchiveTable).where(
-                OutboxEventArchiveTable.archived_at < threshold
-            )
-        )
-
-        count = result.rowcount
-        await session.commit()
-
-        if count > 0:
-            self.logger.info(f'Cleaned up {count} archived events')
 
         return count
 
@@ -355,7 +254,7 @@ class OutboxRepository(IOutboxRepository, BaseService):
             'failed': status_counts.get(OutboxStatus.FAILED, 0),
             'dead_letter': status_counts.get(OutboxStatus.DEAD_LETTER, 0),
             'oldest_pending_age_seconds': (
-                (now_in_utc().replace(tzinfo=None) - oldest_pending).total_seconds()
+                (now_in_utc() - oldest_pending).total_seconds()
                 if oldest_pending
                 else None
             ),
