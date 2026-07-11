@@ -1,10 +1,9 @@
-"""Tests for `foundation.resilience.saga`."""
+"""Tests for `foundation.resiliant.saga`."""
 
 from __future__ import annotations
 
 import pytest
-
-from foundation.resilience.saga import (
+from foundation.resiliant.saga import (
     ISagaRepository,
     SagaAbortedError,
     SagaCompensationError,

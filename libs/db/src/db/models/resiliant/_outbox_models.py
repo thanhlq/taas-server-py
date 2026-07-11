@@ -5,7 +5,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from db.models.base import SoftDeleteColumns
+from advanced_alchemy.mixins import AuditColumns
+from foundation.resiliant.outbox import OutboxStatus
 
 # from sqlalchemy import JSON, Column, DateTime, Index, Integer, String, Text
 from sqlalchemy import (
@@ -20,14 +21,15 @@ from sqlalchemy import (
     # DateTime,
     Text,
     func,
-    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+
+from db.models.base import SoftDeleteColumns
 
 # from .types import OutboxStatus
 
 
-class OutboxEventTable(UUIDv7AuditBase):
+class OutboxEventTable(UUIDv7AuditBase, SoftDeleteColumns):
     """
     Outbox event model for reliable event publishing.
 
@@ -43,14 +45,6 @@ class OutboxEventTable(UUIDv7AuditBase):
     """
 
     __tablename__ = 'outbox_events'
-
-    # Primary key
-    # id = Column(String(64), primary_key=True, default=generate_id)
-    id: Mapped[str] = mapped_column(
-        Text,
-        # server_default=text('gen_random_uuid()'),
-        primary_key=True,
-    )
 
     # Event identification
     event_id = Column(String(64), nullable=False, index=True)
@@ -90,20 +84,6 @@ class OutboxEventTable(UUIDv7AuditBase):
     # updated_at = Column(
     #     DateTime, nullable=False, default=now_in_utc, onupdate=now_in_utc
     # )
-    created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=False),
-        server_default=text('NOW()'),
-        nullable=False,
-        index=True,
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=False),
-        server_default=text('NOW()'),
-        onupdate=text('NOW()'),
-        nullable=False,
-        # index=True,
-    )
 
     # processed_at = Column(DateTime, nullable=True)
     processed_at: Mapped[datetime] = mapped_column(
@@ -149,7 +129,7 @@ class OutboxEventTable(UUIDv7AuditBase):
         Index('idx_outbox_status_created', 'status', 'created_at'),
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
             'id': self.id,
@@ -175,7 +155,7 @@ class OutboxEventTable(UUIDv7AuditBase):
         }
 
 
-class OutboxEventArchiveTable(UUIDv7AuditBase, SoftDeleteColumns):
+class OutboxEventArchiveTable(AuditColumns):
     """
     Archive table for published/processed outbox events.
 
@@ -184,6 +164,14 @@ class OutboxEventArchiveTable(UUIDv7AuditBase, SoftDeleteColumns):
     """
 
     __tablename__ = 'outbox_events_archive'
+
+    # Same structure as OutboxEvent
+    # id = Column(String(64), primary_key=True)
+    id: Mapped[str] = mapped_column(
+        Text,
+        # server_default=text('gen_random_uuid()'),
+        primary_key=True,
+    )
 
     event_id = Column(String(64), nullable=False)
     event_type = Column(String(255), nullable=False, index=True)

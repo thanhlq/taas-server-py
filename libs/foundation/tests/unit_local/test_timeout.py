@@ -1,12 +1,11 @@
-"""Tests for `foundation.resilience.timeout`."""
+"""Tests for `foundation.resiliant.timeout`."""
 
 from __future__ import annotations
 
 import asyncio
 
 import pytest
-
-from foundation.resilience.timeout import (
+from foundation.resiliant.timeout import (
     OperationTimeoutError,
     TimeoutConfig,
     TimeoutFactory,

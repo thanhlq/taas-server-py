@@ -1,10 +1,9 @@
-"""Tests for `foundation.resilience.circuit_breaker`."""
+"""Tests for `foundation.resiliant.circuit_breaker`."""
 
 from __future__ import annotations
 
 import pytest
-
-from foundation.resilience.circuit_breaker import (
+from foundation.resiliant.circuit_breaker import (
     CircuitBreakerConfig,
     CircuitBreakerFactory,
     CircuitBreakerService,

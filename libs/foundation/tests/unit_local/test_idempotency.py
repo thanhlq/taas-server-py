@@ -1,13 +1,11 @@
-"""Tests for `foundation.resilience.idempotency`."""
+"""Tests for `foundation.resiliant.idempotency`."""
 
 from __future__ import annotations
 
 import asyncio
 
 import pytest
-
-from foundation.resilience.idempotency import (
-    IIdempotencyRepository,
+from foundation.resiliant.idempotency import (
     IdempotencyConfig,
     IdempotencyConflictError,
     IdempotencyError,
@@ -16,6 +14,7 @@ from foundation.resilience.idempotency import (
     IdempotencyRecord,
     IdempotencyService,
     IdempotencyStatus,
+    IIdempotencyRepository,
 )
 
 

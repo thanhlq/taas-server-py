@@ -1,12 +1,11 @@
-"""Tests for `foundation.resilience.retry`."""
+"""Tests for `foundation.resiliant.retry`."""
 
 from __future__ import annotations
 
 import random
 
 import pytest
-
-from foundation.resilience.retry import (
+from foundation.resiliant.retry import (
     BackoffStrategy,
     RetryConfig,
     RetryExhaustedError,

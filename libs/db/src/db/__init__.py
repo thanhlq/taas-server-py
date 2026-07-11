@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncEngine
+
 from .models.base import AdvancedDeclarativeBase
-from .repository.base_repo import BaseAsyncRepository, BaseModelT, AsyncSession
+from .repository.base_repo import AsyncSession, BaseAsyncRepository, BaseModelT
 from .repository.exceptions import ConflictError, NotFoundError, RepositoryError
+from .utils.utils import DBUtils
 
 
 async def create_db_and_run_migrations(engine: AsyncEngine) -> None:
@@ -14,6 +16,7 @@ async def create_db_and_run_migrations(engine: AsyncEngine) -> None:
 
 
 __all__ = [
+    'DBUtils',
     'create_db_and_run_migrations',
     'BaseAsyncRepository',
     'BaseModelT',

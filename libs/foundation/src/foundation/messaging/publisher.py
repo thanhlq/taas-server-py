@@ -1,4 +1,4 @@
-from foundation.resilience.outbox import IOutboxPublisher, OutboxMessage
+from foundation.resiliant.outbox import IOutboxPublisher, OutboxMessage
 
 
 class MessagePublisher(IOutboxPublisher):

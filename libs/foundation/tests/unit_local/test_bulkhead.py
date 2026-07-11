@@ -1,12 +1,11 @@
-"""Tests for `foundation.resilience.bulkhead`."""
+"""Tests for `foundation.resiliant.bulkhead`."""
 
 from __future__ import annotations
 
 import asyncio
 
 import pytest
-
-from foundation.resilience.bulkhead import (
+from foundation.resiliant.bulkhead import (
     BulkheadConfig,
     BulkheadFactory,
     BulkheadFullError,

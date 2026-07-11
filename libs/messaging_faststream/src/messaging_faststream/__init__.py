@@ -31,29 +31,30 @@ Public API
     Utility helpers for working with FastStream ``KafkaMessage`` headers
     (traceparent extraction, header building).
 """
-from typing import Optional
-from core.services.service_registry import get_service_locator
-from core.messaging.types import IMessagingService
-from core.messaging.base_messaging import SchemaRegistryConfig
-from core.conf import AppSetting, get_app_settings
-from core.safety.retry import retry
 
-from .faststream_aiokafka_impl import FastStreamKafkaMessagingService
-from .helper import FastStreamHelper
-from core.messaging.sr.schema_registry_fast import (
-    SchemaRegistryEncoder,
+from typing import Optional
+
+from foundation.config import Settings, get_settings
+from foundation.messaging.sr.schema_registry_fast import (
     ConfluentWireFormat,
     SchemaNotFoundError,
     SchemaRegistryClient,
+    SchemaRegistryEncoder,
     SchemaRegistryError,
 )
-from .decorator import messaging
+from foundation.messaging.types import IMessagingService
+from foundation.state import register_service
 
-async def create_pubsub_service(settings: AppSetting) -> IMessagingService:
+from .decorator import messaging
+from .faststream_aiokafka_impl import FastStreamKafkaMessagingService
+from .helper import FastStreamHelper
+
+
+async def create_pubsub_service(settings: Settings) -> IMessagingService:
     """Create pub/sub service based on configuration."""
 
     kafka = FastStreamKafkaMessagingService()
-    if settings.KAFKA_CONSUMER_ENABLE:
+    if settings.messaging.CONSUMER_ENABLE:
         await kafka.start_producer()
         await kafka.start_consumer()
     else:
@@ -62,23 +63,24 @@ async def create_pubsub_service(settings: AppSetting) -> IMessagingService:
     return kafka
 
 
-@retry.decorator(name='initialize_messaging_service')
+# @retry.decorator(name='initialize_messaging_service')
 async def initialize_messaging_service(
-    settings: Optional[AppSetting] = None,
+    settings: Optional[Settings] = None,
 ) -> IMessagingService:
     """Initialize async services that require await."""
-    settings = get_app_settings() if settings is None else settings
+    settings = get_settings() if settings is None else settings
 
     # locator = get_service_locator()
     pubsub_service = await create_pubsub_service(settings)
     # locator.register(IMessagingService, pubsub_service)
+    register_service(IMessagingService, pubsub_service)
     return pubsub_service
+
 
 __all__ = [
     # Service
     'FastStreamKafkaMessagingService',
     # Schema Registry
-    'SchemaRegistryConfig',
     'SchemaRegistryClient',
     'SchemaRegistryEncoder',
     'ConfluentWireFormat',

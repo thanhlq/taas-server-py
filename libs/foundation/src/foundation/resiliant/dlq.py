@@ -19,12 +19,12 @@ from __future__ import annotations
 import time
 import uuid
 from collections.abc import Sequence
+from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
 import msgspec
 
 from foundation.serialization import BaseEntity
-
 
 # --------------------------------------------------------------------------- #
 # Exceptions
@@ -43,6 +43,61 @@ class DeadLetterReplayError(DeadLetterError):
 # Data
 # --------------------------------------------------------------------------- #
 
+
+class DLQStatus(StrEnum):
+    """
+    Status of a DLQ event.
+
+    The status represents the current state of a failed event in the DLQ lifecycle.
+
+    Attributes:
+        PENDING: Event is waiting to be retried (initial state)
+        PROCESSING: Event is currently being retried by a worker
+        RESOLVED: Event was successfully reprocessed
+        FAILED: Retry attempt failed (will retry again if within max_retries)
+        ABANDONED: Max retries exceeded, event cannot be retried automatically
+        ARCHIVED: Event has been moved to archive table
+
+    State Transitions:
+        PENDING → PROCESSING → RESOLVED (success)
+                ↓          ↓
+                ↓          → FAILED (retry failed, will retry again)
+                ↓          ↓
+                → ABANDONED (max retries exceeded)
+                  ↓
+                  → ARCHIVED (cleanup)
+
+    Example:
+        >>> status = DLQStatus.PENDING
+        >>> status.value
+        'pending'
+        >>> status == DLQStatus.PENDING
+        True
+    """
+
+    PENDING = 'pending'
+    """Event is waiting to be retried."""
+
+    APPROVED = 'approved'
+    """When admin fixed and approved the event."""
+
+    CANCELLED = 'cancelled'
+    """When admin does not want to retry the event."""
+
+    PROCESSING = 'processing'
+    """Event is currently being retried by a worker."""
+
+    RESOLVED = 'resolved'
+    """Event was successfully reprocessed."""
+
+    FAILED = 'failed'
+    """Retry attempt failed (will retry again if within max_retries)."""
+
+    ABANDONED = 'abandoned'
+    """Max retries exceeded, event cannot be retried automatically."""
+
+    ARCHIVED = 'archived'
+    """Event has been moved to archive table."""
 
 class DeadLetterMessage(BaseEntity):
     """A poison message persisted in the DLQ."""

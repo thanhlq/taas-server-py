@@ -27,6 +27,9 @@ from store_redis import RedisStore, create_redis_client
 
 from .bootstrap import root_path, settings
 
+# from messaging_kafka import initialize_messaging_service
+from messaging_faststream import initialize_messaging_service
+
 if TYPE_CHECKING:
     from foundation.observability.types import InstrumentSettings
 
@@ -91,6 +94,13 @@ class EwsApplication(BaseApiApplication[FastAPI]):
                 #     roundtrip=True,  # set False to skip the pub/sub probe
                 #     timeout=2.0,
                 # )
+
+            _ms: IMessagingService = await initialize_messaging_service(settings)
+            MessagingFactory.init_factory(
+                messaging_service=_ms,
+                decorator=None
+            )
+            register_iam_schema_registry_schemas(_ms)
 
             yield  # Startup complete, now run the app
 

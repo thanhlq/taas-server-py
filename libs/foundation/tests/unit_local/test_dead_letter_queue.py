@@ -1,10 +1,9 @@
-"""Tests for `foundation.resilience.dead_letter_queue`."""
+"""Tests for `foundation.resiliant.dead_letter_queue`."""
 
 from __future__ import annotations
 
 import pytest
-
-from foundation.resilience.dead_letter_queue import (
+from foundation.resiliant.dlq import (
     DeadLetterError,
     DeadLetterMessage,
     DeadLetterQueueFactory,

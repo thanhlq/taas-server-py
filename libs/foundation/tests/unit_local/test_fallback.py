@@ -1,10 +1,9 @@
-"""Tests for `foundation.resilience.fallback`."""
+"""Tests for `foundation.resiliant.fallback`."""
 
 from __future__ import annotations
 
 import pytest
-
-from foundation.resilience.fallback import (
+from foundation.resiliant.fallback import (
     FallbackConfig,
     FallbackError,
     FallbackFactory,

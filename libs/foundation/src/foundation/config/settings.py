@@ -23,6 +23,7 @@ from foundation.config.cors import CORSConfig
 from foundation.config.csrf import CSRFConfig
 from foundation.config.lock import DistributedLockConfig
 from foundation.config.log import LogSettings
+from foundation.config.messaging_settings import MessagingSettings
 from foundation.config.otel import OtelSettings
 from foundation.config.ratelimit import RateLimitConfig
 from foundation.config.tracing import TracingSettings
@@ -30,12 +31,11 @@ from foundation.config.wss import WebSocketConfig
 from foundation.db.sa_config import (
     SQLAlchemyAsyncConfig,
 )
-from .email_settings import EmailSettings
 from foundation.utils.env_utils import get_env
 from foundation.utils.module_loader import module_to_os_path
 
-
 from .db_settings import DatabaseSettings
+from .email_settings import EmailSettings
 
 CONFIG_PREFIX = 'TAAS'
 
@@ -233,6 +233,7 @@ class AppSettings:
         pass
 
 
+
 @dataclass
 class Settings:
     app: AppSettings = field(default_factory=AppSettings)
@@ -244,6 +245,7 @@ class Settings:
     alchemy: SQLAlchemyAsyncConfig = field(default_factory=SQLAlchemyAsyncConfig)
     otel: OtelSettings = field(default_factory=OtelSettings)
     email: EmailSettings = field(default_factory=EmailSettings)
+    messaging: MessagingSettings = field(default_factory=MessagingSettings)
 
     environment: str = field(default_factory=get_env('ENVIRONMENT', 'local'))
     """The current environment (development, staging, production)."""
@@ -322,11 +324,12 @@ class Settings:
             trace: TracingSettings = TracingSettings()
             otel: OtelSettings = OtelSettings()
             email: EmailSettings = EmailSettings()
+            messaging: MessagingSettings = MessagingSettings()
         except Exception as e:  # noqa: BLE001
             logger.fatal('Could not load settings. %s', e)
             sys.exit(1)
         return Settings(
-            app=app, db=db, server=server, log=log, trace=trace, otel=otel, email=email
+            app=app, db=db, server=server, log=log, trace=trace, otel=otel, email=email, messaging=messaging
         )
 
 

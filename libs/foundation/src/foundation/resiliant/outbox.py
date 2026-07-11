@@ -22,12 +22,11 @@ import enum
 import time
 import uuid
 from collections.abc import Sequence
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable, Optional
 
 import msgspec
 
 from foundation.serialization import BaseModel
-
 
 # --------------------------------------------------------------------------- #
 # Exceptions
@@ -48,9 +47,11 @@ class OutboxPublishError(OutboxError):
 
 
 class OutboxStatus(enum.StrEnum):
-    PENDING = "pending"
-    PUBLISHED = "published"
-    FAILED = "failed"
+    PENDING = 'pending'
+    PROCESSING = 'processing'
+    PUBLISHED = 'published'
+    FAILED = 'failed'
+    DEAD_LETTER = 'dead_letter'
 
 
 class OutboxMessage(BaseModel):
@@ -66,14 +67,120 @@ class OutboxMessage(BaseModel):
     last_error: str | None = None
     published_at: float | None = None
 
+PollStrategy = Literal['fixed', 'adaptive', 'notify']
 
 class OutboxConfig(msgspec.Struct, frozen=True):
-    """Policy for the outbox relay."""
+    """
+    Configuration for outbox pattern implementation.
 
-    # Max messages fetched per relay tick.
+    Attributes:
+        enabled: Whether outbox polling is enabled
+        min_poll_interval_ms: Minimum polling interval when busy (ms)
+        max_poll_interval_ms: Maximum polling interval when idle (ms)
+        initial_poll_interval_ms: Starting polling interval (ms)
+        batch_size: Number of events to fetch per poll
+        concurrent_workers: Number of concurrent poller workers
+        max_retries: Maximum retry attempts before moving to DLQ
+        retry_backoff_multiplier: Exponential backoff multiplier for retries
+        processing_timeout_seconds: Timeout for processing events
+        use_skip_locked: Use FOR UPDATE SKIP LOCKED in queries
+        use_read_replica: Use read replica for initial queries
+        archive_after_days: Move published events to archive after N days
+        cleanup_archive_after_days: Delete archived events after N days
+        enable_metrics: Enable metrics collection
+    """
+
+    enabled: bool = True
+
+    # Poll strategy selection:
+    #   'fixed'    - sleep `fixed_poll_interval_ms` every cycle (legacy 1s behavior)
+    #   'adaptive' - decorrelated jitter backoff between min/max based on activity
+    #   'notify'   - adaptive backoff PLUS Postgres LISTEN/NOTIFY wake-up
+    poll_strategy: PollStrategy = 'fixed'
+
+    # Polling configuration
+    fixed_poll_interval_ms: int = 3000  # used when poll_strategy == 'fixed'
+    min_poll_interval_ms: int = 100
+    max_poll_interval_ms: int = 20000  # default 2000 (2 seconds)
+    initial_poll_interval_ms: int = 5000  # default 500
+    """ Initial polling interval in milliseconds.
+    This value should be between min_poll_interval_ms and max_poll_interval_ms."""
+
+    # Adaptive backoff tuning (decorrelated jitter: next = U(min, prev * growth))
+    backoff_growth_factor: float = 3.0
+    drain_threshold_ratio: float = 1.0
+    """When fetched_count >= batch_size * drain_threshold_ratio, skip sleep
+    and immediately poll again ('drain mode')."""
+
+    # NOTIFY strategy (Postgres LISTEN/NOTIFY)
+    notify_channel: str = 'outbox_new_event'
+    notify_dsn: Optional[str] = None
+    """Optional asyncpg DSN for the LISTEN connection. If None, only in-process
+    `OutboxPoller.wake()` calls will trigger early polling."""
+
+    # Batch processing
     batch_size: int = 100
-    # Max attempts before a message is moved to FAILED.
-    max_attempts: int = 10
+    concurrent_workers: int = 1  # Number of parallel poller workers ()
+
+    # Retry configuration
+    max_retries: int = 3
+    retry_backoff_multiplier: float = 2.0
+    processing_timeout_seconds: int = 30
+
+    # Database optimizations
+    use_skip_locked: bool = True
+    use_read_replica: bool = False
+
+    # Archiving configuration
+    archive_after_days: int = 7
+    cleanup_archive_after_days: int = 30
+
+    # Monitoring
+    enable_metrics: bool = True
+    metrics_log_interval_seconds: int = 60
+
+    # Connection pool
+    db_pool_min_size: int = 5
+    db_pool_max_size: int = 20
+    db_query_timeout_ms: int = 5000
+
+    def __post_init__(self):
+        """Validate configuration."""
+        if self.min_poll_interval_ms > self.max_poll_interval_ms:
+            raise ValueError(
+                f'min_poll_interval_ms ({self.min_poll_interval_ms}) cannot be '
+                f'greater than max_poll_interval_ms ({self.max_poll_interval_ms})'
+            )
+
+        if self.initial_poll_interval_ms < self.min_poll_interval_ms:
+            self.initial_poll_interval_ms = self.min_poll_interval_ms
+
+        if self.initial_poll_interval_ms > self.max_poll_interval_ms:
+            self.initial_poll_interval_ms = self.max_poll_interval_ms
+
+        if self.batch_size < 1:
+            raise ValueError(f'batch_size must be at least 1, got {self.batch_size}')
+
+        if self.concurrent_workers < 1:
+            raise ValueError(
+                f'concurrent_workers must be at least 1, got {self.concurrent_workers}'
+            )
+
+        if self.poll_strategy not in ('fixed', 'adaptive', 'notify'):
+            raise ValueError(
+                f"poll_strategy must be one of 'fixed', 'adaptive', 'notify', "
+                f"got {self.poll_strategy!r}"
+            )
+
+        if self.fixed_poll_interval_ms < 1:
+            raise ValueError(
+                f'fixed_poll_interval_ms must be >= 1, got {self.fixed_poll_interval_ms}'
+            )
+
+        if self.backoff_growth_factor <= 1.0:
+            raise ValueError(
+                f'backoff_growth_factor must be > 1.0, got {self.backoff_growth_factor}'
+            )
 
 
 # --------------------------------------------------------------------------- #

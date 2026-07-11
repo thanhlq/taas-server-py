@@ -5,12 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+  # Core modules (workspace)
   'foundation',
   'ews',
   'http_fastapi',
   'db',
   'iam',
   'store_redis',
+  'messaging_faststream',
   'fastapi==0.136.1',
   'uvicorn==0.34.0',
   'redis==7.4.0',

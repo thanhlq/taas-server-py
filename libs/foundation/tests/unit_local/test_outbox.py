@@ -1,10 +1,9 @@
-"""Tests for `foundation.resilience.outbox`."""
+"""Tests for `foundation.resiliant.outbox`."""
 
 from __future__ import annotations
 
 import pytest
-
-from foundation.resilience.outbox import (
+from foundation.resiliant.outbox import (
     IOutboxPublisher,
     IOutboxRepository,
     OutboxConfig,
