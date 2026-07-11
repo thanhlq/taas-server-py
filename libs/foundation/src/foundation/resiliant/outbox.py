@@ -19,8 +19,6 @@ Layout:
 from __future__ import annotations
 
 import enum
-import time
-import uuid
 from collections.abc import Sequence
 from typing import Any, Literal, Optional, Protocol, runtime_checkable
 
@@ -263,94 +261,8 @@ class IOutboxService(Protocol):
 
 
 
-# --------------------------------------------------------------------------- #
-# Service
-# --------------------------------------------------------------------------- #
 
 
-class OutboxService:
-    """
-    Enqueue messages and run a relay tick that drains PENDING into the broker.
-    """
-
-    def __init__(
-        self,
-        repository: IOutboxRepository,
-        publisher: IOutboxPublisher,
-        config: OutboxConfig | None = None,
-    ) -> None:
-        self._repository = repository
-        self._publisher = publisher
-        self._config = config or OutboxConfig()
-
-    async def enqueue(
-        self,
-        topic: str,
-        payload: bytes,
-        *,
-        headers: dict[str, str] | None = None,
-        message_id: str | None = None,
-    ) -> OutboxMessage:
-        message = OutboxMessage(
-            id=message_id or str(uuid.uuid4()),
-            topic=topic,
-            payload=payload,
-            headers=headers or {},
-            status=OutboxStatus.PENDING,
-            created_at=time.time(),
-        )
-        await self._repository.enqueue(message)
-        return message
-
-    async def relay_once(self) -> int:
-        """Process one batch. Returns the number of messages successfully published."""
-        cfg = self._config
-        pending = await self._repository.fetch_pending(limit=cfg.batch_size)
-        published = 0
-        for message in pending:
-            attempts = message.attempts + 1
-            try:
-                await self._publisher.publish(message)
-            except Exception as exc:  # noqa: BLE001 - boundary
-                terminal = attempts >= cfg.max_retries
-                await self._repository.mark_failed(
-                    message.id,
-                    attempts=attempts,
-                    error=repr(exc),
-                    terminal=terminal,
-                )
-                continue
-            await self._repository.mark_published(
-                message.id, published_at=time.time()
-            )
-            published += 1
-        return published
-
-
-# --------------------------------------------------------------------------- #
-# Factory
-# --------------------------------------------------------------------------- #
-
-
-class OutboxFactory:
-    """Builds `OutboxService` instances."""
-
-    def __init__(
-        self,
-        repository: IOutboxRepository,
-        publisher: IOutboxPublisher,
-        config: OutboxConfig | None = None,
-    ) -> None:
-        self._repository = repository
-        self._publisher = publisher
-        self._config = config
-
-    def create_service(self, config: OutboxConfig | None = None) -> OutboxService:
-        return OutboxService(
-            repository=self._repository,
-            publisher=self._publisher,
-            config=config or self._config,
-        )
 
 
 __all__ = [

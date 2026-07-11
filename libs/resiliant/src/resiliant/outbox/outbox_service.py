@@ -20,6 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .outbox_repository import OutboxRepository
 
+# --------------------------------------------------------------------------- #
+# Outbox Service
+# --------------------------------------------------------------------------- #
+
 
 class OutboxService(IOutboxService, BaseService):
     """High-level API for saving events to the outbox.

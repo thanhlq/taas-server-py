@@ -8,6 +8,8 @@ The module is responsible for setting up the FastAPI app, including:
 from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
 
+from foundation.messaging.factory import MessagingFactory
+from foundation.messaging.types import IMessagingService
 import socketio
 from ews import conrrollers as ews_conrrollers
 from fastapi import FastAPI
@@ -15,20 +17,18 @@ from fastapi.concurrency import asynccontextmanager
 from foundation.cli import cli_print_info
 from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
-from foundation.facade.cache import ICacheService
 from foundation.http._websocket_redis_manager import build_websocket_redis_manager
 from foundation.http.base_app import AppConfig, BaseApiApplication
-from foundation.state.service_registry import register_service
 from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import iam_controllers
-from store_redis import RedisStore, create_redis_client
-
-from .bootstrap import root_path, settings
 
 # from messaging_kafka import initialize_messaging_service
 from messaging_faststream import initialize_messaging_service
+from store_redis import RedisCacheServiceFactory
+
+from .bootstrap import root_path, settings
 
 if TYPE_CHECKING:
     from foundation.observability.types import InstrumentSettings
@@ -75,10 +75,11 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         async def lifespan(application: FastAPI):
 
             # await initFastapiCache()
-            _cache_config = settings.app.get_cache_config()
-            _redis_client = create_redis_client(_cache_config.get_redis_config())
-            _redis_store = RedisStore(_redis_client)
-            register_service(ICacheService, _redis_store)
+            # _cache_config = settings.app.get_cache_config()
+            # _redis_client = create_redis_client(_cache_config.get_redis_config())
+            # _redis_store = RedisStore(_redis_client)
+            # register_service(ICacheService, _redis_store)
+            RedisCacheServiceFactory.create(settings.app.get_cache_config())
 
             _controllers = self.get_app_controllers()
             for controller in _controllers:

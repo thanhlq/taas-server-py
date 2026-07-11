@@ -24,6 +24,10 @@ from foundation.resiliant.outbox import OutboxConfig
 from resiliant.dlq import DLQRepository, DLQService
 from resiliant.outbox import OutboxRepository, OutboxService
 
+# --------------------------------------------------------------------------- #
+# Resiliant Factory
+# --------------------------------------------------------------------------- #
+
 
 class ResiliantFactory:
     """Create and wire resilience components (outbox and DLQ).
@@ -38,7 +42,7 @@ class ResiliantFactory:
     @staticmethod
     def logger() -> Logger:
         if ResiliantFactory._logger is None:
-            ResiliantFactory._logger = LogFactory().get_logger("ResiliantFactory")
+            ResiliantFactory._logger = LogFactory().get_logger('ResiliantFactory')
         return ResiliantFactory._logger
 
     # ----------------------------------------------------------------- outbox
@@ -46,7 +50,7 @@ class ResiliantFactory:
     def get_outbox_repository(config: OutboxConfig | None = None) -> OutboxRepository:
         """Return an :class:`OutboxRepository` built from ``config``."""
         if config is None:
-            ResiliantFactory.logger().debug("No OutboxConfig provided; using defaults.")
+            ResiliantFactory.logger().debug('No OutboxConfig provided; using defaults.')
             config = OutboxConfig()
         return OutboxRepository(config)
 
@@ -54,6 +58,7 @@ class ResiliantFactory:
     def get_outbox_service(config: OutboxConfig | None = None) -> OutboxService:
         """Return an :class:`OutboxService` wired to a fresh repository."""
         if config is None:
+            ResiliantFactory.logger().debug('No OutboxConfig provided; using defaults.')
             config = OutboxConfig()
         return OutboxService(
             config=config,
@@ -66,7 +71,7 @@ class ResiliantFactory:
         """Return a :class:`DLQRepository` built from ``config``."""
         if config is None:
             ResiliantFactory.logger().debug(
-                "No DeadLetterConfig provided; using defaults."
+                'No DeadLetterConfig provided; using defaults.'
             )
             config = DeadLetterConfig()
         return DLQRepository(config)

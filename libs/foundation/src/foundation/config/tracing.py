@@ -1,4 +1,5 @@
 from __future__ import annotations
+from foundation.config import CONFIG_PREFIX
 
 from dataclasses import dataclass, field
 
@@ -75,7 +76,7 @@ class TracingSettings:
     auto-detection."""
 
     OTEL_SERVICE_NAME: str = field(
-        default_factory=get_env('OTEL_SERVICE_NAME', 'ews')
+        default_factory=get_env(f'{CONFIG_PREFIX}_SERVICE_NAME', 'ews')
     )
     """🏷️ Service name for tracing identification"""
 

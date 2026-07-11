@@ -498,6 +498,11 @@ class IMessagingService[M](BaseService, ABC):
     """
 
     @abstractmethod
+    def is_consumer_enabled(self) -> bool:
+        """Return True if the consumer is enabled and running."""
+        ...
+
+    @abstractmethod
     def get_msg_encoder(self) -> IMessageEncoder:
         """Get the message encoder used for serialization."""
         pass

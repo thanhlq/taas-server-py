@@ -7,9 +7,9 @@ outbox and DLQ services. Definitions (config, enums, protocols) live in
 
 from .dlq import DLQRepository, DLQService
 from .outbox import OutboxRepository, OutboxService
-from .resiliant import ResiliantFactory
+from .resiliant_factory import ResiliantFactory
 
-resiliant = "⛰️"
+resiliant_factory = "⛰️"
 
 __all__ = [
     "ResiliantFactory",

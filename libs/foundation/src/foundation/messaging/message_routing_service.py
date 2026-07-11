@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 from foundation import BaseService
 from foundation.db.advanced_db_manager import MainDatabase
-from foundation.resiliant.outbox import OutboxService, IOutboxPublisher
+from foundation.resiliant.outbox import IOutboxPublisher, OutboxConfig, OutboxService
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
@@ -13,32 +13,29 @@ from .types import BaseEvent, IMessagingService
 @singleton
 class MessageRoutingService(BaseService, IOutboxPublisher):
     """
-    A wrapper service that abstracts message routing logic.
-    It decides whether to use outbox pattern or direct messaging based on configuration.
+    A service that routes messages either through the outbox pattern or directly to the messaging service based on configuration.
     """
 
     _messaging_service: Optional[IMessagingService]
     _outbox_service: Optional[OutboxService]
-    outbox_enabled: Optional[bool] = None
+    _outbox_config: OutboxConfig
 
     def __init__(
         self,
         messaging_service: Optional[IMessagingService] = None,
         outbox_service: Optional[OutboxService] = None,
-        outbox_enabled: Optional[bool] = None,
+        outbox_config: Optional[OutboxConfig] = None,
     ):
         super().__init__()
 
-        settings = get_app_settings()
-
-        if outbox_enabled is None:
-            outbox_enabled = settings.OUTBOX_ENABLE
+        if outbox_config is None:
+            outbox_config = OutboxConfig()
 
         self._messaging_service = messaging_service
         self._outbox_service = outbox_service
-        self.outbox_enabled = outbox_enabled
+        self._outbox_config = outbox_config
         self.logger.info(
-            '📦 MessageRoutingService initialized. Outbox enabled: %s', outbox_enabled
+            '📦 MessageRoutingService initialized. Outbox config: %s', outbox_config
         )
 
     @property

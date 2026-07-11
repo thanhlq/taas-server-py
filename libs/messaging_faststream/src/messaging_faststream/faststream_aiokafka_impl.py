@@ -185,6 +185,9 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingPubSubServ
         # Stats & processors
         # ------------------------------------------------------------------
         self.stats = MessageServiceStats(
+            uptime_seconds=0,
+            requests_handled=0,
+            errors_occurred=0,
             messages_published=0,
             messages_processed=0,
             messages_failed=0,
@@ -205,6 +208,10 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingPubSubServ
     # -----------------------------------------------------------------------
     # IMessagingService — introspection
     # -----------------------------------------------------------------------
+
+    def is_consumer_enabled(self) -> bool:
+        """Return True if the consumer is enabled and running."""
+        return self.messaging_config.kafka_consumer_enable and self.running
 
     def get_provider(self) -> MessagingProvider:
         """Return the messaging provider identifier."""
@@ -228,7 +235,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingPubSubServ
     # Lifecycle
     # -----------------------------------------------------------------------
 
-    async def start(self) -> None:
+    async def start(self):
         """Start producer and optionally consumer depending on settings."""
         await self.start_producer()
         if self.messaging_config.kafka_consumer_enable:
