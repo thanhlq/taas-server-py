@@ -36,6 +36,9 @@ dependencies = [
     "jinja2>=3.1.6",
     "fast-query-parsers>=1.0.3",
 
+    # Resilience
+    "tenacity>=9.0.0",
+
     # 📊 Monitoring & Logging with Opentelemetry
     # see: https://pypi.org/org/opentelemetry/
     # "opentelemetry-distro==0.54b0",

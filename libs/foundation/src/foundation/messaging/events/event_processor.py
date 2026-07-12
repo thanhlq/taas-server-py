@@ -4,17 +4,15 @@
 Centralized event processing with retry logic, error handling, and observability.
 Can be used by any pubsub implementation (Kafka, RabbitMQ, Redis, etc.)
 """
-from core.observability.error_reporter import report_error
-
 import time
 from typing import Optional
 
-from core.events.types import BaseEvent, ProcessingResult
-from core.observability.log_factory import LogFactory
-from core.observability.trace_factory import TracingFactory
-from core.safety.retry import Retry
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.types import BaseEvent, ProcessingResult
+from foundation.observability.log_factory import LogFactory
+from foundation.observability.tracing_factory import TracingFactory
+from foundation.resiliant.retry import Retry
 
-from ..utils.debug import debug_exception
 from .event_handler import BaseEventHandler, handlerRegistry
 from .event_processor_config import EventProcessorConfig
 
@@ -59,7 +57,7 @@ class EventProcessor:
             config: Event processor configuration. If None, uses default config from settings.
             stats: Optional statistics dict to track retries. If None, internal stats are used.
         """
-        self.config = config or EventProcessorConfig.from_settings()
+        self.config = config or EventProcessorConfig()
         self.logger = LogFactory().get_logger(self.__class__.__name__)
         self._internal_stats = {
             'messages_retried': 0,
@@ -187,7 +185,7 @@ class EventProcessor:
             else:
                 return await process_event_with_handler()
         except Exception as e:
-            debug_exception(e)
+            self.logger.debug('Event processing failed after retries: %r', e)
             # Exception already recorded in span
             # Return structured result for DLQ processing
             return ProcessingResult(
@@ -207,3 +205,12 @@ class EventProcessor:
     def get_config(self) -> EventProcessorConfig:
         """Get processor configuration."""
         return self.config
+
+    async def cleanup(self) -> None:
+        """Drain in-flight work before shutdown.
+
+        This processor handles each message synchronously within
+        :meth:`process_event`, so there is no background task pool to await —
+        the method exists to satisfy the messaging service's shutdown contract.
+        """
+        return None

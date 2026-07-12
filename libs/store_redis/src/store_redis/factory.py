@@ -2,7 +2,8 @@ from foundation.config.cache import CacheConfig
 from foundation.facade.cache import ICacheService
 from foundation.state import register_service
 
-from store_redis import RedisStore, create_redis_client
+from .redis_client import create_redis_client
+from .redis_store import RedisStore
 
 
 class RedisCacheServiceFactory:

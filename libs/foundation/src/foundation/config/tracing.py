@@ -1,10 +1,15 @@
 from __future__ import annotations
-from foundation.config import CONFIG_PREFIX
 
 from dataclasses import dataclass, field
 
 from foundation.observability.types import Tracing
 from foundation.utils.env_utils import get_env
+
+# Defined locally (like the other config modules, e.g. log.py / cache.py) to
+# avoid a circular import: ``foundation.config.__init__`` imports ``settings``,
+# which imports this module, so importing CONFIG_PREFIX from the package here
+# would run before the package namespace is populated.
+CONFIG_PREFIX = 'TAAS'
 
 
 @dataclass

@@ -1,17 +1,40 @@
 [project]
 name = "ews_worker"
 version = "0.1.0"
-description = "Add your description here"
+description = "EWS background worker: Kafka consumer, event processing, and outbox relay."
 readme = "README.md"
 authors = [
     { name = "Thanh LE", email = "thanhlq@msn.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    # Core modules (workspace)
+    'foundation',
+    'db',
+    'store_redis',
+    'messaging_faststream',
+    'resiliant',
+    # Runtime
+    'aiohttp>=3.9.0',
+    'redis==7.4.0',
+]
 
 [project.scripts]
-ews_worker = "ews_worker:main"
+ews_worker = "ews_worker.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "python-dotenv",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]

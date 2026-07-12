@@ -6,10 +6,8 @@ import time
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
-from core.common.lang import is_async_function
-from core.safety.types import IRetryPolicy
-
 from ...observability.log_factory import LogFactory
+from ..types import IRetryPolicy
 
 T = TypeVar('T')
 
@@ -388,7 +386,7 @@ class ExponentialBackoffRetry(IRetryPolicy):
         """
 
         def decorator_wrapper(func: Callable) -> Callable:
-            if is_async_function(func):
+            if asyncio.iscoroutinefunction(func):
 
                 @wraps(func)
                 async def async_wrapper(*args: Any, **kwargs: Any) -> Any:

@@ -5,7 +5,6 @@ Main worker application that orchestrates the Kafka consumer and handlers.
 
 Start command: EXTRA_CONFIG=ews-worker uv run python -m ews_worker.main --reload
 """
-from foundation.exceptions.report_error import report_error
 import asyncio
 import datetime
 import os
@@ -17,9 +16,9 @@ from typing import Optional
 
 from aiohttp import web
 from messaging_faststream import initialize_messaging_service
-from redis.asyncio.client import Redis
 
 from foundation.config import get_settings
+from foundation.exceptions.report_error import report_error
 from foundation.messaging.types import IMessagingService
 from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
@@ -85,32 +84,13 @@ class BaseWorker:
             settings, 'WORKER_LISTEN_PORT', 7000
         )
         self.outbox_poller_enabled: bool = getattr(
-            settings, 'OUTBOX_POLLER_ENABLE', False
+            settings, 'OUTBOX_POLLER_ENABLE', True
         )
         self.health_check_interval_seconds: int = getattr(
             settings, 'HEALTH_CHECK_INTERVAL', 10
         )
 
         self._health_check_task: Optional[asyncio.Task] = None
-
-        # ------------------------------------------------------------------
-        # REDIS Configuration (only when caching is enabled — the decorator
-        # no-ops when FastAPICache is initialized with enable=False)
-        # ------------------------------------------------------------------
-        self.redis: Optional[Redis] = None
-        if settings.app.get_cache_config().enabled:
-            self.redis = aioredis.from_url(
-                settings.REDIS_HOST, encoding='utf8', decode_responses=True
-            )
-            FastAPICache.init(
-                backend=RedisBackend(self.redis),
-                prefix=settings.API_CACHE_PREFIX,
-                expire=settings.CACHE_EXPIRES_AFTER,
-                key_builder=optional_user_scoped_key_builder,
-                enable=True,
-            )
-        else:
-            FastAPICache.init(backend=None, enable=False)
 
     def _owned_pending_tasks(self) -> list[asyncio.Task]:
         """Tasks owned by this worker (worker tasks + health check loop) still pending.
@@ -375,9 +355,6 @@ class BaseWorker:
         # Stop consumer (this will clean up consumer-specific resources)
         if self.messaging_service:
             await self.messaging_service.stop()
-
-        if self.redis:
-            await self.redis.close()
 
         # TODO: stop outbox poller here once implemented
 

@@ -1,22 +1,23 @@
-import datetime
-import logging
-from core.common.singleton import singleton
-from core.events.types import DlqEvent, EVENT_META_SERIALIZER_FIELD, EVENT_PAYLOAD_FIELD
-from core.messaging.sr import SchemaRegistryEncoder
 import dataclasses
+import datetime
 import json
-from typing import Any, Union, Optional, cast, get_args
-import msgspec
+import logging
+from typing import Any, Optional, Union, get_args
 
-# import msgpack
-from core.events import BaseEvent
-from core.messaging.types import (
+import msgspec
+from foundation.messaging.config.messaging_config import MessagingConfig
+from foundation.messaging.sr import SchemaRegistryEncoder
+from foundation.messaging.types import (
+    EVENT_META_SERIALIZER_FIELD,
+    EVENT_PAYLOAD_FIELD,
+    BaseEvent,
+    BaseSendableMessage,
+    DlqEvent,
     IMessageEncoder,
     MessageEncodingType,
     MessageFieldEncodingType,
-    BaseSendableMessage,
 )
-from core.messaging.utils.messaging_config import MessagingConfig
+from foundation.utils.singleton import singleton
 
 
 class MsgDecoderError(Exception):
