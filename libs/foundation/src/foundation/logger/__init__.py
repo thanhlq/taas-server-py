@@ -1,7 +1,9 @@
-""" All logging should use this module to get a logger, so that it will be configured correctly. """
+"""All logging should use this module to get a logger, so that it will be configured correctly."""
+
 import logging
 
 from ..observability.factory import LogFactory, logger
+from .debug import debug_exception, is_debug_mode, print_dict_pretty
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -9,4 +11,10 @@ def get_logger(name: str) -> logging.Logger:
     return LogFactory().get_logger(name)
 
 
-__all__ = ['get_logger', 'logger']
+__all__ = [
+    'get_logger',
+    'logger',
+    'debug_exception',
+    'print_dict_pretty',
+    'is_debug_mode',
+]

@@ -1,5 +1,5 @@
-from .exp_backoff_retry import ExponentialBackoffRetry
-from .retry_tenacity import TenacityRetry
+from ._exp_backoff_retry import ExponentialBackoffRetry
+from ._retry_tenacity import TenacityRetry
 
 """
 Export a default retry instance configured with sensible defaults for use across the application.

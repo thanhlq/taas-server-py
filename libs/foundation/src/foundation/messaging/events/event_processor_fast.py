@@ -5,29 +5,34 @@ Centralized event processing with retry logic, error handling, observability,
 and optional parallel execution for high-throughput scenarios.
 Can be used by any pubsub implementation (Kafka, RabbitMQ, Redis, etc.)
 """
-
 import asyncio
 import time
 from typing import TYPE_CHECKING, Any, Optional, Set, Union
 
-from core.conf.settings import get_app_settings
-from core.events.types import BaseEvent, ProcessingResult
-from core.observability.error_reporter import report_error
-from core.observability.log_factory import LogFactory
-from core.safety.retry import Retry
+from foundation.cli import cli
+from foundation.db.advanced_db_manager import MainDatabase
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.events.event_processor_settings import (
+    build_config_from_settings,
+)
+from foundation.messaging.types import BaseEvent, ProcessingResult
+from foundation.observability.factory import instrument
+from foundation.observability.log_factory import LogFactory
+from foundation.resiliant.dlq import DeadLetterConfig
+from foundation.resiliant.idempotency import (
+    IdempotencyConfig,
+    IdempotencyConflictError,
+    IdempotencyService,
+)
+from foundation.resiliant.retry import Retry
+from resiliant import DLQService
 
-from ..db.sa.db_manager import MainDBManager
-from ..messaging.idempotency import IdempotencyConfig, IdempotencyService
-from ..messaging.idempotency.types import DuplicateEventError
-from ..messaging.retry import DLQConfig, DLQService
-from ..observability.trace_factory import TracingFactory
-from ..utils.debug import debug_exception
 from .event_handler import BaseEventHandler, handlerRegistry
 from .event_processor_config import EventProcessorConfig
 from .event_processor_handler import execute_handler_with_tracing
 
 if TYPE_CHECKING:
-    from ..messaging.types import MessageServiceStats
+    from foundation.messaging.types import MessageServiceStats
 
 
 class EventProcessorFast:
@@ -78,7 +83,7 @@ class EventProcessorFast:
             idempotency_config: Optional idempotency configuration override. When omitted,
                            IdempotencyConfig.from_settings() is used if enable_idempotency=True.
         """
-        self.config = config or EventProcessorConfig.from_settings()
+        self.config = build_config_from_settings()
         self.logger = LogFactory().get_logger(self.__class__.__name__)
         self._internal_stats = {
             'messages_retried': 0,
@@ -97,39 +102,65 @@ class EventProcessorFast:
         self.processing_tasks: Set[asyncio.Task] = set()
 
         # DLQ support
-        self.session_factory: Any = (
-            session_factory
-            or MainDBManager.get_instance().session_factory()  # Callable that returns async session context manager
-        )
-        self.dlq_service: Optional[DLQService] = None
-        if self.config.enable_dlq:
-            dlq_config = DLQConfig.from_settings(get_app_settings())
-            self.dlq_service = DLQService(config=dlq_config)
+        self._dlq_service: Optional[DLQService] = None
 
         # Idempotency support
-        self.idempotency_service: Optional[IdempotencyService] = None
-        if self.config.enable_idempotency:
-            _idem_cfg = idempotency_config or IdempotencyConfig.from_settings(
-                get_app_settings()
-            )
-            self.idempotency_service = IdempotencyService(_idem_cfg)
+        self._idempotency_service: Optional[IdempotencyService] = None
 
-        if self.config.enable_dlq or self.config.enable_idempotency:
-            self.logger.info(
-                f'⚡ EventProcessorFast initialized '
-                f'dlq={self.config.enable_dlq} '
-                f'idempotency={self.config.enable_idempotency} '
-                f'parallel_execution={self.config.enable_parallel_execution} '
-                f'max_concurrent_tasks={self.config.max_concurrent_tasks}'
-            )
-        else:
-            self.logger.info(
-                f'⚡ EventProcessorFast initialized with parallel_execution='
-                f'{self.config.enable_parallel_execution}, '
-                f'max_concurrent_tasks={self.config.max_concurrent_tasks}'
-            )
 
-    @TracingFactory.instrument  # type ignore
+        cli_info: dict[str, Any] = {
+            'dlq': self.config.enable_dlq,
+            'idempotency': self.config.enable_idempotency,
+            'parallel_execution': self.config.enable_parallel_execution,
+            'parallel_max_concurrent_tasks': self.config.max_concurrent_tasks,
+            'max_concurrent_tasks': self.config.max_concurrent_tasks,
+            'retry_enabled': self.config.retry_enabled,
+            'retry_max_retries': self.config.max_retries,
+            'retry_backoff_ms': self.config.retry_backoff_ms,
+            'retry_exponential_base': self.config.retry_exponential_base,
+            'retry_max_delay_ms': self.config.retry_max_delay_ms,
+            'retry_wait_strategy': self.config.retry_wait_strategy,
+        }
+        cli.info_table(
+            title='EventProcessorFast Configuration',
+            data=cli_info,
+        )
+        self.logger.info(f'⚡ EventProcessorFast CLI info: {cli_info}')
+
+    @property
+    def session_factory(self) -> Any:
+        """Return the configured session factory for DLQ and idempotency operations."""
+        return MainDatabase.get_instance().session_factory()
+
+    @property
+    def dlq_service(self) -> Optional[DLQService]:
+        if not self.config.enable_dlq:
+            raise RuntimeError(
+                'DLQ is not enabled in the configuration. '
+                'Set enable_dlq=True to use DLQ features.'
+            )
+        if self._dlq_service is None:
+            self._dlq_service = DLQService(config=DeadLetterConfig())
+        return self._dlq_service
+
+    @property
+    def idempotency_service(self) -> Optional[IdempotencyService]:
+        if not self.config.enable_idempotency:
+            raise RuntimeError(
+                'Idempotency is not enabled in the configuration. '
+                'Set enable_idempotency=True to use idempotency features.'
+            )
+        if self._idempotency_service is None:
+            idempotency_config = (
+                IdempotencyConfig.from_settings()
+                if self.config.enable_idempotency
+                else None
+            )
+            self._idempotency_service = IdempotencyService(config=idempotency_config)
+        return self._idempotency_service
+
+
+    @instrument
     async def process_event(
         self,
         event: BaseEvent,
@@ -206,10 +237,10 @@ class EventProcessorFast:
                 )
             return result
 
-        except DuplicateEventError as dup:
+        except IdempotencyConflictError as dup:
             # Event was already successfully processed — skip silently.
             self.logger.info(
-                f'Duplicate event skipped idempotency_key={dup.idempotency_key} '
+                f'Duplicate event skipped idempotency_key={dup.key} '
                 f'event_id={event.event_id} '
                 f'handler={handler_name}'
             )
@@ -222,7 +253,7 @@ class EventProcessorFast:
 
         except Exception as e:
             if event.retry_count == 0:
-                debug_exception(e)
+                report_error(e)
             else:
                 # Shorter error message for retries to avoid log bloat, since the full exception is already recorded in the span.
                 self.logger.error(

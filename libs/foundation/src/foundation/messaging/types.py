@@ -498,6 +498,11 @@ class IMessagingService[M](BaseService, ABC):
     """
 
     @abstractmethod
+    def get_messaging_encoding_type(self) -> str:
+        """Return the configured message encoding type (e.g., json, msgpack, avro)."""
+        ...
+
+    @abstractmethod
     def is_consumer_enabled(self) -> bool:
         """Return True if the consumer is enabled and running."""
         ...

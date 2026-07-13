@@ -1,11 +1,20 @@
 import functools
 from typing import Any, Callable
 
-from cachetools import TTLCache, keys
+from cachetools import LRUCache, TTLCache, cached, keys
+
 from foundation.config import get_settings
 from foundation.config.settings import Settings
 
 _T = Any
+
+def lru_cache_ignore_1st_arg(func):
+    @functools.wraps(func)
+    @cached(cache=LRUCache(maxsize=1000), key=lambda *args: keys.hashkey(args[1:]))
+    def wrapper(*args):
+        return func(*args)
+
+    return wrapper
 
 def a_ttl_cache_ignore_1st_arg(func=None, *, size: int = 0, ttl: int = 0) -> Any:
     """

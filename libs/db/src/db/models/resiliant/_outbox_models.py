@@ -24,6 +24,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from db.models.config import RESILIANT_TABLE_PREFIX
+
 # from .types import OutboxStatus
 
 
@@ -48,7 +50,7 @@ class OutboxEventTable(UUIDv7AuditBase):
         - idx_outbox_status_retry: Efficient retry logic
     """
 
-    __tablename__ = 'outbox_events'
+    __tablename__ = f'{RESILIANT_TABLE_PREFIX}outbox_events'
 
     # Event identification
     event_id = Column(String(64), nullable=False, index=True)

@@ -110,6 +110,10 @@ class BaseMessagingService(IMessagingService):
     def get_msg_encoder(self) -> IMessageEncoder:
         return self.msg_encoder
 
+    def get_messaging_encoding_type(self) -> str:
+        """Return the configured message encoding type (e.g., json, msgpack, avro)."""
+        return self.messaging_config.message_encoding
+
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
     ) -> 'IMessagingService':

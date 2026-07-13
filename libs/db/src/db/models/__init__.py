@@ -59,6 +59,7 @@ from .resiliant import (
     DLQEventTable,
     OutboxEventArchiveTable,
     OutboxEventTable,
+    ProcessedEventTable,
 )
 
 # from sqlalchemy.orm import DeclarativeBase
@@ -87,6 +88,7 @@ __all__ = [
     'DLQEventArchiveTable',
     'OutboxEventTable',
     'OutboxEventArchiveTable',
+    'ProcessedEventTable',
 
     # CRM
     'CrmAccount',

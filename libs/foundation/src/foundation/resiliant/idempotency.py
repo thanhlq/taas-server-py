@@ -28,7 +28,6 @@ import msgspec
 
 from foundation.serialization import BaseEntity
 
-
 # --------------------------------------------------------------------------- #
 # Exceptions
 # --------------------------------------------------------------------------- #
@@ -87,12 +86,96 @@ class IdempotencyRecord(BaseEntity):
 
 
 class IdempotencyConfig(msgspec.Struct, frozen=True):
-    """Policy for the idempotency service."""
+    """
+    Configuration for the idempotency pattern.
+
+    Attributes
+    ----------
+    key_separator:
+        Character used when joining handler_name + event_id into a
+        composite idempotency key.  Change only if your event IDs or
+        handler names can themselves contain the default colon.
+
+    ttl_days:
+        How many days a ``processed_events`` row is retained before the
+        cleanup job deletes it.  Must be long enough that replayed events
+        (e.g. from Kafka offset resets) are still caught — 30 days covers
+        almost all realistic at-least-once replay windows.
+
+    cleanup_batch_size:
+        Maximum rows deleted per cleanup run.  Keeps individual DELETE
+        statements short to avoid long-running locks.
+
+    enable_metrics:
+        Toggle in-memory counters for processed / duplicate / error counts.
+
+    log_duplicates:
+        When True (default) a WARNING is emitted for every duplicate key
+        detected.  Set to False in very high-throughput paths where
+        duplicates are expected and the log volume is undesirable.
+
+    strict_mode:
+        When True, ``DuplicateEventError`` is raised instead of silently
+        returning on duplicate.  The ``guard()`` context manager always
+        exposes this via its own ``raise_on_duplicate`` parameter, which
+        takes precedence.
+
+    db_query_timeout_ms:
+        Advisory timeout for idempotency DB queries.  Keeps an unhealthy
+        database from stalling event consumers indefinitely.
+
+    Example
+    -------
+    >>> config = IdempotencyConfig(ttl_days=60, strict_mode=True)
+    """
 
     # Logical bucket; backends typically use it as a key prefix.
     namespace: str = "default"
-    # How long a completed response is retained.
-    ttl_seconds: int = 24 * 60 * 60
+    # Key construction
+    key_separator: str = ':'
+    """Separator used to join handler_name and event_id into a composite key."""
+
+    # Retention & cleanup
+    ttl_days: int = 30
+    """Rows older than this are eligible for deletion by the cleanup job."""
+
+    cleanup_batch_size: int = 500
+    """Maximum rows deleted per cleanup run to avoid long locks."""
+
+    # Behaviour flags
+    enable_metrics: bool = True
+    """Collect in-process counters for processed / duplicate / error events."""
+
+    log_duplicates: bool = True
+    """Emit a WARNING log entry each time a duplicate key is detected."""
+
+    strict_mode: bool = False
+    """
+    Raise DuplicateEventError instead of silently returning on duplicate.
+
+    The context manager's own ``raise_on_duplicate`` parameter takes
+    precedence over this setting when both are provided.
+    """
+
+    # Performance
+    db_query_timeout_ms: int = 3000
+    """Advisory per-query timeout in milliseconds."""
+
+    @property
+    def ttl_seconds(self) -> int:
+        """``ttl_days`` expressed in seconds for datetime arithmetic."""
+        return self.ttl_days * 86_400
+
+    def __post_init__(self) -> None:
+        if self.ttl_days < 1:
+            raise ValueError(f'ttl_days must be >= 1, got {self.ttl_days}')
+        if self.cleanup_batch_size < 1:
+            raise ValueError(
+                f'cleanup_batch_size must be >= 1, got {self.cleanup_batch_size}'
+            )
+        if not self.key_separator:
+            raise ValueError('key_separator cannot be empty')
+
     # How long a reservation may stay IN_PROGRESS before being considered stale.
     in_progress_ttl_seconds: int = 60
 

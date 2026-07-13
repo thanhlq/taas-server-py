@@ -19,15 +19,17 @@ A domain hooks in by providing two things:
    Kafka topic (or returns ``None`` if the event is not routable here).
    This is the only domain-specific knowledge these functions need.
 """
+
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterable, Mapping
 from typing import cast
 
-from core.conf import get_app_settings
-from core.events.event_handler import EventStep, HandlerRegistry, handlerRegistry
-from core.events.types import BaseEvent
-from core.messaging.types import IMessagingService, MessageEncodingType
+from ..types import BaseEvent, IMessagingService, MessageEncodingType
+from .event_handler import EventStep, HandlerRegistry, handlerRegistry
+
+logger = logging.getLogger(__name__)
 
 FlowMap = Mapping[str, Iterable[EventStep]]
 """``{flow_name: (EventStep, EventStep, …)}`` — the shape of a domain's
@@ -88,7 +90,11 @@ def register_schema_registry_schemas(
     topic_for_event: TopicForEvent,
 ) -> None:
     """Register Avro schemas for every topic referenced by ``flows``."""
-    if get_app_settings().MESSAGE_ENCODING != MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+    # FIXME
+    if (
+        msg_service.get_messaging_encoding_type()
+        != MessageEncodingType.SCHEMA_REGISTRY_AVRO
+    ):
         return
 
     for topic, event_cls in topic_to_schema_event(flows, topic_for_event).items():
@@ -120,15 +126,17 @@ def register_handlers_from_flows(
         registry: Handler registry to populate. Defaults to the global one.
         domain_label: Human-readable label used in disable-warning logs.
     """
-    if not get_app_settings().KAFKA_CONSUMER_ENABLE:
-        print(
-            f'⚠️ Kafka consumer is disabled. {domain_label} event handlers '
+    if not msg_service.is_consumer_enabled():
+        logger.info(
+            f'🎯 ⚠️ Kafka consumer is disabled. {domain_label} event handlers '
             f'will not be registered.'
         )
         return
 
     register_schema_registry_schemas(
-        msg_service, flows=flows, topic_for_event=topic_for_event,
+        msg_service,
+        flows=flows,
+        topic_for_event=topic_for_event,
     )
 
     # Register all the event classes in the flow definition for event deserialization/reconstruction of event class

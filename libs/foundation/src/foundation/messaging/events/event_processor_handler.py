@@ -4,20 +4,16 @@ Event Processor Handler Execution
 Contains the core handler execution logic with retry, tracing, and error handling.
 Extracted for cleaner code organization and reusability.
 """
-from core.observability.error_reporter import report_error
-
 import time
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Optional, Union
 
-from core.events.types import BaseEvent, ProcessingResult
-from core.observability.trace_factory import TracingFactory
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.types import BaseEvent, MessageServiceStats, ProcessingResult
+from foundation.observability.tracing_factory import TracingFactory
 
 from .event_handler import BaseEventHandler
 from .event_processor_config import EventProcessorConfig
-
-if TYPE_CHECKING:
-    from ..messaging.types import MessageServiceStats
 
 
 async def execute_handler_with_tracing(

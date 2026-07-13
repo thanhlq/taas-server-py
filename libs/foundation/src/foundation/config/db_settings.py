@@ -89,7 +89,7 @@ class DatabaseSettings:
     """
     URL: str = _env_field(
         'DATABASE_URL',
-        'postgresql+psycopg://postgres:Pa55w0rd@localhost:15432/ews_db',
+        'postgresql+psycopg://postgres:Pa55w0rd@localhost:5432/ews_db',
     )
     """SQLAlchemy Database URL."""
 

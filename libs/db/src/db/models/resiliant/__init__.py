@@ -1,4 +1,5 @@
 from ._dlq_models import DLQEventArchiveTable, DLQEventTable
+from ._idempotency_models import ProcessedEventTable
 from ._outbox_models import OutboxEventArchiveTable, OutboxEventTable, OutboxStatus
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     'OutboxEventArchiveTable',
     'DLQEventTable',
     'DLQEventArchiveTable',
+    'ProcessedEventTable',
 ]

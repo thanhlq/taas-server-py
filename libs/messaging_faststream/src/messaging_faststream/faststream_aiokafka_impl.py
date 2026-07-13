@@ -97,6 +97,7 @@ from foundation.messaging.types import (
     DlqEvent,
     IMessageEncoder,
     IMessagingPubSubService,
+    MessageEncodingType,
     MessageHandler,
     MessageServiceStats,
     MessagingProvider,

@@ -5,7 +5,6 @@ Centralized configuration for event processing, retry logic, and DLQ behavior.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -64,42 +63,6 @@ class EventProcessorConfig:
     # Parallel execution configuration
     enable_parallel_execution: bool = False
     max_concurrent_tasks: int = 10
-
-    @classmethod
-    def from_settings(cls, settings: Optional[object] = None) -> 'EventProcessorConfig':
-        """
-        Create configuration from application settings.
-
-        Args:
-            settings: Optional settings object. If None, uses get_app_settings()
-
-        Returns:
-            EventProcessorConfig instance
-
-        Example:
-            >>> config = EventProcessorConfig.from_settings()
-            >>> config = EventProcessorConfig.from_settings(custom_settings)
-        """
-        if settings is None:
-            settings = get_app_settings()
-
-        return cls(
-            retry_enabled=getattr(settings, 'RETRY_ENABLED', True),
-            max_retries=getattr(settings, 'MAX_RETRIES', 1),
-            retry_backoff_ms=getattr(settings, 'RETRY_BACKOFF_MS', 1000),
-            retry_exponential_base=getattr(settings, 'RETRY_EXPONENTIAL_BASE', 2.0),
-            retry_max_delay_ms=getattr(settings, 'RETRY_MAX_DELAY_MS', 60000),
-            retry_wait_strategy=getattr(settings, 'RETRY_WAIT_STRATEGY', 'exponential'),
-            enable_dlq=getattr(settings, 'ENABLE_DLQ', True),
-            enable_idempotency=getattr(settings, 'ENABLE_IDEMPOTENCY', False),
-            enable_tracing=getattr(settings, 'ENABLE_TRACING', True),
-            enable_metrics=getattr(settings, 'ENABLE_METRICS', True),
-            retry_policy_name=getattr(settings, 'RETRY_POLICY_NAME', 'event_processor'),
-            enable_parallel_execution=getattr(
-                settings, 'ENABLE_PARALLEL_EXECUTION', False
-            ),
-            max_concurrent_tasks=getattr(settings, 'MAX_CONCURRENT_TASKS', 10),
-        )
 
     def get_retry_initial_delay_seconds(self) -> float:
         """

@@ -1,10 +1,12 @@
-from core.messaging.types import IMessagingService, IMessagingDecorators
-from ..services.service_registry import get_service_locator
-from .outbox.types import IOutboxService
+from typing import Any
+
+from foundation.state import register_service
+
 from .message_routing_service import MessageRoutingService
 from .types import (
     IMessagingPubSubService,
     IMessagingQueueService,
+    IMessagingService,
     IMessagingStreamService,
     MessagingType,
 )
@@ -13,12 +15,12 @@ from .types import (
 class MessagingFactory:
     """A convenient factory for getting of messaging services."""
 
-    decorator: IMessagingDecorators
+    # decorator: IMessagingDecorators
 
     @staticmethod
-    def init_factory(messaging_service: IMessagingService, decorator: IMessagingDecorators):
-        get_service_locator().register(IMessagingService, messaging_service)
-        MessagingFactory.decorator = decorator
+    def init_factory(messaging_service: IMessagingService, decorator: Any):
+        register_service(IMessagingService, messaging_service)
+        # MessagingFactory.decorator = decorator
         """Initialize the factory by registering messaging services in the service locator."""
         # Register messaging services in the service locator
         # This is where you would instantiate and register your concrete messaging service implementations

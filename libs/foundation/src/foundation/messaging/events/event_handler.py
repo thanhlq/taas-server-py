@@ -3,16 +3,14 @@
 
 Handler registry and base classes for event processing.
 """
-from foundation.observability.log_factory import LogFactory
-from dataclasses import dataclass, field
-
 import dataclasses
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from logging import Logger
-from typing import Dict, Optional, TypeVar, cast, Any
+from typing import Dict, Optional, TypeVar, cast
 
 from foundation.messaging.types import BaseEvent, ProcessingResult
-
+from foundation.observability.log_factory import LogFactory
 
 EventT = TypeVar('EventT', bound=BaseEvent)
 
@@ -92,23 +90,23 @@ class BaseEventHandler[EventT](ABC):
         return self.event_class(**data)
 
     async def handle(self, event: BaseEvent, **kwargs) -> ProcessingResult:
-        metadata = EventMetadata(
-            event_id=event.event_id,
-            event_type=event.event_type,
-            timestamp=event.timestamp,
-            retry_count=event.retry_count,
-            source=event.source,
-            correlation_id=event.correlation_id,
-            user_id=event.user_id,
-            handler_name=self.handler_name,
-        )
+        # metadata = EventMetadata(
+        #     event_id=event.event_id,
+        #     event_type=event.event_type,
+        #     timestamp=event.timestamp,
+        #     retry_count=event.retry_count,
+        #     source=event.source,
+        #     correlation_id=event.correlation_id,
+        #     user_id=event.user_id,
+        #     handler_name=self.handler_name,
+        # )
         return await self.handle_event(
-            event=self.get_event(event), metadata=metadata, **kwargs
+            event=self.get_event(event), **kwargs
         )
 
     @abstractmethod
     async def handle_event(
-        self, event: EventT, metadata: EventMetadata, **kwargs
+        self, event: EventT, **kwargs
     ) -> ProcessingResult:
         """
         Handle the event.

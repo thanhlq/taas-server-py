@@ -24,6 +24,8 @@ from foundation.worker.base_worker import BaseWorker
 from messaging_faststream import initialize_messaging_service
 from store_redis import RedisCacheServiceFactory
 
+from libs.foundation.src.foundation.db.advanced_db_manager import AdvancedDBManager
+
 from .bootstrap import settings
 
 # Demo topic the worker subscribes to. A publisher (e.g. the API, or the
@@ -118,7 +120,7 @@ class EwsWorker(BaseWorker):
 
         outbox = ResiliantFactory.get_outbox_service()
         repo = outbox.repository
-        db = MainDatabase.get_instance()
+        db: AdvancedDBManager = MainDatabase.get_instance()
         interval_seconds = 3.0
 
         while True:

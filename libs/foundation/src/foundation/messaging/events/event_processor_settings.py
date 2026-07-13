@@ -7,8 +7,10 @@ Centralized configuration for event processing, retry logic, and DLQ behavior.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from foundation.messaging.events.event_processor_config import EventProcessorConfig
+from foundation.utils.cache import lru_cache_ignore_1st_arg
 from foundation.utils.env_utils import get_env
 
 
@@ -85,6 +87,7 @@ class EventProcessorSettings:
     )
     """Maximum number of concurrently executed tasks."""
 
+    @lru_cache_ignore_1st_arg
     def get_config(self) -> EventProcessorConfig:
         """Return the :class:`EventProcessorConfig`.
 
@@ -108,6 +111,7 @@ class EventProcessorSettings:
         )
 
 
+@lru_cache
 def build_config_from_settings(
     settings: EventProcessorSettings | None = None,
 ) -> EventProcessorConfig:

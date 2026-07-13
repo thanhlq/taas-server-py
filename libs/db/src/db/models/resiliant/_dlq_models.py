@@ -4,7 +4,6 @@ DLQ database models.
 This module defines the SQLAlchemy models for storing failed events
 in the Dead Letter Queue (DLQ) tables.
 """
-
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -22,6 +21,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+
+from db.models.config import RESILIANT_TABLE_PREFIX
 
 
 class DLQEventTable(UUIDv7AuditBase):
@@ -64,7 +65,7 @@ class DLQEventTable(UUIDv7AuditBase):
         events to DLQEventArchiveTable.
     """
 
-    __tablename__ = 'dlq_events'
+    __tablename__ = f'{RESILIANT_TABLE_PREFIX}dlq_events'
 
     # Event identification
     event_id = Column(
@@ -313,7 +314,7 @@ class DLQEventArchiveTable(UUIDv7AuditBase):
         not be modified, only queried for analysis and audit purposes.
     """
 
-    __tablename__ = 'dlq_events_archive'
+    __tablename__ = f'{RESILIANT_TABLE_PREFIX}dlq_events_archive'
 
     event_id = Column(String(64), nullable=False)
     event_type = Column(String(255), nullable=False)
