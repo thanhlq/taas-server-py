@@ -58,6 +58,7 @@ _RESILIANT_TABLES = (
     "outbox_events",
     "dlq_events",
     "dlq_events_archive",
+    "resiliant_processed_events",
 )
 
 

@@ -19,9 +19,11 @@ from logging import Logger
 
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.dlq import DeadLetterConfig
+from foundation.resiliant.idempotency import IdempotencyConfig
 from foundation.resiliant.outbox import OutboxConfig
 
 from resiliant.dlq import DLQRepository, DLQService
+from resiliant.idempotency import IdempotencyRepository, IdempotencyService
 from resiliant.outbox import OutboxRepository, OutboxService
 
 # --------------------------------------------------------------------------- #
@@ -84,4 +86,32 @@ class ResiliantFactory:
         return DLQService(
             config=config,
             repository=ResiliantFactory.get_dlq_repository(config),
+        )
+
+    # ------------------------------------------------------------ idempotency
+    @staticmethod
+    def get_idempotency_repository(
+        config: IdempotencyConfig | None = None,
+    ) -> IdempotencyRepository:
+        """Return an :class:`IdempotencyRepository` built from ``config``."""
+        if config is None:
+            ResiliantFactory.logger().debug(
+                'No IdempotencyConfig provided; using defaults.'
+            )
+            config = IdempotencyConfig()
+        return IdempotencyRepository(config)
+
+    @staticmethod
+    def get_idempotency_service(
+        config: IdempotencyConfig | None = None,
+    ) -> IdempotencyService:
+        """Return an :class:`IdempotencyService` wired to a fresh repository."""
+        if config is None:
+            ResiliantFactory.logger().debug(
+                'No IdempotencyConfig provided; using defaults.'
+            )
+            config = IdempotencyConfig()
+        return IdempotencyService(
+            config=config,
+            repository=ResiliantFactory.get_idempotency_repository(config),
         )

@@ -1,127 +1,132 @@
 """
-Idempotency primitives.
+Idempotency primitive.
 
-The idempotency pattern guarantees that retried or duplicated requests that
-share the same idempotency key produce the same observable result and the
-underlying side-effect runs at most once.
+The idempotency pattern guarantees that an at-least-once event delivery
+system processes the business side-effect of a given event **at most once**
+per handler. Two workers that receive the same message are protected by a
+database-level uniqueness constraint (PostgreSQL
+``INSERT … ON CONFLICT (idempotency_key) DO NOTHING``): exactly one insert
+wins, the rest observe a duplicate.
 
-Layout:
+Layout
+------
+* ``IdempotencyStatus``   - lifecycle state recorded for a key
+* ``DuplicateEventError`` - raised (strict mode) when a duplicate is seen
+* ``IdempotencyConfig``   - policy (key format, TTL, cleanup, behaviour flags)
+* ``IIdempotencyService`` - application-facing contract
 
-* `IdempotencyStatus`      - lifecycle state of a record
-* `IdempotencyRecord`      - persisted state for a single key
-* `IdempotencyConfig`      - policy (namespace, TTLs)
-* `IIdempotencyRepository` - storage protocol (pluggable backend)
-* `IdempotencyService`     - orchestrates reserve -> execute -> complete
-* `IdempotencyFactory`     - DI helper to build a service from a repository
-* Exceptions               - `IdempotencyConflictError`, `IdempotencyInProgressError`
+The concrete, database-backed implementation lives in the ``resiliant``
+library (``resiliant.idempotency``) and is wired through ``ResiliantFactory``.
+The DB model lives in ``db.models.resiliant`` (``ProcessedEventTable``).
+
+Session/return types on the service contract are intentionally loose
+(``Any``) so this definitions module stays free of any persistence-layer
+import — mirroring the ``dlq`` and ``outbox`` definitions in this package.
 """
 
 from __future__ import annotations
 
-import enum
-import hashlib
-import time
-from collections.abc import Awaitable, Callable
-from typing import Protocol, runtime_checkable
+from contextlib import AbstractAsyncContextManager
+from enum import StrEnum
+from typing import Any, Optional, Protocol, runtime_checkable
 
 import msgspec
 
-from foundation.serialization import BaseEntity
+# --------------------------------------------------------------------------- #
+# Status
+# --------------------------------------------------------------------------- #
+
+
+class IdempotencyStatus(StrEnum):
+    """
+    Lifecycle state of a recorded idempotency key.
+
+    Only a single terminal state exists today: a key is recorded once its
+    handler completes successfully. If a future implementation grows a
+    reservation/expiry lifecycle the enum can gain more members without
+    breaking callers that only branch on ``PROCESSED``.
+    """
+
+    PROCESSED = 'processed'
+    """Event was successfully processed — do not reprocess."""
+
 
 # --------------------------------------------------------------------------- #
 # Exceptions
 # --------------------------------------------------------------------------- #
 
 
-class IdempotencyError(Exception):
-    """Base class for idempotency errors."""
+class DuplicateEventError(Exception):
+    """
+    Raised by the idempotency guard when a duplicate event is detected.
 
+    Callers that want to silently skip duplicates should leave
+    ``strict_mode``/``raise_on_duplicate`` off (the default). Callers that
+    treat a duplicate as a hard error should let this propagate.
 
-class IdempotencyInProgressError(IdempotencyError):
-    """Raised when a concurrent request for the same key is still running."""
+    Attributes:
+        idempotency_key: The key that was already processed.
+        processed_at:    When the original processing was recorded (ISO
+                         string), when known.
+    """
 
-    def __init__(self, key: str) -> None:
-        super().__init__(f"Request for idempotency key {key!r} is in progress")
-        self.key = key
-
-
-class IdempotencyConflictError(IdempotencyError):
-    """Raised when the same key is reused with a different request payload."""
-
-    def __init__(self, key: str) -> None:
+    def __init__(
+        self, idempotency_key: str, processed_at: Optional[str] = None
+    ) -> None:
+        self.idempotency_key = idempotency_key
+        self.processed_at = processed_at
         super().__init__(
-            f"Idempotency key {key!r} was reused with a different request payload"
+            f"Duplicate event detected — key '{idempotency_key}' already processed"
+            + (f' at {processed_at}' if processed_at else '')
         )
-        self.key = key
 
 
 # --------------------------------------------------------------------------- #
-# Data
+# Config
 # --------------------------------------------------------------------------- #
-
-
-class IdempotencyStatus(enum.StrEnum):
-    """Lifecycle state of an idempotency record."""
-
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-class IdempotencyRecord(BaseEntity):
-    """
-    Persisted state associated with a single idempotency key.
-
-    `response` is opaque bytes so the storage layer stays serializer-agnostic.
-    `fingerprint` is an optional digest of the request payload used to detect
-    accidental key reuse with a different payload.
-    """
-
-    key: str
-    status: IdempotencyStatus
-    created_at: float
-    completed_at: float | None = None
-    fingerprint: str | None = None
-    response: bytes | None = None
 
 
 class IdempotencyConfig(msgspec.Struct, frozen=True):
     """
     Configuration for the idempotency pattern.
 
+    Every tunable lives here so handlers never scatter magic numbers. The
+    struct is frozen (immutable) so a single config instance can be shared
+    safely across services and workers.
+
     Attributes
     ----------
     key_separator:
-        Character used when joining handler_name + event_id into a
-        composite idempotency key.  Change only if your event IDs or
-        handler names can themselves contain the default colon.
+        Character used when joining ``handler_name`` + ``event_id`` into a
+        composite idempotency key. Change only if your event IDs or handler
+        names can themselves contain the default colon.
 
     ttl_days:
         How many days a ``processed_events`` row is retained before the
-        cleanup job deletes it.  Must be long enough that replayed events
-        (e.g. from Kafka offset resets) are still caught — 30 days covers
+        cleanup job deletes it. Must be long enough that replayed events
+        (e.g. from a Kafka offset reset) are still caught — 30 days covers
         almost all realistic at-least-once replay windows.
 
     cleanup_batch_size:
-        Maximum rows deleted per cleanup run.  Keeps individual DELETE
+        Maximum rows deleted per cleanup run. Keeps individual DELETE
         statements short to avoid long-running locks.
 
     enable_metrics:
-        Toggle in-memory counters for processed / duplicate / error counts.
+        Toggle the in-process counters for processed / duplicate / error
+        events exposed on the service.
 
     log_duplicates:
-        When True (default) a WARNING is emitted for every duplicate key
-        detected.  Set to False in very high-throughput paths where
+        When ``True`` (default) a WARNING is emitted for every duplicate key
+        detected. Set to ``False`` on very high-throughput paths where
         duplicates are expected and the log volume is undesirable.
 
     strict_mode:
-        When True, ``DuplicateEventError`` is raised instead of silently
-        returning on duplicate.  The ``guard()`` context manager always
-        exposes this via its own ``raise_on_duplicate`` parameter, which
-        takes precedence.
+        When ``True``, ``DuplicateEventError`` is raised instead of silently
+        skipping on duplicate. The ``guard()`` context manager exposes its own
+        ``raise_on_duplicate`` parameter, which takes precedence per-call.
 
     db_query_timeout_ms:
-        Advisory timeout for idempotency DB queries.  Keeps an unhealthy
+        Advisory timeout for idempotency DB queries. Keeps an unhealthy
         database from stalling event consumers indefinitely.
 
     Example
@@ -129,8 +134,6 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
     >>> config = IdempotencyConfig(ttl_days=60, strict_mode=True)
     """
 
-    # Logical bucket; backends typically use it as a key prefix.
-    namespace: str = "default"
     # Key construction
     key_separator: str = ':'
     """Separator used to join handler_name and event_id into a composite key."""
@@ -150,23 +153,15 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
     """Emit a WARNING log entry each time a duplicate key is detected."""
 
     strict_mode: bool = False
-    """
-    Raise DuplicateEventError instead of silently returning on duplicate.
-
-    The context manager's own ``raise_on_duplicate`` parameter takes
-    precedence over this setting when both are provided.
-    """
+    """Raise DuplicateEventError instead of silently returning on duplicate."""
 
     # Performance
     db_query_timeout_ms: int = 3000
     """Advisory per-query timeout in milliseconds."""
 
-    @property
-    def ttl_seconds(self) -> int:
-        """``ttl_days`` expressed in seconds for datetime arithmetic."""
-        return self.ttl_days * 86_400
-
     def __post_init__(self) -> None:
+        # Validate eagerly so a misconfiguration fails at construction time
+        # rather than on the hot path.
         if self.ttl_days < 1:
             raise ValueError(f'ttl_days must be >= 1, got {self.ttl_days}')
         if self.cleanup_batch_size < 1:
@@ -176,235 +171,155 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
         if not self.key_separator:
             raise ValueError('key_separator cannot be empty')
 
-    # How long a reservation may stay IN_PROGRESS before being considered stale.
-    in_progress_ttl_seconds: int = 60
+    @property
+    def ttl_seconds(self) -> int:
+        """``ttl_days`` expressed in seconds for datetime arithmetic."""
+        return self.ttl_days * 86_400
+
+    @classmethod
+    def from_settings(cls, settings: Any) -> 'IdempotencyConfig':
+        """
+        Build config from an application settings object.
+
+        Falls back gracefully when settings attributes are absent so that
+        adding idempotency to an existing service only requires the settings
+        keys you actually want to override.
+
+        Expected attribute names (all optional):
+            IDEMPOTENCY_TTL_DAYS              int  = 30
+            IDEMPOTENCY_CLEANUP_BATCH_SIZE    int  = 500
+            IDEMPOTENCY_ENABLE_METRICS        bool = True
+            IDEMPOTENCY_LOG_DUPLICATES        bool = True
+            IDEMPOTENCY_STRICT_MODE           bool = False
+            IDEMPOTENCY_DB_QUERY_TIMEOUT_MS   int  = 3000
+        """
+        return cls(
+            ttl_days=getattr(settings, 'IDEMPOTENCY_TTL_DAYS', 30),
+            cleanup_batch_size=getattr(
+                settings, 'IDEMPOTENCY_CLEANUP_BATCH_SIZE', 500
+            ),
+            enable_metrics=getattr(settings, 'IDEMPOTENCY_ENABLE_METRICS', True),
+            log_duplicates=getattr(settings, 'IDEMPOTENCY_LOG_DUPLICATES', True),
+            strict_mode=getattr(settings, 'IDEMPOTENCY_STRICT_MODE', False),
+            db_query_timeout_ms=getattr(
+                settings, 'IDEMPOTENCY_DB_QUERY_TIMEOUT_MS', 3000
+            ),
+        )
 
 
 # --------------------------------------------------------------------------- #
-# Repository protocol
+# Service contract
 # --------------------------------------------------------------------------- #
 
 
 @runtime_checkable
-class IIdempotencyRepository(Protocol):
+class IIdempotencyService(Protocol):
     """
-    Storage contract for idempotency records.
+    Application-facing contract for the database-backed idempotency service.
 
-    Implementations must make `reserve` atomic: only the first caller for a
-    given key may succeed; concurrent callers must observe the existing
-    record.
+    The idempotency key is always *scoped* to an ``(event_id, handler_name)``
+    pair, so the same domain event can be processed independently by multiple
+    handlers (fan-out) while still protecting each handler against duplicates.
+    Composite key format: ``"<handler_name>:<event_id>"``.
+
+    Preferred usage (context manager)::
+
+        async with service.guard(
+            session=session,
+            event_id=event.metadata.event_id,
+            handler_name="OrderHandler",
+        ) as should_process:
+            if should_process:
+                await do_business_work(...)
+                # key is recorded atomically when the block exits cleanly
+
+    Manual usage::
+
+        key = service.build_key(event_id, "OrderHandler")
+        if await service.is_processed(session, key):
+            return
+        await do_business_work(...)
+        await service.mark_processed(session, key, event_id, event_type,
+                                     "OrderHandler")
+
+    Thread / process safety
+    -----------------------
+    PostgreSQL's ``ON CONFLICT DO NOTHING`` provides the race-free atomic
+    check-and-insert: concurrent workers that both see ``is_processed`` return
+    ``False`` will race to insert; exactly one wins and the loser observes a
+    duplicate. Handlers should still be designed to tolerate running twice.
+
+    Session/return types are ``Any`` so this contract stays free of any
+    persistence-layer import.
     """
 
-    async def reserve(
+    def build_key(self, event_id: str, handler_name: str) -> str:
+        """Build a handler-scoped composite key, e.g. ``"OrderHandler:evt_1"``."""
+        ...
+
+    async def is_processed(self, session: Any, idempotency_key: str) -> bool:
+        """Return ``True`` if the key has already been recorded."""
+        ...
+
+    async def mark_processed(
         self,
-        namespace: str,
-        record: IdempotencyRecord,
+        session: Any,
+        idempotency_key: str,
+        event_id: str,
+        event_type: str,
+        handler_name: str,
         *,
-        ttl_seconds: int,
-    ) -> IdempotencyRecord:
+        correlation_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        saga_id: Optional[str] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> bool:
         """
-        Atomically create a record in `IN_PROGRESS` state.
+        Atomically record the key as processed.
 
-        Returns the input `record` on success. On conflict, returns the
-        already-stored record (which may be `IN_PROGRESS`, `COMPLETED`, or
-        `FAILED`).
+        Returns ``True`` when this call inserted the row (won the race) and
+        ``False`` when the key already existed (concurrent duplicate).
         """
         ...
 
-    async def get(self, namespace: str, key: str) -> IdempotencyRecord | None:
-        """Return the record for `key` or `None` if not stored."""
+    def guard(
+        self,
+        session: Any,
+        event_id: str,
+        handler_name: str,
+        event_type: str = '',
+        *,
+        correlation_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        saga_id: Optional[str] = None,
+        raise_on_duplicate: bool = False,
+    ) -> AbstractAsyncContextManager[bool]:
+        """
+        Async context manager enforcing idempotency around a block.
+
+        Yields a ``should_process`` flag — run the guarded work only when it is
+        truthy (a context manager cannot skip its own body implicitly). On a
+        duplicate the guard either raises ``DuplicateEventError`` (when
+        ``raise_on_duplicate`` or ``config.strict_mode``) or yields ``False``.
+        On clean exit of a fresh key the key is recorded atomically; on
+        exception it is *not* recorded so the broker/worker can safely retry.
+        """
         ...
 
-    async def complete(
+    async def cleanup_expired(
         self,
-        namespace: str,
-        key: str,
+        session: Any,
         *,
-        response: bytes,
-        completed_at: float,
-        ttl_seconds: int,
-    ) -> None:
-        """Mark a reserved record as `COMPLETED` and persist its response."""
+        ttl_days: Optional[int] = None,
+        batch_size: Optional[int] = None,
+    ) -> int:
+        """Delete processed-event rows older than the TTL; return rows deleted."""
         ...
-
-    async def fail(self, namespace: str, key: str) -> None:
-        """Release a reserved record so the caller may retry."""
-        ...
-
-
-# --------------------------------------------------------------------------- #
-# Service
-# --------------------------------------------------------------------------- #
-
-
-_default_encoder = msgspec.json.Encoder()
-
-
-def _fingerprint(payload: bytes | None) -> str | None:
-    if payload is None:
-        return None
-    return hashlib.sha256(payload).hexdigest()
-
-
-class IdempotencyService:
-    """
-    Orchestrates the idempotency lifecycle around a handler.
-
-    Typical usage::
-
-        response = await service.execute(
-            key="order-123",
-            handler=create_order,
-            request_payload=raw_body,
-        )
-
-    Semantics:
-
-    * Fresh key: the handler runs, its result is stored, and returned.
-    * Duplicate completed key: the cached response is returned.
-    * Concurrent in-progress key: `IdempotencyInProgressError` is raised.
-    * Key reused with a different `request_payload` (fingerprint mismatch):
-      `IdempotencyConflictError` is raised.
-    """
-
-    def __init__(
-        self,
-        repository: IIdempotencyRepository,
-        config: IdempotencyConfig | None = None,
-        *,
-        clock: Callable[[], float] = time.time,
-    ) -> None:
-        self._repository = repository
-        self._config = config or IdempotencyConfig()
-        self._clock = clock
-
-    @property
-    def config(self) -> IdempotencyConfig:
-        return self._config
-
-    async def execute(
-        self,
-        key: str,
-        handler: Callable[[], Awaitable[bytes]],
-        *,
-        request_payload: bytes | None = None,
-    ) -> bytes:
-        """Run `handler` at most once for `key` and return its response bytes."""
-        cfg = self._config
-        fingerprint = _fingerprint(request_payload)
-        now = self._clock()
-
-        reservation = IdempotencyRecord(
-            key=key,
-            status=IdempotencyStatus.IN_PROGRESS,
-            created_at=now,
-            fingerprint=fingerprint,
-        )
-
-        stored = await self._repository.reserve(
-            cfg.namespace, reservation, ttl_seconds=cfg.in_progress_ttl_seconds
-        )
-
-        if stored is not reservation:
-            return self._resolve_existing(stored, fingerprint)
-
-        try:
-            response = await handler()
-        except BaseException:
-            await self._repository.fail(cfg.namespace, key)
-            raise
-
-        await self._repository.complete(
-            cfg.namespace,
-            key,
-            response=response,
-            completed_at=self._clock(),
-            ttl_seconds=cfg.ttl_seconds,
-        )
-        return response
-
-    async def execute_typed[T: msgspec.Struct](
-        self,
-        key: str,
-        handler: Callable[[], Awaitable[T]],
-        response_type: type[T],
-        *,
-        request_payload: bytes | None = None,
-    ) -> T:
-        """Typed convenience wrapper that JSON-encodes/decodes the response."""
-
-        async def _runner() -> bytes:
-            return _default_encoder.encode(await handler())
-
-        raw = await self.execute(key, _runner, request_payload=request_payload)
-        return msgspec.json.decode(raw, type=response_type)
-
-    async def get(self, key: str) -> IdempotencyRecord | None:
-        """Return the stored record for `key`, if any."""
-        return await self._repository.get(self._config.namespace, key)
-
-    # ------------------------------------------------------------------ #
-    # Internals
-    # ------------------------------------------------------------------ #
-
-    def _resolve_existing(
-        self, record: IdempotencyRecord, fingerprint: str | None
-    ) -> bytes:
-        if (
-            fingerprint is not None
-            and record.fingerprint is not None
-            and fingerprint != record.fingerprint
-        ):
-            raise IdempotencyConflictError(record.key)
-
-        match record.status:
-            case IdempotencyStatus.COMPLETED:
-                if record.response is None:
-                    raise IdempotencyError(
-                        f"Completed record for {record.key!r} has no response"
-                    )
-                return record.response
-            case IdempotencyStatus.IN_PROGRESS:
-                raise IdempotencyInProgressError(record.key)
-            case IdempotencyStatus.FAILED:
-                raise IdempotencyError(
-                    f"Previous attempt for {record.key!r} failed; retry with a new key"
-                )
-
-
-# --------------------------------------------------------------------------- #
-# Factory
-# --------------------------------------------------------------------------- #
-
-
-class IdempotencyFactory:
-    """Builds `IdempotencyService` instances bound to a single repository."""
-
-    def __init__(
-        self,
-        repository: IIdempotencyRepository,
-        config: IdempotencyConfig | None = None,
-    ) -> None:
-        self._repository = repository
-        self._config = config
-
-    def create_service(
-        self, config: IdempotencyConfig | None = None
-    ) -> IdempotencyService:
-        return IdempotencyService(
-            repository=self._repository,
-            config=config or self._config,
-        )
 
 
 __all__ = [
-    "IIdempotencyRepository",
-    "IdempotencyConfig",
-    "IdempotencyConflictError",
-    "IdempotencyError",
-    "IdempotencyFactory",
-    "IdempotencyInProgressError",
-    "IdempotencyRecord",
-    "IdempotencyService",
-    "IdempotencyStatus",
+    'DuplicateEventError',
+    'IIdempotencyService',
+    'IdempotencyConfig',
+    'IdempotencyStatus',
 ]
