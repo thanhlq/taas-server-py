@@ -7,8 +7,9 @@ published / failed, and the stats projection.
 from __future__ import annotations
 
 import pytest
+from db.models import OutboxEventTable
 from foundation.resiliant.outbox import OutboxConfig, OutboxStatus
-from resiliant import ResiliantFactory
+from resiliant import ResiliantServiceBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -19,8 +20,8 @@ def config() -> OutboxConfig:
 
 
 async def test_factory_builds_outbox_components(config: OutboxConfig) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
-    repo = ResiliantFactory.get_outbox_repository(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
+    repo = ResiliantServiceBuilder.build_outbox_repository(config)
     assert service.config.max_retries == 2
     assert repo.config.batch_size == 10
 
@@ -28,7 +29,7 @@ async def test_factory_builds_outbox_components(config: OutboxConfig) -> None:
 async def test_save_raw_message_persists_pending(
     db_session: AsyncSession, config: OutboxConfig
 ) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
 
     row = await service.save_raw_message(
         db_session,
@@ -48,7 +49,7 @@ async def test_save_raw_message_persists_pending(
 async def test_save_event_duck_typed(
     db_session: AsyncSession, config: OutboxConfig
 ) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
 
     class _Event:
         event_id = "evt-123"
@@ -59,7 +60,7 @@ async def test_save_event_duck_typed(
         def as_dict(self) -> dict:
             return {"user_id": "u-1"}
 
-    row = await service.save_event(db_session, _Event(), channel="users")
+    row: OutboxEventTable = await service.save_event(db_session, _Event(), channel="users")
 
     assert row.event_id == "evt-123"
     assert row.event_type == "UserRegistered"
@@ -72,8 +73,8 @@ async def test_save_event_duck_typed(
 async def test_fetch_pending_batch_marks_processing(
     db_session: AsyncSession, config: OutboxConfig
 ) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
-    repo = ResiliantFactory.get_outbox_repository(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
+    repo = ResiliantServiceBuilder.build_outbox_repository(config)
 
     for i in range(3):
         await service.save_raw_message(
@@ -94,8 +95,8 @@ async def test_fetch_pending_batch_marks_processing(
 async def test_mark_published_updates_status(
     db_session: AsyncSession, config: OutboxConfig
 ) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
-    repo = ResiliantFactory.get_outbox_repository(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
+    repo = ResiliantServiceBuilder.build_outbox_repository(config)
 
     row = await service.save_raw_message(
         db_session, channel="orders", payload={}, event_type="OrderCreated"
@@ -112,8 +113,8 @@ async def test_mark_published_updates_status(
 async def test_mark_failed_retries_then_dead_letters(
     db_session: AsyncSession, config: OutboxConfig
 ) -> None:
-    service = ResiliantFactory.get_outbox_service(config)
-    repo = ResiliantFactory.get_outbox_repository(config)
+    service = ResiliantServiceBuilder.build_outbox_service(config)
+    repo = ResiliantServiceBuilder.build_outbox_repository(config)
 
     row = await service.save_raw_message(
         db_session,

@@ -20,11 +20,12 @@ from __future__ import annotations
 import asyncio
 import os
 
+from foundation.db.advanced_db_manager import AdvancedDBManager
+from foundation.factory import FoundationFactory
 from foundation.worker.base_worker import BaseWorker
 from messaging_faststream import initialize_messaging_service
+from resiliant import ResiliantServiceFactory
 from store_redis import RedisCacheServiceFactory
-
-from libs.foundation.src.foundation.db.advanced_db_manager import AdvancedDBManager
 
 from .bootstrap import settings
 
@@ -43,6 +44,7 @@ class EwsWorker(BaseWorker):
         # isn't defined in this repo's Settings; read it from the environment
         # instead. Default 7100 avoids macOS AirPlay's use of port 7000.
         self.health_check_server_port = int(os.getenv('WORKER_LISTEN_PORT', '7100'))
+        FoundationFactory.use_resiliant(ResiliantServiceFactory())
 
     # ------------------------------------------------------------------ cache
     def _init_cache(self) -> None:
@@ -116,9 +118,9 @@ class EwsWorker(BaseWorker):
         it PUBLISHED. Runs until the task is cancelled during shutdown.
         """
         from foundation.db.advanced_db_manager import MainDatabase
-        from resiliant import ResiliantFactory
+        from resiliant import ResiliantServiceBuilder
 
-        outbox = ResiliantFactory.get_outbox_service()
+        outbox = ResiliantServiceBuilder.build_outbox_service()
         repo = outbox.repository
         db: AdvancedDBManager = MainDatabase.get_instance()
         interval_seconds = 3.0

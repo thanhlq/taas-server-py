@@ -1,44 +1,40 @@
 # https://medium.com/@rspatel031/a-comprehensive-guide-to-the-thread-safe-singleton-pattern-in-python-e47682e300da
 
 import threading
+from functools import wraps
 
 
 def singleton(cls):
     """
-    A thread-safe decorator to ensure a class follows the Singleton
-    design pattern.
-
-    This decorator allows a class to have only one instance throughout
-    the application. If the instance does not exist, it will create one;
-    otherwise, it will return the existing instance. This implementation
-    is thread-safe, ensuring that only one instance is created even in
-    multithreaded environments.
-
-    :param: cls (type): The class to be decorated as a Singleton.
-    :return: function: A function that returns the single instance of the
-             class.
+    Decorator to make a class a singleton while preserving inheritance.
+    This is preferred over metaclass approach to avoid metaclass conflicts.
+    Thread-safe implementation using Double-Checked Locking.
     """
     instances = {}
-    lock = threading.Lock()
+    _lock = threading.Lock()
+    original_new = cls.__new__
+    original_init = cls.__init__
 
-    def get_instance(*args, **kwargs) -> object:
-        """
-        Return a single instance of the decorated class, creating it
-        if necessary.
+    @wraps(cls.__new__)
+    def singleton_new(cls_inner, *args, **kwargs):
+        if cls_inner not in instances:
+            with _lock:
+                if cls_inner not in instances:
+                    # Use the original __new__ method
+                    if original_new is object.__new__:
+                        instance = original_new(cls_inner)
+                    else:
+                        instance = original_new(cls_inner, *args, **kwargs)
+                    instances[cls_inner] = instance
+        return instances[cls_inner]
 
-        This function ensures that only one instance of the class exists.
-        It uses a thread-safe approach to check if an instance of the class
-        already exists in the `instances` dictionary. If it does not exist,
-        it creates a new instance with the provided arguments. If it does
-        exist, it returns the existing instance.
+    @wraps(cls.__init__)
+    def singleton_init(self, *args, **kwargs):
+        with _lock:
+            if not getattr(self, '_singleton_initialized', False):
+                original_init(self, *args, **kwargs)
+                self._singleton_initialized = True
 
-        :param: *args: Variable length argument list for the class constructor.
-        :param: **kwargs: Arbitrary keyword arguments for the class constructor.
-        :return: object: The single instance of the class.
-        """
-        with lock:
-            if cls not in instances:
-                instances[cls] = cls(*args, **kwargs)
-            return instances[cls]
-
-    return get_instance
+    cls.__new__ = singleton_new
+    cls.__init__ = singleton_init
+    return cls

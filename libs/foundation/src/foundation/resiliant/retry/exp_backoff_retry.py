@@ -6,8 +6,8 @@ import time
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
-from ...observability.log_factory import LogFactory
-from .types import IRetryPolicy
+from foundation.observability.log_factory import LogFactory
+from foundation.resiliant.retry.types import IRetryPolicy
 
 T = TypeVar('T')
 

@@ -23,7 +23,7 @@ from tenacity import (
 )
 
 from ...observability.log_factory import LogFactory
-from ..types import IRetryPolicy
+from .types import IRetryPolicy
 
 T = TypeVar('T')
 

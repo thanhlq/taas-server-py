@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 from foundation import BaseService
 from foundation.db.advanced_db_manager import MainDatabase
-from foundation.resiliant.outbox import IOutboxPublisher, OutboxConfig, OutboxService
+from foundation.resiliant.outbox import IOutboxPublisher, IOutboxService, OutboxConfig
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
@@ -17,13 +17,13 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
     """
 
     _messaging_service: Optional[IMessagingService]
-    _outbox_service: Optional[OutboxService]
+    _outbox_service: Optional[IOutboxService]
     _outbox_config: OutboxConfig
 
     def __init__(
         self,
         messaging_service: Optional[IMessagingService] = None,
-        outbox_service: Optional[OutboxService] = None,
+        outbox_service: Optional[IOutboxService] = None,
         outbox_config: Optional[OutboxConfig] = None,
     ):
         super().__init__()
@@ -39,6 +39,10 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
         )
 
     @property
+    def outbox_enabled(self) -> bool:
+        return self._outbox_config.enabled
+
+    @property
     def messaging_service(self) -> IMessagingService:
         if not self._messaging_service:
             self._messaging_service = get_service(IMessagingService)
@@ -49,9 +53,9 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
         return self._messaging_service
 
     @property
-    def outbox_service(self) -> OutboxService:
+    def outbox_service(self) -> IOutboxService:
         if not self._outbox_service:
-            self._outbox_service = get_service(OutboxService, True)
+            self._outbox_service = get_service(IOutboxService, True)
 
         # if not self._outbox_service:
         #     # use default implementation
@@ -179,4 +183,3 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
                 'Direct publishing of raw messages is not supported. '
                 'Please enable outbox or convert to BaseEvent before publishing.'
             )
-

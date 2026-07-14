@@ -81,9 +81,6 @@ class MsgEncoder(IMessageEncoder):
                 MessageFieldEncodingType.NA
             )  # Not applicable for non-Avro encodings
 
-        print(
-            f'📦  MsgEncoder with message encoding: {self._msg_encoding}, field encoding: {self._field_encoding}'
-        )
 
     def msgpack_pack(self, data: Any) -> bytes:
         return msgspec.msgpack.encode(data)

@@ -6,14 +6,16 @@ live in ``foundation.resiliant``; the DB models live in ``db.models.resiliant``.
 """
 
 from .dlq import DLQRepository, DLQService
+from .factory import ResiliantServiceFactory
 from .idempotency import IdempotencyRepository, IdempotencyService
 from .outbox import OutboxRepository, OutboxService
-from .resiliant_factory import ResiliantFactory
+from .service_builder import ResiliantServiceBuilder
 
-resiliant_factory = "⛰️"
+service_builder = "⛰️"
 
-__all__ = [
-    "ResiliantFactory",
+__all__: list[str] = [
+    "ResiliantServiceBuilder",
+    "ResiliantServiceFactory",
     "OutboxRepository",
     "OutboxService",
     "DLQRepository",

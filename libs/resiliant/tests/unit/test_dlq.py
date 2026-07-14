@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 from foundation.resiliant.dlq import DeadLetterConfig, DLQStatus
-from resiliant import ResiliantFactory
+from resiliant import ResiliantServiceBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -30,8 +30,8 @@ async def _save(service, session: AsyncSession, **overrides):
 
 
 async def test_factory_builds_dlq_components(config: DeadLetterConfig) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
-    repo = ResiliantFactory.get_dlq_repository(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
+    repo = ResiliantServiceBuilder.build_dlq_repository(config)
     assert service.config.max_retries == 2
     assert repo.config.page_size == 50
 
@@ -39,7 +39,7 @@ async def test_factory_builds_dlq_components(config: DeadLetterConfig) -> None:
 async def test_save_event_persists_pending(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
 
     row = await _save(service, db_session)
 
@@ -55,7 +55,7 @@ async def test_save_event_persists_pending(
 async def test_get_and_list(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
 
     a = await _save(service, db_session, handler_name="OrderHandler")
     await _save(service, db_session, handler_name="EmailHandler")
@@ -72,8 +72,8 @@ async def test_get_and_list(
 async def test_fetch_pending_batch_marks_processing(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
-    repo = ResiliantFactory.get_dlq_repository(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
+    repo = ResiliantServiceBuilder.build_dlq_repository(config)
 
     for i in range(3):
         await _save(service, db_session, event_id=f"evt-{i}")
@@ -87,7 +87,7 @@ async def test_fetch_pending_batch_marks_processing(
 async def test_resolve_marks_resolved(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
 
     row = await _save(service, db_session)
     await service.resolve(db_session, row.id)
@@ -100,7 +100,7 @@ async def test_resolve_marks_resolved(
 async def test_fail_retries_then_abandons(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
 
     row = await _save(service, db_session, max_retries=2)
 
@@ -118,7 +118,7 @@ async def test_fail_retries_then_abandons(
 async def test_abandon_marks_abandoned(
     db_session: AsyncSession, config: DeadLetterConfig
 ) -> None:
-    service = ResiliantFactory.get_dlq_service(config)
+    service = ResiliantServiceBuilder.build_dlq_service(config)
 
     row = await _save(service, db_session)
     await service.abandon(db_session, row.id)

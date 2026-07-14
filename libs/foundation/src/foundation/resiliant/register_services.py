@@ -1,0 +1,27 @@
+from typing import Any
+
+from foundation.resiliant.dlq import IDLQService
+from foundation.resiliant.idempotency import IIdempotencyService
+from foundation.resiliant.outbox import IOutboxService
+from foundation.resiliant.types import ResiliantServiceFactoryT
+
+
+def register_service(svc: type, service: Any):
+    """
+    A convenience method to register a service in the service registry.
+    """
+    from foundation.state.service_registry import (
+        register_service as _register_service,
+    )
+
+    _register_service(svc, service)
+
+
+def register_factory(factory: ResiliantServiceFactoryT):
+    """
+    Register a resiliant service factory.
+    """
+
+    register_service(IOutboxService, factory.get_outbox_service())
+    register_service(IDLQService, factory.get_dlq_service())
+    register_service(IIdempotencyService, factory.get_idempotency_service())
