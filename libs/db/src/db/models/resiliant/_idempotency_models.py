@@ -161,8 +161,6 @@ class ProcessedEventTable(UUIDv7Base):
         Index('idx_idempotency_event_id', 'event_id'),
         # TTL sweep: DELETE WHERE created_at < NOW() - INTERVAL '30 days'.
         Index('idx_idempotency_created_at', 'created_at'),
-        # Tenant-scoped replay: WHERE tenant_id = ? AND event_id = ?.
-        Index('idx_idempotency_tenant', 'tenant_id', 'event_id'),
     )
 
     # ------------------------------------------------------------------
