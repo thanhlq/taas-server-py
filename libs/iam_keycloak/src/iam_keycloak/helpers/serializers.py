@@ -1,12 +1,10 @@
 import json
-from datetime import datetime
 from typing import Any, Optional
 
-from core.iam.domain.entities import Tenant, UserEntity
-from core.iam.domain.entities.user import TaxNumber
-from core.iam.domain.schemas.auth import UserRegistrationForm
-from core.utils.string_utils import camel_to_snake, snake_to_camel
 from dateutil import parser
+from foundation.utils.str_utils import camel_to_snake
+from iam.auth.schemas import SignupRequest
+from iam.auth.types import DirectoryTenant, DirectoryUser
 from keycloak import KeycloakError
 
 
@@ -25,7 +23,7 @@ user_attributes_json_fields = ['taxNumbers']
 
 
 def user_registration_form_to_keycloak_data(
-    registration_data: UserRegistrationForm,
+    registration_data: SignupRequest
 ) -> dict:
     """
     Convert UserRegistrationForm to keycloak user data dictionary for Keycloak API
@@ -40,21 +38,15 @@ def user_registration_form_to_keycloak_data(
         'password': registration_data.password,
         'emailVerified': False,
         'enabled': True,
-        'attributes': {'origin': 'taas'},
     }
     return kc_user_data
 
 
-def parse_keycloak_user_data(user: dict) -> 'UserEntity':
+def parse_keycloak_user_data(user: dict) -> 'DirectoryUser':
     _user = {camel_to_snake(key): value for key, value in user.items()}
     attributes = _user.pop('attributes', None)
 
-    # if 'preferred_username' not in _user and 'username' in _user:
-    #     _user['preferred_username'] = _user.get('username', None)
-
-    print(f'_user after username set: {_user}')
-
-    keycloak_user = UserEntity(**_user)
+    keycloak_user = DirectoryUser(**_user)
 
     if attributes:
         for key in attributes:
@@ -62,7 +54,7 @@ def parse_keycloak_user_data(user: dict) -> 'UserEntity':
             if not attribute:
                 continue
 
-            snake_case_key = camel_to_snake(key)
+            _snake_case_key = camel_to_snake(key)
             if (
                 attribute
                 and isinstance(attribute, list)
@@ -71,7 +63,7 @@ def parse_keycloak_user_data(user: dict) -> 'UserEntity':
             ):
                 attribute = attribute[0]
 
-            attribute_type = UserEntity.__annotations__.get(snake_case_key)
+            attribute_type = DirectoryUser.__annotations__.get(_snake_case_key)
 
             if attribute_type == 'datetime':
                 attribute = parser.parse(attribute)
@@ -84,104 +76,17 @@ def parse_keycloak_user_data(user: dict) -> 'UserEntity':
                     attribute = attribute.lower() == 'true'
                 else:
                     attribute = attribute == 'true'
-            elif key in user_attributes_json_fields:
-                attribute = [TaxNumber(**json.loads(tax)) for tax in attribute]
+            # elif key in user_attributes_json_fields:
+            #     attribute = [TaxNumber(**json.loads(tax)) for tax in attribute]
 
-            if hasattr(keycloak_user, snake_case_key):
-                setattr(keycloak_user, snake_case_key, attribute)
+            if hasattr(keycloak_user, _snake_case_key):
+                setattr(keycloak_user, _snake_case_key, attribute)
             else:
-                print(f'Unknown KeycloakUser attribute: {snake_case_key}')
+                print(f'Unknown KeycloakUser attribute: {_snake_case_key}')
     return keycloak_user
 
 
-def convert_user_to_keycloak_user_data(user: UserEntity) -> 'dict':
-    """
-    Convert User to keycloak user data dictionary for Keycloak API
-    """
-    ignore_attributes = [
-        # OpenID attributes
-        'sub',
-        'preferred_username',
-        'given_name',
-        'family_name',
-        'name',
-        # properties used by Authentication Middleware
-        'is_authenticated',
-        'display_name',
-        'identity',
-        # other Keycloak attributes that should be read-only
-        'created_timestamp',
-        'not_before',
-        'totp',
-        'disableable_credential_types',
-        'access',
-        'created_on',
-        'full_name',
-        'set_attributes',
-        'attributes',
-        'address',
-        'json',
-        'dict',
-        'phone1_formated',
-        'phone2_formated',
-        'custom_tags_formated',
-        'date_of_birth_formated',
-        'created_on_formated',
-        'address_country_formated',
-    ]
-
-    # Keycloak User Representation for JSON fields:
-    # https://www.keycloak.org/docs-api/latest/rest-api/index.html#UserRepresentation
-    # Use this attributes to identify custom attributes that we added to KeycloakUser model
-    keycloak_user_representation_attrs = [
-        'access',
-        'attributes',
-        'clientConsents',
-        'clientRoles',
-        'createdTimestamp',
-        'credentials',
-        'disableableCredentialTypes',
-        'email',
-        'emailVerified',
-        'enabled',
-        'federatedIdentities',
-        'federationLink',
-        'firstName',
-        'groups',
-        'id',
-        'lastName',
-        'notBefore',
-        'origin',
-        'realmRoles',
-        'requiredActions',
-        'self',
-        'serviceAccountClientId',
-        'username',
-    ]
-
-    user_dict = {}
-    user_class_properties = dir(user)
-    user_class_properties = [
-        cp
-        for cp in user_class_properties
-        if cp not in ignore_attributes and not cp.startswith('__') and not callable(cp)
-    ]
-    for cp in user_class_properties:
-        attr = getattr(user, cp)
-        if isinstance(attr, datetime):
-            attr = str(attr)
-        camel_case_attr = snake_to_camel(cp)
-        if camel_case_attr in keycloak_user_representation_attrs:
-            user_dict[camel_case_attr] = attr
-        else:
-            if camel_case_attr == 'taxNumbers' and attr is not None:
-                user_dict['attributes'][camel_case_attr] = [tax.json() for tax in attr]
-            else:
-                user_dict['attributes'][camel_case_attr] = attr
-    return user_dict
-
-
-def parse_keycloak_registered_user(kc_user: dict[str, Any]) -> UserEntity:
+def parse_keycloak_registered_user(kc_user: dict[str, Any]) -> DirectoryUser:
     """
     {
     "email": "ngocle1401@gmail.com",
@@ -204,7 +109,7 @@ def parse_keycloak_registered_user(kc_user: dict[str, Any]) -> UserEntity:
     "id": "f1308231-8316-40df-aa5b-1dab983ab245"
     }
     """
-    user = UserEntity(
+    user = DirectoryUser(
         id=kc_user['id'],
         email=kc_user['email'],
         username=kc_user['username'],
@@ -213,12 +118,12 @@ def parse_keycloak_registered_user(kc_user: dict[str, Any]) -> UserEntity:
         email_verified=kc_user['emailVerified'],
         enabled=kc_user['enabled'],
         tenant_id=kc_user['attributes'].get('tenant_id', None),
-        _is_root_account=kc_user['attributes'].get('is_root_account', False),
+        is_root_account=kc_user['attributes'].get('is_root_account', False),
     )
     return user
 
 
-def parse_keycloak_registered_organization(kc_user: dict[str, Any]) -> Tenant:
+def parse_keycloak_registered_organization(kc_user: dict[str, Any]) -> DirectoryTenant:
     """
        {
     `       "name": "Ngoc Test Org 8227",
@@ -229,7 +134,7 @@ def parse_keycloak_registered_organization(kc_user: dict[str, Any]) -> Tenant:
            "id": "4282157c-26ff-457e-8c44-2f24703c3205"
            }`
     """
-    tenant = Tenant(
+    tenant = DirectoryTenant(
         id=kc_user['id'],
         name=kc_user['name'],
         alias_id=kc_user['alias'],

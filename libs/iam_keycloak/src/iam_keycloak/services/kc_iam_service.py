@@ -1,37 +1,17 @@
 """Centralized service to interact with Keycloak"""
-from core.iam.events.iam_events import UserDirectoryCreatedEvent, UserDirectoryEventPayload
-
 import json
 from typing import Any, Dict, List, Optional, Union, cast
 
-import jwt
-from core.caching.utils import cache_ttl_async_ignore_arg1
-from core.conf.settings import get_app_settings
-from core.db.engine import DBAsyncSession
-from core.iam.db.types import IUserRepository
-from core.iam.domain import (
-    AuthContext,
-    SocialProvider,
-    TokenType,
-)
-from core.iam.domain.entities import UserEntity
-
-# from core.iam.domain.entities import User
-from core.iam.domain.schemas.auth import (
-    PasswordAuthRequest,
-    PasswordPolicy,
-    SessionInfo,
-    UserRegistrationForm,
-    UserRegistrationOut,
-)
-from core.iam.events.iam_event_publisher import IamEventPublisher
-from core.iam.services.iam_generic_service import IamGenericService
-from core.iam.types import (
-    AuthResponse,
-    IIamService,
-    IIamServiceFactory,
-)
-from core.saas.saas_utils import generate_saas_subdomain, get_keycloak_subdomain
+from foundation.config.saas_settings import SaaSSettings
+from foundation.db.types import DBAsyncSession
+from iam.auth.auth_events import UserDirectoryCreatedEvent, UserDirectoryEventPayload
+from iam.auth.schemas import SignupRequest
+from iam.auth.schemas._auth import SignupRequestOut
+from iam.auth.services._auth import BaseAuthService
+from iam.auth.types import AuthResponse, DirectoryUser, IamDirectoryServiceT
+from iam.iam_constants import IamTopics
+from iam.types import IIamServiceFactory
+from iam.utils.saas_utils import generate_saas_subdomain, get_keycloak_subdomain
 from keycloak import (
     KeycloakAuthenticationError,
     KeycloakError,
@@ -39,9 +19,12 @@ from keycloak import (
     KeycloakOperationError,
 )
 
+from iam_keycloak.db.repositories.kc_user_repo import KeycloakUserRepository
+from iam_keycloak.keycloak_settings import get_keycloak_settings
+
 from ..db.kc_db import kc_db_session_async
 from ..domains.entities import KeycloakUser
-from ..helpers.keycloak import KeycloakServerAdmin
+from ..helpers.kc_admin_client import keycloaiAdminClient
 from ..helpers.report_kc_error import report_keycloak_error
 from ..helpers.serializers import (
     parse_keycloak_registered_organization,
@@ -49,49 +32,28 @@ from ..helpers.serializers import (
     parse_keycloak_user_data,
     user_registration_form_to_keycloak_data,
 )
-from ..utils import parse_keycloak_error
-from .keycloak_init import get_keycloak_admin, get_keycloak_openid
+from .keycloak_init import get_keycloak_openid
 
 
-class KeycloakIamService(IamGenericService, IIamService):
+class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
     """
     Keycloak IAM service implementation. This service interacts with Keycloak server
     to perform user authentication, registration, and management operations.
     """
 
-    iam_service_factory: IIamServiceFactory
-    _delegate: KeycloakServerAdmin
+    _iam_service_factory: IIamServiceFactory
+    _delegate: keycloaiAdminClient
 
     def __init__(
         self,
-        iam_service_factory: IIamServiceFactory | None = None,
-        # server_url: str,
-        # realm_name: str,
-        # client_id: str,
-        # client_secret: str = None,
-        admin_username: str = None,
-        admin_password: str = None,
-        # verify_ssl: bool = True,
+        iam_service_factory: IIamServiceFactory,
     ):
         """
         Initialize Keycloak IAM service.
-
-        Args:
-            server_url: Keycloak server URL
-            realm_name: Keycloak realm name
-            client_id: OAuth2/OpenID Connect client ID
-            client_secret: OAuth2/OpenID Connect client secret
-            admin_username: Admin username for admin operations
-            admin_password: Admin password for admin operations
-            verify_ssl: Whether to verify SSL certificates
         """
         super().__init__()
 
-        self.iam_service_factory = iam_service_factory
-        # self.server_url = server_url
-        # self.realm_name = realm_name
-        # self.client_id = client_id
-        # self.client_secret = client_secret
+        self._iam_service_factory = iam_service_factory
 
         # Initialize Keycloak OpenID client for user operations
         self.keycloak_openid: KeycloakOpenID = get_keycloak_openid()
@@ -99,8 +61,8 @@ class KeycloakIamService(IamGenericService, IIamService):
         # Initialize Keycloak Admin client for administrative operations
         # self.keycloak_admin: KeycloakAdmin | None = None
 
-        # admin_username = admin_username or get_app_settings().KEYCLOAK_ADMIN_USER
-        # admin_password = admin_password or get_app_settings().KEYCLOAK_ADMIN_SECRET
+        # admin_username = admin_username or get_keycloak_settings().KEYCLOAK_ADMIN_USER
+        # admin_password = admin_password or get_keycloak_settings().KEYCLOAK_ADMIN_SECRET
 
         # if admin_username and admin_password:
         #     try:
@@ -111,9 +73,15 @@ class KeycloakIamService(IamGenericService, IIamService):
         #     self.logger.warning(
         #         'Admin credentials not provided; admin operations will be unavailable.'
         #     )
-        self._delegate = KeycloakServerAdmin()
+        self._delegate = keycloaiAdminClient()
 
-    def _convert_keycloak_user_to_user_entity(self, kc_user: Dict[str, Any]) -> UserEntity:
+    def saas_settings(self) -> SaaSSettings:
+        """
+        Get SaaS settings for the Keycloak IAM service.
+        """
+        return SaaSSettings.get_settings()
+
+    def _convert_keycloak_user_to_user_entity(self, kc_user: Dict[str, Any]) -> DirectoryUser:
         return parse_keycloak_user_data(kc_user)
 
     def _ensure_admin_client(self):
@@ -127,10 +95,15 @@ class KeycloakIamService(IamGenericService, IIamService):
     # User Management
     # ================================
 
+    async def create_directory_user(
+        self, registration_data: SignupRequest, **kwargs
+    ) -> SignupRequestOut:
+        return await self._create_directory_user(registration_data, **kwargs)
+
     @kc_db_session_async(transaction=True)
-    async def create_directory_user(  # type: ignore
-        self, registration_data: UserRegistrationForm, session: DBAsyncSession, **kwargs
-    ) -> UserRegistrationOut:
+    async def _create_directory_user(
+        self, registration_data: SignupRequest, session: DBAsyncSession, **kwargs
+    ) -> SignupRequestOut:
         """
         Register a new user in Keycloak. Here is the flow:
         - Check if user with the given email already exists.
@@ -167,22 +140,34 @@ class KeycloakIamService(IamGenericService, IIamService):
         #     return response
         # Verify OPT for email --
 
-        user_repo = cast(
-            IUserRepository,
-            self.iam_service_factory.get_repository_factory().get_async(KeycloakUser),
-        )
-        existed_user = await user_repo.first_with_session(
-            session, email=registration_data.email
-        )
-        response = UserRegistrationOut()
+        #
+        # 1. Check if user existed
+        #
 
-        if existed_user is not None:
-            # Send mail to existing user / inform user already exists
+        user_repo = cast(
+            KeycloakUserRepository,
+            self._iam_service_factory.get_repository_factory().get_async(KeycloakUser),
+        )
+        email: str = registration_data.email # type: ignore
+        username = registration_data.username
+
+        if username:
+            existed_user = await user_repo.count_user_by_username(username, session)
+        elif email:
+            existed_user = await user_repo.count_user_by_email(email, session)
+        else:
+            raise ValueError('Either username or email must be provided for registration.')
+
+        if existed_user > 0:
             self.logger.info(
-                f'User with email {registration_data.email} already exists'
+                f'User with email {registration_data.email} or username {registration_data.username} already exists'
             )
+            response = SignupRequestOut()
             response.status = 'EXISTED'
             return response
+
+
+        response = SignupRequestOut()
 
         # user: User = User(
         #     email=registration_data.email,
@@ -196,25 +181,36 @@ class KeycloakIamService(IamGenericService, IIamService):
         # Create user in Keycloak
         # user_id = generate_id()
         kc_user_data = user_registration_form_to_keycloak_data(registration_data)
-        # user_data_dict = convert_user_to_keycloak_user_data(existed_user)
-        # user_data_dict.pop('recaptcha', None)
-        # user_data_dict.pop('password2', None)
-        tenant_dict = {
-            'name': registration_data.organization_name,
-            'alias': registration_data.organization_name.lower().replace(' ', '-'),
-            'domains': [
-                get_keycloak_subdomain(
-                    generate_saas_subdomain(registration_data.organization_name)
-                )
-            ],
-            # 'domains': ['eworksuite.com']
-            # 'attributes': to_json({'origin': 'taas'})
-        }
+        attributes: dict[str, Any] = kc_user_data.get('attributes', {})
+        attributes['origin'] = 'signup'
+
+        if registration_data.organization:
+            tenant_dict = {
+                'name': registration_data.organization,
+                'alias': registration_data.organization.lower().replace(' ', '-'),
+                'domains': [
+                    get_keycloak_subdomain(
+                        generate_saas_subdomain(registration_data.organization)
+                    )
+                ],
+                # 'domains': ['eworksuite.com']
+                # 'attributes': to_json({'origin': 'taas'})
+            }
+        else:
+            tenant_dict = {
+                'name': email.split('@')[0],
+                'alias': email.split('@')[0].lower().replace(' ', '-'),
+                'domains': [
+                    get_keycloak_subdomain(
+                        generate_saas_subdomain(email.split('@')[0])
+                    )
+                ],
+            }
         try:
             created_tenant = await self._delegate.create_organization(tenant_dict)
             tenant_id = created_tenant['id']
-            kc_user_data['attributes']['tenant_id'] = tenant_id
-            kc_user_data['attributes']['is_root_account'] = True
+            attributes['tenant_id'] = tenant_id
+            attributes['is_root_account'] = True
             created_kc_user = await self._delegate.create_user(kc_user_data, True)
             user_id = created_kc_user['id']
             self.logger.info(f'Created user in Keycloak with ID {user_id}/{tenant_id}')
@@ -233,33 +229,36 @@ class KeycloakIamService(IamGenericService, IIamService):
                     }
                 ],
             """
+            kc_user_data['attributes'] = attributes
             kc_user_data.pop('credentials', None)  # hide password in logs
 
+            _directory_user = parse_keycloak_registered_user(created_kc_user)
+            _directory_tenant = parse_keycloak_registered_organization(created_tenant)
 
-            _payload: UserDirectoryEventPayload = {
-                'user': parse_keycloak_registered_user(
-                    kc_user=created_kc_user
-                ).as_dict(),
-                'tenant': parse_keycloak_registered_organization(
-                    created_tenant
-                ).as_dict(),
-            }
+
+            _payload = UserDirectoryEventPayload  (
+                user=_directory_user,
+                tenant=_directory_tenant,
+            )
             e_user_directory_created = UserDirectoryCreatedEvent(
                 user_id=user_id,
-                username=registration_data.email,
+                email=_directory_user.email,
+                username=_directory_user.username,
                 realm_name=self.keycloak_openid.realm_name,
-                email=registration_data.email,
-                tenant_id=created_tenant['id'],
+                tenant_id=tenant_id,
                 # payload=parse_keycloak_registered_user(kc_user=created_kc_user).as_dict(),
                 # tenant=parse_keycloak_registered_organization(created_tenant).as_dict(),
                 # payload={
                 #     'user': parse_keycloak_registered_user(kc_user=created_kc_user).as_dict(),
                 #     'tenant': parse_keycloak_registered_organization(created_tenant).as_dict(),
                 # }
-            ).set_payload(_payload)
+            )
+            e_user_directory_created.set_payload_object(_payload)
 
             try:
-                await IamEventPublisher().publish_user_directory_created_event(e_user_directory_created)
+                await self.message_routing_service.publish_event(e_user_directory_created, IamTopics.IAM_USER_REGISTER)
+
+                # await IamEventPublisher().publish_user_directory_created_event(e_user_directory_created)
             except Exception as publish_exc:
                 # TODO: handle failed event publishing (e.g., retry, compensation)
                 # Report error and rollback
@@ -280,7 +279,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         return response
 
     async def logout_by_refresh_token(
-        self, refresh_token: Optional[str] = None, realm: str | None = None
+        self, refresh_token: str, realm: str | None = None
     ) -> bool:
         keycloak_openid = get_keycloak_openid(realm)
         # keycloak_openid.client_id = settings.KEYCLOAK_LOGIN_CLIENT_ID
@@ -292,11 +291,11 @@ class KeycloakIamService(IamGenericService, IIamService):
             return False
 
     async def logout_by_user_id(self, user_id, session_id=None):
-        keycloak_admin = self._delegate
         try:
-            keycloak_admin.user_logout(user_id)
+            await self._delegate.loggout_user(user_id)
             return True
-        except Exception:
+        except Exception as e:
+            self.logger.warning(f'Failed to logout user {user_id} with session {session_id}, error: {e}')
             return False
 
     async def logout_by_access_token(self, access_token: str) -> bool:
@@ -402,7 +401,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Raises:
             KeycloakAuthenticationError: If authentication fails
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
         keycloak_openid = get_keycloak_openid()
         keycloak_openid.client_id = settings.KEYCLOAK_LOGIN_CLIENT_ID
 
@@ -449,10 +448,10 @@ class KeycloakIamService(IamGenericService, IIamService):
         self,
         username: str,
         password: str,
-        otp_code: str = None,
+        otp_code: str | None = None,
         keep_signed_in: bool = False,
     ) -> Union[AuthResponse, str]:
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         client_id: str
         if not settings.KEYCLOAK_LOGIN_CLIENT_ID:
@@ -502,7 +501,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Raises:
             KeycloakAuthenticationError: If authentication fails
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
         keycloak_openid = get_keycloak_openid()
         keycloak_openid.client_id = settings.KEYCLOAK_LOGIN_CLIENT_ID
 
@@ -609,7 +608,7 @@ class KeycloakIamService(IamGenericService, IIamService):
             Dict with totp_secret, totp_secret_encoded, and qr_code
         """
         self._ensure_admin_client()
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             url = f'{settings.KEYCLOAK_HOST}/admin/realms/{settings.KEYCLOAK_REALM}/totp/config/{user_id}/'
@@ -645,7 +644,7 @@ class KeycloakIamService(IamGenericService, IIamService):
             bool: True if TOTP verified and activated
         """
         self._ensure_admin_client()
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             # Get TOTP secret first
@@ -698,7 +697,7 @@ class KeycloakIamService(IamGenericService, IIamService):
             bool: True if TOTP disabled successfully
         """
         self._ensure_admin_client()
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             # Get user credentials
@@ -888,7 +887,7 @@ class KeycloakIamService(IamGenericService, IIamService):
             user = await self._delegate.keycloak_admin.a_get_user(user_id)
             username = user.get('username')
 
-            settings = get_app_settings()
+            settings = get_keycloak_settings()
             keycloak_openid = get_keycloak_openid()
             keycloak_openid.client_id = settings.KEYCLOAK_LOGIN_CLIENT_ID
 
@@ -930,7 +929,7 @@ class KeycloakIamService(IamGenericService, IIamService):
             PasswordPolicy with current policy settings
         """
         self._ensure_admin_client()
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             realm = await self._delegate.keycloak_admin.a_get_realm(
@@ -992,7 +991,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Raises:
             KeycloakAuthenticationError: If refresh fails
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             # Decode refresh token to get client ID
@@ -1229,7 +1228,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Raises:
             KeycloakAuthenticationError: If impersonation fails
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             # Get target user
@@ -1450,7 +1449,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Raises:
             KeycloakAuthenticationError: If authentication fails
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         keycloak_openid = KeycloakOpenID(
             server_url=settings.KEYCLOAK_HOST,
@@ -1903,7 +1902,7 @@ class KeycloakIamService(IamGenericService, IIamService):
         Returns:
             Dict with health status and service information
         """
-        settings = get_app_settings()
+        settings = get_keycloak_settings()
 
         try:
             # Try to get realm information as health check

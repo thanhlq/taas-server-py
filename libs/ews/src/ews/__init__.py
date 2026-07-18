@@ -2,13 +2,20 @@ from foundation.http import BaseController
 
 from ews.platform.controller._platform import PlatformController
 
-from .ppm import project_controllers
+from .ppm import get_project_controllers
 
-conrrollers: list[type[BaseController] | BaseController] = [
-    *project_controllers,
-    PlatformController(),
-]
+
+def get_ews_controllers() -> list[type[BaseController] | BaseController]:
+    """
+    Get the list of EWS controllers.
+    """
+    controllers: list[type[BaseController] | BaseController] = [
+        *get_project_controllers(),
+        PlatformController(),
+    ]
+    return controllers
+
 
 __all__ = [
-    'conrrollers',
+    'get_ews_controllers',
 ]

@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.models.base import ID_COLUMN_TYPE
+from db.models.base import ID_COLUMN_TYPE, TENANT_ID_COLUMN_TYPE
 
 from .constants import TAG_TABLE
 
@@ -55,8 +55,8 @@ class Tag(UUIDv7AuditBase, SlugKey, UniqueMixin):
         index=True,
     )
 
-    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        Integer, index=True, nullable=True, default=None
     )
     org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None

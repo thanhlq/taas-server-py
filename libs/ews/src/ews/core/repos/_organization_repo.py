@@ -1,6 +1,6 @@
 from db import BaseAsyncRepository
-from db.models.core._organization import OrganizationTable
+from db.models.core._organization import Organization
 
 
-class OrganizationTableRepository(BaseAsyncRepository[OrganizationTable]):
-    model_type = OrganizationTable
+class OrganizationRepository(BaseAsyncRepository[Organization]):
+    model_type = Organization

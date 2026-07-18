@@ -1,10 +1,9 @@
 from typing import Any
 
-from foundation.state import register_service
+from foundation.state import get_service, register_service
 
-from .message_routing_service import MessageRoutingService
 from .types import (
-    IMessagingPubSubService,
+    IMessageRoutingService,
     IMessagingQueueService,
     IMessagingService,
     IMessagingStreamService,
@@ -30,30 +29,16 @@ class MessagingFactory:
         # get_service_locator().register(IMessagingStreamService, FastStreamMessagingService())
         pass  # Replace with actual registration logic
 
+    @staticmethod
+    def get_messaging_routing_service() -> IMessageRoutingService:
+        """Return an instance of the messaging routing service."""
+        return get_service(IMessageRoutingService)
 
     @staticmethod
     def get_messaging_service(type: MessagingType = MessagingType.PUBSUB):
         if type == MessagingType.PUBSUB:
-            return get_service_locator().get(IMessagingPubSubService)
+            return get_service(IMessagingService)
         elif type == MessagingType.QUEUE:
-            return get_service_locator().get(IMessagingQueueService)
+            return get_service(IMessagingQueueService)
         elif type == MessagingType.STREAM:
-            return get_service_locator().get(IMessagingStreamService)
-        else:
-            return get_service_locator().get(IMessagingService)
-
-    # @staticmethod
-    # def get_stream_messaging_service() -> IMessagingStreamService:
-    #     return get_service_locator().get(IMessagingStreamService)
-
-    # @staticmethod
-    # def get_queue_messaging_service() -> IMessagingQueueService:
-    #     return get_service_locator().get(IMessagingQueueService)
-
-    # @staticmethod
-    # def get_pubsub_messaging_service() -> IMessagingPubSubService:
-    #     return get_service_locator().get(IMessagingPubSubService)
-
-    @staticmethod
-    def get_message_routing_service() -> IOutboxService:
-        return MessageRoutingService()
+            return get_service(IMessagingStreamService)

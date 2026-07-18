@@ -2,8 +2,6 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from core.iam.domain.entities.user import TaxNumber
-from core.utils.string_utils import camel_to_snake, snake_to_camel
 from dateutil import parser
 from keycloak import KeycloakError
 

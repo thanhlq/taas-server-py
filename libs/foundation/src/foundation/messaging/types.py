@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,12 +18,15 @@ from typing import (
     TypeAlias,
     TypeVar,
     Union,
+    cast,
     runtime_checkable,
 )
 
 import msgspec
 from foundation import BaseService
-from foundation.serialization import BaseModel
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.resiliant.outbox import IOutboxService, OutboxConfig, RoutingStrategy
+from foundation.serialization import BaseEventPayload, BaseModel
 from foundation.utils import now_in_utc
 from foundation.utils.id import generate_id
 from foundation.utils.serialization import from_json
@@ -101,8 +104,38 @@ class DlqEvent(
             'handler_name': self.handler_name,
         }
 
+class EventMetadata(msgspec.Struct):
+    """Event metadata for tracking and tracing."""
 
-class BaseEvent(msgspec.Struct, _AvroModelBase):  # pyright: ignore[reportUntypedBaseClass, reportGeneralTypeIssues]
+    event_type: str
+    """Event type/topic"""
+
+    event_id: str = field(default_factory=generate_id)
+    """Unique event identifier"""
+
+    timestamp: datetime = field(default_factory=now_in_utc)
+
+    retry_count: int = 0
+
+    source: Optional[str] = None
+    """Event source service"""
+
+    correlation_id: Optional[str] = None
+    """Correlation ID for distributed tracing"""
+
+    handler_name: Optional[str] = None
+    """Name of the handler that processed the event - useful for retry/dead-letter scenarios"""
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a dict representation of the event, including payload as dict if possible."""
+        return msgspec.structs.asdict(self)  # type: ignore[reportGeneralTypeIssues]
+
+    def __post_init__(self) -> None:
+        # Optional: manual validation since dataclasses don't validate
+        if self.retry_count < 0:
+            raise ValueError('retry_count must be >= 0')
+
+class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright: ignore[reportUntypedBaseClass, reportGeneralTypeIssues]
     """
     Flat event structure with all metadata fields inline.
 
@@ -152,7 +185,10 @@ class BaseEvent(msgspec.Struct, _AvroModelBase):  # pyright: ignore[reportUntype
     # Domain-specific payload fields (defined by subclasses)
     # bytes | str: avro compatible types for payload
     ########################################################################################################################
-    payload: bytes | str | None = None
+    # ``dict`` is a valid transient state: ``to_payload()`` stores the payload
+    # as a dict, which the publisher/``_serialize`` later encodes to bytes|str
+    # (Avro/JSON). Matches the ``EventPayloadType`` alias above.
+    payload: bytes | str | dict | None = None
 
     def __post_init__(self) -> None:
         self.m_serializer = type(self).m_serializer
@@ -165,6 +201,17 @@ class BaseEvent(msgspec.Struct, _AvroModelBase):  # pyright: ignore[reportUntype
         """Helper method to set the payload for good type hint."""
         self.payload = payload
         return self
+
+    def set_payload_object(self, payload: E):
+        """
+        Helper method to convert a payload object to dict
+        Then in the event publisher, the payload can be set as bytes or str depending on the serialization method used.
+        """
+        self.payload = payload.as_dict()
+
+    def get_payload(self) -> E:
+        """ Convenience method to get the payload as the expected type E (subclass of BaseEventPayload). """
+        return cast(E, self.payload)  # type: ignore[reportGeneralTypeIssues]
 
     def _serialize(self, encoder: 'IMessageEncoder', **kwargs: Any) -> Any:
         """
@@ -279,7 +326,7 @@ class MessageHandler(Protocol):
     async def __call__(self, message: Union[Dict[str, Any], BaseEvent]) -> None: ...
 
 
-class MessagingType(str, Enum):
+class MessagingType(StrEnum):
     """Enumeration of messaging service types."""
 
     PUBSUB = 'pubsub'
@@ -287,7 +334,7 @@ class MessagingType(str, Enum):
     QUEUE = 'queue'
 
 
-class MessagingProvider(str, Enum):
+class MessagingProvider(StrEnum):
     """Enumeration of supported pub/sub providers."""
 
     KAFKA_FASTSTREAM = 'faststream.aiokafka'
@@ -729,7 +776,91 @@ class IMessagingAdminService(ABC):
         """Get detailed information about a specific channel."""
         pass
 
+class IMessageRoutingService(ABC):
+    """
+    Responsible for determining the routing of messages to actual outbox or messsaging service
+    depending on the configuration and environment.
 
+    This allows for flexibility in how messages are handled, whether they are sent to a local outbox for later processing or directly to a messaging service.
+
+    Channel configuration examples:
+        - "orders" -> "outbox" (local outbox)
+        - "notifications" -> "direct" (direct to messaging service)
+    """
+
+    @property
+    @abstractmethod
+    def messaging_service(self) -> IMessagingService:
+        """
+        Retrieve the messaging service instance.
+
+        Returns:
+            IMessagingService: The messaging service instance.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def outbox_service(self) -> IOutboxService:
+        """
+        Retrieve the outbox service instance.
+
+        Returns:
+            Any: The outbox service instance.
+        """
+        ...
+
+    @abstractmethod
+    def get_config(self) -> OutboxConfig:
+        """
+        Retrieve the current outbox configuration.
+
+        Returns:
+            OutboxConfig: The current outbox configuration.
+        """
+        ...
+
+    def get_routing_for_channel(self, channel: str) -> RoutingStrategy:
+        """
+        Determine the routing strategy for a given channel.
+
+        Args:
+            channel (str): The name of the channel for which to determine routing.
+        """
+        if self.get_config().enabled is False:
+            return "direct"  # Outbox is disabled, route directly to the messaging service
+
+        if channel in self.get_config().direct_channels:
+            return "direct"  # Route directly to the messaging service
+
+        if channel in self.get_config().outbox_channels:
+            return "outbox"  # Route to the local outbox for later processing
+
+        return self.get_config().routing_default  # Use the default routing strategy
+
+    @abstractmethod
+    async def publish_event(
+        self,
+        event: Any,
+        channel: str,
+        *,
+        session: DBAsyncSession | DBAsyncScopedSession | None = None,
+        partition_key: str | None = None,
+        headers: dict[str, Any] | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
+        """
+        Route an event to the appropriate messaging service or outbox based on the channel configuration.
+
+        Args:
+            event: The event to be routed.
+            channel: The name of the channel to which the event should be routed.
+            session: Optional database session for transactional routing.
+                Required if routing to the outbox service, as it may involve database operations.
+            partition_key: Optional key for partitioning messages in streams.
+            headers: Optional headers to include with the message.
+            max_retries: Optional maximum number of retries for routing failures.
+        """
 # ============================================================================
 # PUB/SUB SERVICE INTERFACE
 # ============================================================================

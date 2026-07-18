@@ -81,7 +81,7 @@ class AppSettings:
     """Application contact name"""
     CONTACT_EMAIL: str = field(default='admin@eworksuite.com')
     """Application contact email"""
-    URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8191'))
+    FRONTEND_URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8191'))
     """The frontend base URL"""
     TENANT_PREFIX: str = field(default_factory=get_env('TENANT_PREFIX', 'taas'))
     SERVICE_NAME: str = field(default_factory=get_env(f'{CONFIG_PREFIX}_SERVICE_NAME', ''))

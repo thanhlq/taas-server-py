@@ -25,6 +25,7 @@ from foundation.resiliant.outbox import OutboxConfig
 from resiliant.dlq import DLQRepository, DLQService
 from resiliant.idempotency import IdempotencyRepository, IdempotencyService
 from resiliant.outbox import OutboxRepository, OutboxService
+from resiliant.outbox.outbox_settings import get_outbox_config
 
 # --------------------------------------------------------------------------- #
 # Resiliant Factory
@@ -61,7 +62,7 @@ class ResiliantServiceBuilder:
         """Return an :class:`OutboxService` wired to a fresh repository."""
         if config is None:
             ResiliantServiceBuilder.logger().debug('No OutboxConfig provided; using defaults.')
-            config = OutboxConfig()
+            config = get_outbox_config()
         return OutboxService(
             config=config,
             repository=ResiliantServiceBuilder.build_outbox_repository(config),

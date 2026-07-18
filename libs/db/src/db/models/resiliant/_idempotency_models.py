@@ -129,12 +129,6 @@ class ProcessedEventTable(UUIDv7Base):
         comment='W3C correlation ID propagated from the original request',
     )
 
-    tenant_id: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True,
-        comment='Tenant ID for multi-tenant replay queries',
-    )
-
     extra_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
         JSON,
         nullable=True,
@@ -183,7 +177,6 @@ class ProcessedEventTable(UUIDv7Base):
             'handler_name': self.handler_name,
             'saga_id': self.saga_id,
             'correlation_id': self.correlation_id,
-            'tenant_id': self.tenant_id,
             'extra_metadata': self.extra_metadata,
             'created_at': (self.created_at.isoformat() if self.created_at else None),
         }

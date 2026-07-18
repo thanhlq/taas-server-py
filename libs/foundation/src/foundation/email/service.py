@@ -4,7 +4,7 @@ from foundation.email.backends import BaseEmailBackend
 
 if TYPE_CHECKING:
     from foundation.email.config import EmailConfig
-    from foundation.email.message import EmailMessage
+    from foundation.email.types import EmailMessage
 
 __all__ = ("EmailService",)
 

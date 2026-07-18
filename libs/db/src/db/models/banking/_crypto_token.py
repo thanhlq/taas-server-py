@@ -13,7 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.models.db_types import JSONText
+from db.models.types import JSONText
 
 from .contants import CRYPTO_TOKEN_TABLE
 

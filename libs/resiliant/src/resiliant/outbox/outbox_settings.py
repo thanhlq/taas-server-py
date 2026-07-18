@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import cast
 
 from foundation.resiliant.outbox import OutboxConfig, PollStrategy
@@ -124,13 +125,29 @@ class OutboxSettings:
     )
     """Database query timeout (ms)."""
 
+    # MESSAGING ROUTING
+    DEFAULT_ROUTING: str = field(
+        default_factory=get_env('OUTBOX_DEFAULT_ROUTING', 'outbox')
+    )
+    DIRECT_CHANNELS: str = field(
+        default_factory=get_env('OUTBOX_DIRECT_CHANNEL_ROUTING', '')
+    )
+    """
+    Example: DIRECT_CHANNELS="audits,notifications"
+    """
+    OUTBOX_CHANNEL: str = field(
+        default_factory=get_env('OUTBOX_OUTBOX_CHANNEL', '')
+    )
+    """ The channel name for direct routing. Messages sent to this channel will be routed directly
+    to the consumer without going through the default routing mechanism. """
+
     def get_config(self) -> OutboxConfig:
         """Return the validated :class:`OutboxConfig`.
 
         Returns:
             The outbox configuration.
         """
-        return OutboxConfig(
+        config = OutboxConfig(
             enabled=self.ENABLED,
             poll_strategy=cast(PollStrategy, self.POLL_STRATEGY),
             fixed_poll_interval_ms=self.FIXED_POLL_INTERVAL_MS,
@@ -155,10 +172,22 @@ class OutboxSettings:
             db_pool_min_size=self.DB_POOL_MIN_SIZE,
             db_pool_max_size=self.DB_POOL_MAX_SIZE,
             db_query_timeout_ms=self.DB_QUERY_TIMEOUT_MS,
+            # Routing
+            routing_default=self.DEFAULT_ROUTING,
         )
+        if self.DIRECT_CHANNELS:
+            # Examples: "audits,notifications"
+            for channel in self.DIRECT_CHANNELS.split(","):
+                config.direct_channels[channel.strip()] = channel.strip()
+
+        if self.OUTBOX_CHANNEL:
+            config.outbox_channels[self.OUTBOX_CHANNEL] = self.OUTBOX_CHANNEL
+
+        return config
 
 
-def build_outbox_config(settings: OutboxSettings | None = None) -> OutboxConfig:
+@lru_cache(maxsize=1)
+def get_outbox_config(settings: OutboxSettings | None = None) -> OutboxConfig:
     """Build the internal (validated) :class:`OutboxConfig` from settings.
 
     Args:

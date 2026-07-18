@@ -22,6 +22,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from db.models.base import TENANT_ID_COLUMN_TYPE
 from db.models.config import RESILIANT_TABLE_PREFIX
 
 
@@ -167,11 +168,8 @@ class DLQEventTable(UUIDv7AuditBase):
         comment='User ID associated with the event (if applicable)',
     )
 
-    tenant_id: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True,
-        index=True,
-        comment='Tenant ID for multi-tenant applications',
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        Integer, index=True, nullable=True, default=None
     )
 
     # Timestamps

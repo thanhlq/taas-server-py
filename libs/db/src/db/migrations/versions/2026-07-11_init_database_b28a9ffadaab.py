@@ -21,7 +21,7 @@ from advanced_alchemy.types import (
 )
 from advanced_alchemy.types.encrypted_string import PGCryptoBackend
 from alembic import op
-from db.models.db_types import JSONText
+from db.models.types import JSONText
 from sqlalchemy import Text  # noqa: F401
 from sqlalchemy.dialects import postgresql
 

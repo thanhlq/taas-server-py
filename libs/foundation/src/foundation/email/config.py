@@ -259,7 +259,7 @@ class EmailConfig:
             A string keyed dict of names to be added to the namespace for signature forward reference resolution.
         """
         from foundation.email.backends.base import BaseEmailBackend
-        from foundation.email.message import EmailMessage, EmailMultiAlternatives
+        from foundation.email.types import EmailMessage, EmailMultiAlternatives
         from foundation.email.service import EmailService
 
         return {

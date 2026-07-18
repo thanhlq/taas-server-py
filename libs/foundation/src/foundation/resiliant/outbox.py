@@ -66,6 +66,7 @@ class OutboxMessage(BaseModel):
     published_at: float | None = None
 
 PollStrategy = Literal['fixed', 'adaptive', 'notify']
+type RoutingStrategy = Literal['outbox', 'direct']
 
 class OutboxConfig(msgspec.Struct, frozen=True):
     """
@@ -141,6 +142,11 @@ class OutboxConfig(msgspec.Struct, frozen=True):
     db_pool_min_size: int = 5
     db_pool_max_size: int = 20
     db_query_timeout_ms: int = 5000
+
+    # Messaging Routing
+    routing_default: RoutingStrategy = 'outbox'
+    direct_channels: dict[str, str] = {}
+    outbox_channels: dict[str, str] = {}
 
     def __post_init__(self):
         """Validate configuration."""

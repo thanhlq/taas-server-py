@@ -1,5 +1,6 @@
 from typing import Any
 
+from foundation.messaging.types import IMessageRoutingService
 from foundation.resiliant.dlq import IDLQService
 from foundation.resiliant.idempotency import IIdempotencyService
 from foundation.resiliant.outbox import IOutboxService
@@ -25,3 +26,4 @@ def register_factory(factory: ResiliantServiceFactoryT):
     register_service(IOutboxService, factory.get_outbox_service())
     register_service(IDLQService, factory.get_dlq_service())
     register_service(IIdempotencyService, factory.get_idempotency_service())
+    register_service(IMessageRoutingService, factory.get_message_routing_service())

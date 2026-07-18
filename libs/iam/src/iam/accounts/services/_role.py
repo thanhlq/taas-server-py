@@ -4,7 +4,7 @@ import asyncio
 
 import db.models.core as m
 from advanced_alchemy.extensions.fastapi import repository, service
-from iam.constants import Roles
+from iam.iam_constants import Roles
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session

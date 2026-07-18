@@ -1,3 +1,3 @@
-from .repos import RepoFactory
+from .repos import CoreRepositoryFactory
 
-__all__ = ['RepoFactory']
+__all__ = ['CoreRepositoryFactory']

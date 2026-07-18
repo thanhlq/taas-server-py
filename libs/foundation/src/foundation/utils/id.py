@@ -1,4 +1,5 @@
-# from ..common.constants import TENANT_ID_LENGTH
+# uv run python id.py
+import random
 import uuid
 
 from fastnanoid import generate
@@ -16,9 +17,21 @@ def generate_uuid() -> str:
     return str(v7_uuid())
 
 
-def generate_tenant_id(size: int = TENANT_ID_LENGTH) -> str:
+def generate_tenant_id_str(size: int = TENANT_ID_LENGTH) -> str:
     return generate(size=size, alphabet=numbers_all)
 
+
+def generate_tenant_id(from_size: int = 10000000, to_size: int = 99999999) -> int:
+    return random.randint(from_size, to_size)
+
+
+def random_int_by_size(size: int = 8) -> int:
+    """Generate a random integer of a specific length."""
+    if size < 1:
+        raise ValueError("Size must be at least 1")
+    lower_bound = 10 ** (size - 1)
+    upper_bound = (10 ** size) - 1
+    return random.randint(lower_bound, upper_bound)
 
 def generate_id(
     size: int = 21,
@@ -45,3 +58,7 @@ def generate_otp(size: int = 6) -> str:
 # print(f'Generated UUID: {generate_uuid()}')
 # print(f'Generated OTP: {generate_otp()}')
 # print('---')
+
+
+# print(f'Generated Tenant ID: {random_int_by_size(6)}')
+# print(f'Generated Tenant ID: {random_int_by_size(8)}')

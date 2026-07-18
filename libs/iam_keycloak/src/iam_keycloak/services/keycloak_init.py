@@ -1,7 +1,7 @@
-from core.conf import get_app_settings
-from core.conf.settings import AppSetting
-from core.observability.log_factory import LogFactory
+from foundation.observability.log_factory import LogFactory
 from keycloak import KeycloakAdmin, KeycloakOpenID
+
+from iam_keycloak.keycloak_settings import KeycloakSettings, get_keycloak_settings
 
 """
 def get_keycloak_openid() -> KeycloakOpenID:
@@ -20,8 +20,8 @@ def get_keycloak_openid() -> KeycloakOpenID:
 """
 
 
-def get_keycloak_openid(realm: str = None) -> KeycloakOpenID:
-    settings: AppSetting = get_app_settings()
+def get_keycloak_openid(realm: str | None = None) -> KeycloakOpenID:
+    settings: KeycloakSettings = get_keycloak_settings()
     logger = LogFactory().get_logger(__name__)
 
     # if settings.SAAS_MODE:
@@ -34,7 +34,7 @@ def get_keycloak_openid(realm: str = None) -> KeycloakOpenID:
                 'Keycloak realm [KEYCLOAK_REALM] is not set in settings or provided as argument.'
             )
         else:
-            realm = settings.KEYCLOAK_REALM  # type: ignore
+            realm = settings.KEYCLOAK_REALM
 
     logger.debug(
         f'Initializing Keycloak OpenID: '
@@ -55,14 +55,14 @@ def get_keycloak_openid(realm: str = None) -> KeycloakOpenID:
 
 
 def get_keycloak_admin(realm: str | None = None) -> KeycloakAdmin:
-    settings = get_app_settings()
+    settings = get_keycloak_settings()
     logger = LogFactory().get_logger(__name__)
 
     if not realm:
         realm = settings.KEYCLOAK_REALM
 
-    logger.debug(
-        f'Initializing Keycloak Admin: '
+    logger.info(
+        f'🔐 Initializing Keycloak Admin: '
         # f'realm_name: master, '
         f'user_realm_name: {realm}, '
         f'server_url={settings.KEYCLOAK_API}, '

@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 import db.models.core as core_models
+from advanced_alchemy.base import ModelProtocol
 from db import BaseAsyncRepository
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 
 from ._audit_log_repo import AuditLogRepository
 from ._casbin_rule_repo import CasbinRuleRepository
 from ._email_verification_token_repo import EmailVerificationTokenRepository
+from ._organization_repo import OrganizationRepository
 from ._password_reset_token_repo import PasswordResetTokenRepository
 from ._refresh_token_repo import RefreshTokenRepository
 from ._role_repo import RoleRepository
@@ -17,20 +19,10 @@ from ._tag_repo import TagRepository
 from ._team_invitation_repo import TeamInvitationRepository
 from ._team_member_repo import TeamMemberRepository
 from ._team_repo import TeamRepository
+from ._tenant_repo import TenantRepository
 from ._user_oauth_account_repo import UserOAuthAccountRepository
 from ._user_repo import UserRepository
 from ._user_role_repo import UserRoleRepository
-
-try:
-    from ._organization_repo import OrganizationTableRepository
-except Exception:
-    OrganizationTableRepository: type[BaseAsyncRepository[Any]] | None = None
-
-try:
-    from ._tenant_repo import TenantTableRepository
-except Exception:
-    TenantTableRepository: type[BaseAsyncRepository[Any]] | None = None
-
 
 type SessionLike = DBAsyncSession | DBAsyncScopedSession
 
@@ -50,13 +42,9 @@ ALL_REPOSITORIES = {
     'user': UserRepository,
     'user_oauth_account': UserOAuthAccountRepository,
     'user_role': UserRoleRepository,
+    'organization': OrganizationRepository,
+    'tenant': TenantRepository,
 }
-
-if OrganizationTableRepository is not None:
-    ALL_REPOSITORIES['organization'] = OrganizationTableRepository
-
-if TenantTableRepository is not None:
-    ALL_REPOSITORIES['tenant'] = TenantTableRepository
 
 
 MODEL_TO_REPOSITORY = {
@@ -74,10 +62,12 @@ MODEL_TO_REPOSITORY = {
     core_models.User: UserRepository,
     core_models.UserOAuthAccount: UserOAuthAccountRepository,
     core_models.UserRole: UserRoleRepository,
+    core_models.Organization: OrganizationRepository,
+    core_models.Tenant: TenantRepository,
 }
 
 
-class RepoFactory:
+class CoreRepositoryFactory:
     """Factory for core repository classes and instances."""
 
     @staticmethod
@@ -103,7 +93,7 @@ class RepoFactory:
         return repository_type(session=session)
 
     @staticmethod
-    def get_repo_by_model(model_type: type, session: SessionLike) -> BaseAsyncRepository:
+    def get_repo_by_model(model_type: type[ModelProtocol], session: SessionLike) -> BaseAsyncRepository:
         repository_type = MODEL_TO_REPOSITORY.get(model_type)
         if repository_type is None:
             raise KeyError(f'No repository found for model: {model_type}')
@@ -112,7 +102,7 @@ class RepoFactory:
 
 __all__ = [
     'SessionLike',
-    'RepoFactory',
+    'CoreRepositoryFactory',
     'ALL_REPOSITORIES',
     'MODEL_TO_REPOSITORY',
     'AuditLogRepository',
@@ -129,11 +119,6 @@ __all__ = [
     'UserRepository',
     'UserOAuthAccountRepository',
     'UserRoleRepository',
+    'OrganizationRepository',
+    'TenantRepository',
 ]
-
-if OrganizationTableRepository is not None:
-    __all__.append('OrganizationTableRepository')
-
-if TenantTableRepository is not None:
-    __all__.append('TenantTableRepository')
-

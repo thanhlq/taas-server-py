@@ -19,7 +19,7 @@ from db.models.core.constants import ORGANIZATION_TABLE
 from db.models.core.enums import OrganizationStatus
 
 
-class OrganizationTable(UUIDv7AuditBase, SoftDeleteColumns):
+class Organization(UUIDv7AuditBase, SoftDeleteColumns):
     """Organization"""
 
     __tablename__ = ORGANIZATION_TABLE

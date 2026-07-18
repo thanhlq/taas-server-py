@@ -1,9 +1,13 @@
 from foundation.http import BaseController
 
-from .accounts import account_controllers
 
-iam_controllers: list[BaseController | type[BaseController]] = [
-    *account_controllers,
-]
+def get_iam_controllers() -> list[BaseController | type[BaseController]]:
+    """
+    Get the list of IAM controllers.
+    """
+    from .auth import get_auth_controllers
 
-__all__ = ['iam_controllers']
+
+    return [*get_auth_controllers()]
+
+__all__ = ['get_iam_controllers']

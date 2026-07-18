@@ -12,7 +12,7 @@ from foundation.email.utils.module_loader import ensure_httpx
 
 if TYPE_CHECKING:
     from foundation.email.config import SendGridConfig
-    from foundation.email.message import EmailMessage
+    from foundation.email.types import EmailMessage
     from foundation.email.transports.base import HTTPTransport
 
 __all__ = ("SendGridBackend",)

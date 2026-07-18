@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Optional, cast
+from typing import Annotated, Any, cast
 
 from core.api.api_serializers import (
     PaginatedSuccessResponse,
@@ -23,10 +23,9 @@ from core.iam.types import IIamService
 from core.observability.log_factory import LogFactory
 from core.utils.debug import debug_exception
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi_cache.decorator import cache
 
 from ..db.kc_db_factory import KCDBFactory
-from ..db.repositories.kc_directory_user_repo import DirectoryUserRepository
+from ..db.repositories.kc_user_repo import KeycloakUserRepository
 from ..domains.schemas.api_schemas import UserFilterParams
 
 settings = get_app_settings()
@@ -59,8 +58,8 @@ async def admin_list_users(
     try:
         context_data: RequestContextData = build_request_context(req)
         logger.debug('Admin List Users - context_data Params: %s', context_data)
-        user_repo: DirectoryUserRepository = cast(
-            DirectoryUserRepository, KCDBFactory.get_instance().get_async(UserEntity)
+        user_repo: KeycloakUserRepository = cast(
+            KeycloakUserRepository, KCDBFactory.get_instance().get_async(UserEntity)
         )
         # user_repo.set_realm(realm_id=context_data.user.realm_id)
         # user_repo.set_realm(realm_name='emtrack')

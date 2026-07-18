@@ -3,6 +3,7 @@ Event Processor Configuration.
 
 Centralized configuration for event processing, retry logic, and DLQ behavior.
 """
+from functools import lru_cache
 
 from dataclasses import dataclass
 
@@ -120,3 +121,14 @@ class EventProcessorConfig:
     def __post_init__(self):
         """Validate configuration after initialization."""
         self.validate()
+
+
+@lru_cache(maxsize=1)
+def get_event_processor_config() -> EventProcessorConfig:
+    """
+    Get default event processor configuration.
+
+    Returns:
+        Default EventProcessorConfig instance
+    """
+    return EventProcessorConfig()

@@ -1,11 +1,11 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Optional
 
 from foundation.serialization import ApiResponse
 
 
-class TaskNotificationEvent(str, Enum):
+class TaskNotificationEvent(StrEnum):
     """Kinds of project task notifications pushed over the WebSocket."""
 
     TASK_CREATED = 'task.created'

@@ -2,7 +2,7 @@
 Outbox database models and types.
 """
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import AuditColumns
@@ -101,12 +101,6 @@ class OutboxEventTable(UUIDv7AuditBase):
     source_service = Column(String(100), nullable=True)
     correlation_id = Column(String(64), nullable=True, index=True)
     user_id = Column(String(64), nullable=True)
-    tenant_id: Mapped[Optional[str]] = mapped_column(
-        Text,
-        # server_default=text('gen_random_uuid()'),
-        nullable=True,
-        index=True,
-    )
 
     # Indexes for performance
     __table_args__ = (
@@ -157,7 +151,6 @@ class OutboxEventTable(UUIDv7AuditBase):
             'source_service': self.source_service,
             'correlation_id': self.correlation_id,
             'user_id': self.user_id,
-            'tenant_id': self.tenant_id,
         }
 
 
@@ -196,11 +189,6 @@ class OutboxEventArchiveTable(AuditColumns):
     source_service = Column(String(100), nullable=True)
     correlation_id = Column(String(64), nullable=True)
     user_id = Column(String(64), nullable=True)
-    tenant_id: Mapped[Optional[str]] = mapped_column(
-        Text,
-        # server_default=text('gen_random_uuid()'),
-        index=True,
-    )
 
     __table_args__ = (
         # Index('idx_outbox_archive_created', 'created_at'),

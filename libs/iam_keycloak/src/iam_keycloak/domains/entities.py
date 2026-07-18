@@ -14,9 +14,30 @@
 from datetime import datetime
 from typing import Optional
 
-from core.iam.domain.entities import OpenIDUserInfo
-from pydantic import BaseModel
-from starlette.authentication import BaseUser
+from foundation.serialization import BaseEntity, BaseModel
+
+
+class OpenIDUserInfo(BaseModel):
+    """
+    See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+        {
+        "sub": "248289761001",
+        "name": "Jane Doe",
+        "given_name": "Jane",
+        "family_name": "Doe",
+        "preferred_username": "j.doe",
+        "email": "janedoe@example.com",
+        "picture": "http://example.com/janedoe/me.jpg"
+        }
+    """
+
+    sub: str
+    preferred_username: str
+    name: Optional[str] = None
+    family_name: Optional[str] = None  # last_name
+    given_name: Optional[str] = None  # first_name
+    email: Optional[str] = None
+    picture: Optional[str] = None
 
 
 class KeycloakAuthUser(OpenIDUserInfo):
@@ -33,24 +54,9 @@ class KeycloakAuthUser(OpenIDUserInfo):
         return self.preferred_username
 
 
-class KeycloakUser(BaseModel):
-    """
-    id
-    email
-    email_constraint
-    email_verified
-    enabled
-    federation_link
-    first_name
-    last_name
-    realm_id
-    username
-    created_timestamp
-    service_account_client_link
-    not_before
-    """
-
+class KeycloakUser(BaseEntity):
     id: str
+    username: Optional[str]
     email: Optional[str] = None
     email_constraint: Optional[str] = None
     email_verified: bool = False
@@ -59,7 +65,6 @@ class KeycloakUser(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     realm_id: Optional[str] = None
-    username: Optional[str]
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     created_timestamp: Optional[int] = None

@@ -1,21 +1,23 @@
-from sqlalchemy.sql import text
-from sqlalchemy import String
 import datetime
 from uuid import UUID
 
-from advanced_alchemy.base import AdvancedDeclarativeBase
+from advanced_alchemy.base import DefaultBase as BaseDBModel
 from advanced_alchemy.types import DateTimeUTC
+from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column, validates
+from sqlalchemy.sql import text
 
 # from advanced_alchemy.types import DateTimeUTC
 
 type ID_COLUMN_TYPE = UUID
+type TENANT_ID_COLUMN_TYPE = int
 
 
 __all__ = [
     'SoftDeleteColumns',
-    'AdvancedDeclarativeBase',
+    # 'AdvancedDeclarativeBase',
+    'BaseDBModel',
     'ID_COLUMN_TYPE',
     'JSONB',
     'Uuid36DBGenerating',

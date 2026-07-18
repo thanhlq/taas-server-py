@@ -3,11 +3,13 @@ name = "iam_keycloak"
 version = "0.1.0"
 description = "The iam implementation using keycloak"
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "Thanh LE", email = "thanhlq@msn.com" }
 ]
 requires-python = ">=3.14"
 dependencies = [
+    # Core modules (workspace)
     "foundation",
+    "iam",
 
     "pydantic>=2.0.0",
     "fastapi>=0.104.0",

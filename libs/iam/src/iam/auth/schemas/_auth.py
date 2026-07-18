@@ -1,9 +1,9 @@
 """User-related account schemas."""
-from typing import Literal, TypedDict
-from foundation.serialization import BaseModel
+from typing import Literal, Optional, TypedDict
 
-
+from foundation.http.response import ApiResponse
 from foundation.iam.types import Phone
+from foundation.serialization import BaseModel
 from foundation.serialization._msgspec_model import ApiRequest
 
 
@@ -18,6 +18,7 @@ class SignupRequest(ApiRequest):
     first_name: str | None = None
     last_name: str | None = None
     organization: str | None = None
+    """ When SaaS is enabled, this is required. """
     mobile_phone: Phone | None = None
     password: str | None = None
     email: str | None = None
@@ -51,6 +52,11 @@ class SignupRequest(ApiRequest):
             if len(name_parts) > 1:
                 self.last_name = name_parts[1]
 
+class SignupRequestOut(ApiResponse):
+    id: str | None = None
+    user: Optional[dict] = None
+    status: Literal['PENDING', 'VERIFICATION_SENT', 'OK', 'FAILED', 'EXISTED'] = 'OK'
+    message: Optional[str] = None
 
 class DirectoryUser(TypedDict):
     pass

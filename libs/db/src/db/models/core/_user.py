@@ -7,12 +7,12 @@ from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedString
 from foundation.config import Settings, get_settings
 from foundation.iam.types import UserStatus
-from sqlalchemy import String
+from sqlalchemy import Integer, String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.models.base import ID_COLUMN_TYPE, JSONB
-from db.models.core.constants import USER_ACCOUNT_TABLE
+from ..base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE
+from .constants import USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
     from db.models import (
@@ -41,8 +41,8 @@ class User(UUIDv7AuditBase):
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     first_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     last_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
-    username: Mapped[str | None] = mapped_column(
-        String(length=30), unique=False, index=True, nullable=True, default=None
+    username: Mapped[str] = mapped_column(
+        String(length=30), unique=False, index=True, nullable=False, default=None
     )
     # phone: Mapped[str | None] = mapped_column(
     #     String(length=20), nullable=True, default=None
@@ -70,8 +70,8 @@ class User(UUIDv7AuditBase):
     password_reset_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     failed_reset_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
     reset_locked_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
-    tenant_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        Integer, index=True, nullable=True, default=None
     )
     org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None

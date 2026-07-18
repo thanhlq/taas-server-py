@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     import aiosmtplib
 
     from foundation.email.config import SMTPConfig
-    from foundation.email.message import EmailMessage
+    from foundation.email.types import EmailMessage
 
 __all__ = ("SMTPBackend",)
 

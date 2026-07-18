@@ -2,6 +2,7 @@
 from collections.abc import Set
 from typing import List, Optional
 
+from db.models.base import BaseDBModel, Uuid36DBGenerating
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -11,11 +12,8 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from db.models.base import AdvancedDeclarativeBase as BaseDBModel, Uuid36DBGenerating
 
 ID_LENGTH = 36
 LENGTH_DEFAULT = 36

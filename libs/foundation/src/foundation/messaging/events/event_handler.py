@@ -9,7 +9,8 @@ from dataclasses import dataclass, field
 from logging import Logger
 from typing import Dict, Optional, TypeVar, cast
 
-from foundation.messaging.types import BaseEvent, ProcessingResult
+from foundation import BaseService
+from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResult
 from foundation.observability.log_factory import LogFactory
 
 EventT = TypeVar('EventT', bound=BaseEvent)
@@ -34,7 +35,7 @@ class EventStep:
     note: str = ''
 
 
-class BaseEventHandler[EventT](ABC):
+class BaseEventHandler[EventT: BaseEvent](BaseService, ABC):
     """
     Base class for event handlers.
 
@@ -68,8 +69,23 @@ class BaseEventHandler[EventT](ABC):
         self.handler_name = handler_name or self.__class__.__name__
 
     @property
+    def handler_id(self) -> str:
+        """Unique identifier for this handler."""
+        return f'{self.handler_name}'
+
+    def build_idempotency_key(self, event: BaseEvent) -> str:
+        """Build a unique key for this handler and event.
+
+        This key is used to ensure that the same event is not processed
+        multiple times by the same handler.
+        """
+        return f'{self.handler_id}:{event.event_id}'
+
+    @property
     def logger(self) -> Logger:
-        return LogFactory().get_logger(self.handler_name)
+        if self._logger is None:
+            self._logger = LogFactory().get_logger(self.handler_name)
+        return self._logger
 
     def get_event(self, event: BaseEvent) -> EventT:
         """Return the typed payload for *event*.
@@ -89,7 +105,7 @@ class BaseEventHandler[EventT](ABC):
         data = {k: v for k, v in dataclasses.asdict(event).items() if k in valid_fields}
         return self.event_class(**data)
 
-    async def handle(self, event: BaseEvent, **kwargs) -> ProcessingResult:
+    async def handle(self, event: BaseEvent, meta: EventMetadata,  **kwargs) -> ProcessingResult:
         # metadata = EventMetadata(
         #     event_id=event.event_id,
         #     event_type=event.event_type,
@@ -101,12 +117,12 @@ class BaseEventHandler[EventT](ABC):
         #     handler_name=self.handler_name,
         # )
         return await self.handle_event(
-            event=self.get_event(event), **kwargs
+            event=self.get_event(event), meta=meta, **kwargs
         )
 
     @abstractmethod
     async def handle_event(
-        self, event: EventT, **kwargs
+        self, event: EventT, meta: EventMetadata, **kwargs
     ) -> ProcessingResult:
         """
         Handle the event.
@@ -121,12 +137,13 @@ class BaseEventHandler[EventT](ABC):
         """
         pass
 
-    async def validate(self, event: BaseEvent, **kwargs) -> bool:
+    async def validate(self, event: BaseEvent, meta: EventMetadata,  **kwargs) -> bool:
         """
         Validate event before processing.
 
         Args:
             event: Event to validate
+            metadata: Synthesised ``EventMetadata`` view (backward compat).
 
         Returns:
             True if valid, False otherwise

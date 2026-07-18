@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TextIO
 from foundation.email.backends.base import BaseEmailBackend
 
 if TYPE_CHECKING:
-    from foundation.email.message import EmailMessage
+    from foundation.email.types import EmailMessage
 
 __all__ = ("ConsoleBackend",)
 

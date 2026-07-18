@@ -1,6 +1,6 @@
 from db import BaseAsyncRepository
-from db.models.core._tenant import TenantTable
+from db.models.core._tenant import Tenant
 
 
-class TenantTableRepository(BaseAsyncRepository[TenantTable]):
-    model_type = TenantTable
+class TenantRepository(BaseAsyncRepository[Tenant]):
+    model_type = Tenant

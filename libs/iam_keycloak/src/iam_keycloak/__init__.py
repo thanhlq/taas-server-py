@@ -9,6 +9,6 @@ __version__ = '0.1.0'
 from .endpoints.kc_admin_endpoint import router as admin_router
 from .endpoints.kc_auth_endpoint import router as auth_router
 from .endpoints.kc_users_endpoint import router as users_router
-from .factory import IamKeycloakServiceFactory
+from .factory import KeycloakIamServiceFactory
 
-__all__ = ['admin_router', 'users_router', 'auth_router', 'IamKeycloakServiceFactory']
+__all__ = ['admin_router', 'users_router', 'auth_router', 'KeycloakIamServiceFactory']

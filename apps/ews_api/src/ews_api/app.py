@@ -5,12 +5,11 @@ The module is responsible for setting up the FastAPI app, including:
   - cors
   - routes
 """
-
 from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
 
 import socketio
-from ews import conrrollers as ews_conrrollers
+from ews import get_ews_controllers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from foundation.cli import cli_print_info
@@ -21,10 +20,13 @@ from foundation.http._websocket_redis_manager import build_websocket_redis_manag
 from foundation.http.base_app import AppConfig, BaseApiApplication
 from foundation.messaging.factory import MessagingFactory
 from foundation.messaging.types import IMessagingService
+from foundation.resiliant.register_services import register_service
 from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
-from iam import iam_controllers
+from iam import get_iam_controllers
+from iam.types import IIamServiceFactory
+from iam_keycloak import KeycloakIamServiceFactory
 
 # from messaging_kafka import initialize_messaging_service
 from messaging_faststream import initialize_messaging_service
@@ -47,7 +49,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         runtime_path: str,
     ) -> None:
         super().__init__(settings, runtime_path, None)
-        FoundationFactory.use_resiliant(ResiliantServiceFactory())
+        self._init_services()  # Initialize services before building the app
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 
     def instrument_settings(self) -> 'InstrumentSettings':
@@ -116,6 +118,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         _fastapi_app: FastAPI = _setup_fastapi_app(
             logger=self.logger, app_config=self.config, lifespan=lifespan
         )
+
         _controllers = self.get_app_controllers()
         if self.is_websocket_enabled():
             websocket_config: WebSocketConfig = self.config.websocket_config  # type: ignore
@@ -128,8 +131,15 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
         return _fastapi_app
 
+    def _init_services(self) -> None:
+        # Initialize the ResiliantServiceFactory and register it with the FoundationFactory
+        resiliant_factory = ResiliantServiceFactory()
+        FoundationFactory.use_resiliant(resiliant_factory)
+
+        register_service(IIamServiceFactory, KeycloakIamServiceFactory())
+
     def get_app_controllers(self) -> list[Any]:
-        return [*iam_controllers, *ews_conrrollers]
+        return [*get_iam_controllers(), *get_ews_controllers()]
 
 
 def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastAPI:

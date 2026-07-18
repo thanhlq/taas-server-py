@@ -6,12 +6,12 @@ from typing import Optional
 from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.models.base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
-from db.models.ews.constants import TENANT_TABLE
+from db.models.base import ID_COLUMN_TYPE, JSONB, BaseDBModel, SoftDeleteColumns
+from db.models.core.constants import TENANT_TABLE
 from db.models.core.enums import TenantStatus
 
 
-class TenantTable(SoftDeleteColumns):
+class Tenant(BaseDBModel, SoftDeleteColumns):
     """Tenant model representing a Keycloak realm"""
 
     __tablename__ = TENANT_TABLE
@@ -22,7 +22,7 @@ class TenantTable(SoftDeleteColumns):
     #     primary_key=True,
     # )
     id: Mapped[int] = mapped_column(
-        Integer,
+        String(12),
         primary_key=True,
     )
     # Id that stored in Keycloak i.e. organization_id in Keycloak

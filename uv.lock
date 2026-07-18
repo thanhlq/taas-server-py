@@ -1251,6 +1251,7 @@ source = { editable = "libs/iam_keycloak" }
 dependencies = [
     { name = "fastapi" },
     { name = "foundation" },
+    { name = "iam" },
     { name = "pydantic" },
     { name = "python-keycloak" },
 ]
@@ -1267,6 +1268,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "foundation", editable = "libs/foundation" },
+    { name = "iam", editable = "libs/iam" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "python-keycloak", specifier = "==7.1.1" },
 ]

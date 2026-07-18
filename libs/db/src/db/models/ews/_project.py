@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
+from ..base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE, SoftDeleteColumns
 from .constants import PROJECTS_TABLE
 
 if TYPE_CHECKING:
@@ -32,6 +32,9 @@ class Project(UUIDv7Base, SoftDeleteColumns):
     __tablename__ = PROJECTS_TABLE
 
     org_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        Integer, index=True, nullable=True, default=None
+    )
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
     code: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)

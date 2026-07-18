@@ -2,14 +2,14 @@
 Contains types and domain models specific to Keycloak integration for IAM (Identity and Access Management).
 """
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 # region KEYCLOAK NATIVE TYPES
 
 # endregion
 
 
-class KeycloakSupportedLocale(str, Enum):
+class KeycloakSupportedLocale(StrEnum):
     DE = 'de'
     NO = 'no'
     RU = 'ru'
@@ -36,7 +36,7 @@ class KeycloakSupportedLocale(str, Enum):
         return [c.value for c in KeycloakSupportedLocale]
 
 
-class KeycloakRequiredActions(str, Enum):
+class KeycloakRequiredActions(StrEnum):
     UPDATE_USER_LOCALE = 'update_user_locale'
     TERMS_AND_CONDITIONS = 'TERMS_AND_CONDITIONS'
     CONFIGURE_TOTP = 'CONFIGURE_TOTP'

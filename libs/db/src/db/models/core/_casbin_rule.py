@@ -6,11 +6,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..base import AdvancedDeclarativeBase
+from ..base import BaseDBModel
 from .constants import CASBIN_RULE_TABLE
 
 
-class CasbinRule(AdvancedDeclarativeBase):
+class CasbinRule(BaseDBModel):
     __tablename__ = CASBIN_RULE_TABLE
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import (
 from foundation.concurrency import get_current_task_id
 from foundation.config import DatabaseSettings, get_settings
 from foundation.db.engine_factory import EngineFactory
+from foundation.utils.singleton import singleton
 
 from .analytics import DBSessionStats
 
@@ -182,6 +183,7 @@ class AdvancedDBManager:
         self._sessionmaker = None  # type: ignore
 
 
+@singleton
 class MainDatabase:
     _instance: AdvancedDBManager | None = None
 

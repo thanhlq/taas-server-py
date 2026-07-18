@@ -3,11 +3,18 @@ from foundation.http import BaseController
 from .controllers._test_controller_demo import TestController
 from .repos import RepoFactory
 
-project_controllers: list[BaseController] = [
-    TestController(),
-]
+
+def get_project_controllers() -> list[BaseController]:
+    """
+    Get the list of project controllers.
+    """
+    project_controllers: list[BaseController] = [
+        TestController(),
+    ]
+    return project_controllers
+
 
 __all__ = [
-    "project_controllers",
+    'get_project_controllers',
     'RepoFactory',
 ]

@@ -14,7 +14,7 @@ from foundation.observability.tracing_factory import TracingFactory
 from foundation.resiliant.retry import Retry
 
 from .event_handler import BaseEventHandler, handlerRegistry
-from .event_processor_config import EventProcessorConfig
+from .event_processor_config import EventProcessorConfig, get_event_processor_config
 
 # from .safety.exp_backoff_retry import ExponentialBackoffRetry as Retry
 
@@ -57,7 +57,7 @@ class EventProcessor:
             config: Event processor configuration. If None, uses default config from settings.
             stats: Optional statistics dict to track retries. If None, internal stats are used.
         """
-        self.config = config or EventProcessorConfig()
+        self._config = config or get_event_processor_config()
         self.logger = LogFactory().get_logger(self.__class__.__name__)
         self._internal_stats = {
             'messages_retried': 0,
@@ -65,7 +65,13 @@ class EventProcessor:
         self.stats = stats or self._internal_stats
 
         # Initialize retry policy with config
-        self.retry_policy = Retry(name=self.config.retry_policy_name)
+        self.retry_policy = Retry(name=self._config.retry_policy_name)
+
+
+    @property
+    def config(self) -> EventProcessorConfig:
+        """Get the current event processor configuration."""
+        return self._config
 
     async def process_event(
         self,

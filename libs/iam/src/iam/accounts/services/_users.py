@@ -1,15 +1,15 @@
 from __future__ import annotations
-from ews.core import RepoFactory
-from typing import TYPE_CHECKING
 
 import asyncio
+from typing import TYPE_CHECKING
 
 import db.models.core as m
 from advanced_alchemy.extensions.fastapi import service
-from iam.accounts.schemas._user import UserCreate, UserStatus
-from iam.constants import Roles
+from ews.core import CoreRepositoryFactory
 from foundation.db.types import DBAsyncSession
 from foundation.models import ListResult
+from iam.accounts.schemas._user import UserCreate, UserStatus
+from iam.iam_constants import Roles
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from sqlalchemy.sql import text
@@ -21,7 +21,7 @@ class UserService(service.SQLAlchemyAsyncRepositoryService[m.User]):
     """Handles database operations for users."""
 
 
-    repository_type = RepoFactory.user_repo()
+    repository_type = CoreRepositoryFactory.user_repo()
     default_role = Roles.USER
     match_fields = ['email']
 

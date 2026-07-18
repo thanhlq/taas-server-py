@@ -8,7 +8,6 @@ from typing import Union
 
 from foundation.db.advanced_db_manager import AdvancedDBManager
 
-
 from .kc_db_settings import get_keycloak_db_settings
 
 
@@ -20,8 +19,7 @@ class KeycloakDBManager(AdvancedDBManager):
         super().__init__(settings)
 
 
-
-db = KeycloakDBManager()
+kc_db = KeycloakDBManager()
 
 
 # def kc_db_session_async(func: Callable) -> Callable:
@@ -46,8 +44,6 @@ db = KeycloakDBManager()
 
 #     return wrapper
 
-count = 0
-
 
 def kc_db_session_async(
     _func: Union[Callable, None] = None, *, transaction: bool = False
@@ -65,9 +61,7 @@ def kc_db_session_async(
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # current_depth = _call_depth.get()
-            existing_session = (
-                KeycloakDBManager.get_instance().get_current_context_session()
-            )
+            existing_session = kc_db.get_current_context_session()
 
             if existing_session is not None:
                 # Use existing session from context - pass it in kwargs
@@ -78,15 +72,7 @@ def kc_db_session_async(
                 # async with db_context_transaction(transaction) as new_session:
                 # No existing session, create a new transaction context
                 # Increment call depth to track we're the root caller
-                async with (
-                    KeycloakDBManager.get_instance().get_context_session_generator(
-                        transaction
-                    ) as new_session
-                ):
-                    global count
-                    print(f'🐬 🚀 [kc_db_session_async] New session created: {count}')
-                    count += 1
-                    # kwargs['session'] = new_session
+                async with kc_db.get_session_generator(transaction) as new_session:
                     result = await func(*args, session=new_session, **kwargs)
                     return result
 

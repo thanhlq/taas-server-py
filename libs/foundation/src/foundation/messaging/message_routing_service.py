@@ -1,17 +1,19 @@
 # from foundation.db.sa.db_manager import MainDBManager
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from foundation import BaseService
+from foundation.cli import cli
 from foundation.db.advanced_db_manager import MainDatabase
-from foundation.resiliant.outbox import IOutboxPublisher, IOutboxService, OutboxConfig
+from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.resiliant.outbox import IOutboxService, OutboxConfig
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
-from .types import BaseEvent, IMessagingService
+from .types import IMessageRoutingService, IMessagingService
 
 
 @singleton
-class MessageRoutingService(BaseService, IOutboxPublisher):
+class MessageRoutingService(BaseService, IMessageRoutingService):
     """
     A service that routes messages either through the outbox pattern or directly to the messaging service based on configuration.
     """
@@ -22,21 +24,33 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
 
     def __init__(
         self,
+        outbox_config: OutboxConfig,
         messaging_service: Optional[IMessagingService] = None,
         outbox_service: Optional[IOutboxService] = None,
-        outbox_config: Optional[OutboxConfig] = None,
     ):
         super().__init__()
-
-        if outbox_config is None:
-            outbox_config = OutboxConfig()
 
         self._messaging_service = messaging_service
         self._outbox_service = outbox_service
         self._outbox_config = outbox_config
-        self.logger.info(
-            '📦 MessageRoutingService initialized. Outbox config: %s', outbox_config
+
+        init_info: dict[str, Any] = {
+            "outbox_enabled": self._outbox_config.enabled,
+            "default_routing": self._outbox_config.routing_default,
+            "direct_channels": list(self._outbox_config.direct_channels.keys()),
+            "outbox_channels": list(self._outbox_config.outbox_channels.keys()),
+        }
+        cli.info_table(
+            title="Message Routing Service Configuration",
+            data=init_info,
         )
+
+        self.logger.info(
+            '📦 MessageRoutingService initialized', init_info
+        )
+
+    def get_config(self) -> OutboxConfig:
+        return self._outbox_config
 
     @property
     def outbox_enabled(self) -> bool:
@@ -47,19 +61,12 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
         if not self._messaging_service:
             self._messaging_service = get_service(IMessagingService)
 
-        if not self._messaging_service:
-            raise ValueError('Messaging service is not available in Service Locator')
-
         return self._messaging_service
 
     @property
     def outbox_service(self) -> IOutboxService:
         if not self._outbox_service:
             self._outbox_service = get_service(IOutboxService, True)
-
-        # if not self._outbox_service:
-        #     # use default implementation
-        #     self._outbox_service = OutboxService(OutboxConfig())
 
         return self._outbox_service
 
@@ -69,14 +76,15 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
                 'Messaging service must be provided when outbox is disabled'
             )
 
-    async def save_event(
+    async def publish_event(
         self,
-        session: Any,  # AsyncSession from SQLAlchemy
-        event: BaseEvent,
+        event: Any,
         channel: str,
-        partition_key: Optional[str] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        max_retries: Optional[int] = None,
+        *,
+        session: DBAsyncSession | DBAsyncScopedSession | None = None,
+        partition_key: str | None = None,
+        headers: dict[str, Any] | None = None,
+        max_retries: int | None = None,
     ) -> Any:
         """
         Save domain event to outbox or publish directly based on configuration.
@@ -95,7 +103,7 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
         Returns:
             OutboxEvent if outbox enabled, None if direct publish
         """
-        if self.outbox_enabled:
+        if self.get_routing_for_channel(channel) == "outbox":
             _new_session = None
             if session is None:
                 # in event / user directory creation case, we don't have a db session, but we still want to use outbox to ensure reliable delivery
@@ -129,57 +137,3 @@ class MessageRoutingService(BaseService, IOutboxPublisher):
             )
             return None
 
-    async def save_raw_message(
-        self,
-        session: Any,
-        channel: str,
-        payload: Dict[str, Any],
-        event_type: str,
-        partition_key: Optional[str] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        max_retries: Optional[int] = None,
-    ) -> Any:
-        """
-        Save raw message to outbox or publish directly based on configuration.
-
-        If outbox is enabled: Saves to database for reliable async publishing
-        If outbox is disabled: Publishes immediately to messaging provider
-
-        Args:
-            session: Database session (used only when outbox is enabled)
-            channel: Channel name (topic/stream/queue)
-            payload: Message payload (will be JSON serialized)
-            event_type: Event type identifier
-            partition_key: Optional partition key
-            headers: Optional message headers
-            max_retries: Override default max retries (outbox only)
-
-        Returns:
-            OutboxEvent if outbox enabled, None if direct publish
-        """
-        if self.outbox_enabled:
-            # Use transactional outbox pattern
-            self.logger.debug(f'Saving raw message to outbox: {event_type} → {channel}')
-            return await self.outbox_service.save_raw_message(
-                session=session,
-                channel=channel,
-                payload=payload,
-                event_type=event_type,
-                partition_key=partition_key,
-                headers=headers,
-                max_retries=max_retries,
-            )
-        else:
-            # Direct publish (need to convert to BaseEvent-like structure)
-            # Note: Direct publishing raw messages requires the messaging service
-            # to accept dict payloads. Consider wrapping in a generic event.
-            self.logger.warning(
-                f'Direct publishing raw message without outbox: {event_type} → {channel}. '
-                'This bypasses transactional guarantees and may lose messages on failure.'
-            )
-            # TODO: Implement direct raw message publishing if messaging_service supports it
-            # For now, raise an exception to force using outbox for raw messages
-            raise NotImplementedError(
-                'Direct publishing of raw messages is not supported. '
-                'Please enable outbox or convert to BaseEvent before publishing.'
-            )
