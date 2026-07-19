@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 import socketio
-from ews import conrrollers as ews_conrrollers
+from ews import get_ews_controllers
 from foundation.cli import cli_print_info
 from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
@@ -28,7 +28,7 @@ from http_litestar.adapters import (
 )
 from http_litestar.create_app import build_app
 from http_litestar.middewares.request_context import RequestContextMiddleware
-from iam import iam_controllers
+from iam import get_iam_controllers
 from litestar import Litestar
 from litestar.response import Response
 from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
@@ -125,7 +125,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
         return litestar_app
 
     def get_app_controllers(self) -> list[Any]:
-        return [*iam_controllers, *ews_conrrollers]
+        return [*get_iam_controllers(), *get_ews_controllers()]
 
 
 _ews_app = EwsLitestarApplication(settings, root_path)

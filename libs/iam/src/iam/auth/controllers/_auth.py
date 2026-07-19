@@ -2,27 +2,22 @@ from __future__ import annotations
 
 from uuid import UUID
 
-# from fastapi import Depends
 from foundation.db.advanced_db_manager import (
-    MainDatabase,
     db_concurrent_session,
     db_context_session,
 )
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.http import BaseController, cache, delete, get, patch, post, status
 
-# async def provide_users_service(
-#     db_session: Annotated[AsyncSession, Depends(get_db_async_generator)],
-# ) -> UserService:
-#     """Provide a ``UserService`` bound to a request-scoped session."""
-#     return UserService(session=db_session)
+from iam.accounts.accounts_factory import AccountFactory
+from iam.accounts.schemas._user import User, UserCreate, UserUpdate
+from iam.auth.types import IamDirectoryServiceT
 
 
-# UsersServiceDep = Annotated[UserService, Depends(provide_users_service)]
+def get_iam_directory_service() -> IamDirectoryServiceT:
+    from iam.iam_factory import IamFactory
 
-
-def get_auth_service(session) -> UserService:
-    return AuthService(session=session or MainDatabase.get_instance().new_session())
+    return IamFactory.get_directory_service()
 
 
 class AuthController(BaseController):

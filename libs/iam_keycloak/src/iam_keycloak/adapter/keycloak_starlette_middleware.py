@@ -11,14 +11,13 @@ Keycloak Starlette Authentication Backend Middleware
  - Returns authenticated user information as IamUser entity
 
 """
-
+from foundation.logger import debug_exception
 from typing import Optional
 
-from core.common.cookie_parser import parse_cookies
-from core.iam.endpoint import is_endpoint_allow_any
-from core.observability.log_factory import LogFactory
-from core.utils.debug import debug_exception
 from fastapi.requests import HTTPConnection
+from foundation.observability.log_factory import LogFactory
+from foundation.state.endpoint import is_endpoint_allow_any
+from foundation.utils.cookie_parser import parse_cookies
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakGetError
 from starlette.authentication import (
     AuthCredentials,
@@ -36,7 +35,7 @@ class KeycloakOpenIDAuthBackend(AuthenticationBackend):
     async def authenticate(
         self, conn: HTTPConnection
     ) -> Optional[tuple[AuthCredentials, BaseUser]]:
-        endpoint = conn.scope.get('path')
+        endpoint: str = conn.scope.get('path')
 
         logger = LogFactory().get_logger(__name__)
 

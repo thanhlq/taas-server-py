@@ -1,5 +1,6 @@
-from typing import Optional, Any
-from core.observability.error_reporter import report_error
+from typing import Any, Optional
+
+from foundation.exceptions.report_error import report_error
 from keycloak import KeycloakError
 
 from ..utils import parse_keycloak_error

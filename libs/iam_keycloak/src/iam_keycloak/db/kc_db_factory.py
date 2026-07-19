@@ -1,4 +1,4 @@
-from db.repository import RepositoryFactory
+from db.common import RepositoryFactory
 
 from ..domains.entities import KeycloakUser
 from .repositories.kc_user_repo import KeycloakUserRepository

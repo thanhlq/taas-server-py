@@ -20,13 +20,12 @@ from foundation.http._websocket_redis_manager import build_websocket_redis_manag
 from foundation.http.base_app import AppConfig, BaseApiApplication
 from foundation.messaging.factory import MessagingFactory
 from foundation.messaging.types import IMessagingService
-from foundation.resiliant.register_services import register_service
 from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
 from iam import get_iam_controllers
-from iam.types import IIamServiceFactory
-from iam_keycloak import KeycloakIamServiceFactory
+from iam.iam_factory import IamFactory
+from iam_keycloak import IamServiceFactory
 
 # from messaging_kafka import initialize_messaging_service
 from messaging_faststream import initialize_messaging_service
@@ -109,6 +108,9 @@ class EwsApplication(BaseApiApplication[FastAPI]):
             MessagingFactory.init_factory(messaging_service=_ms, decorator=None)
 
             # FIXME: TO BE MIGRATED
+            from iam.auth.handlers.init_handlers import (
+                register_iam_schema_registry_schemas,
+            )
             register_iam_schema_registry_schemas(_ms)
 
             yield  # Startup complete, now run the app
@@ -136,7 +138,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         resiliant_factory = ResiliantServiceFactory()
         FoundationFactory.use_resiliant(resiliant_factory)
 
-        register_service(IIamServiceFactory, KeycloakIamServiceFactory())
+        IamFactory.set_iam_service_factory(IamServiceFactory())
 
     def get_app_controllers(self) -> list[Any]:
         return [*get_iam_controllers(), *get_ews_controllers()]

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from db.repository import IRepositoryFactory
+from db.common import IRepositoryFactory
 from starlette.authentication import AuthenticationBackend
 
 from iam.auth.types import IamDirectoryServiceT

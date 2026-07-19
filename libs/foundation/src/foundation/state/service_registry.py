@@ -2,25 +2,29 @@ import logging
 from logging import Logger
 from typing import Any, Callable, Dict, Optional, Type, cast
 
+from foundation.utils.singleton import singleton
+
 # ============================================================================
-# SERVICE LOCATOR IMPLEMENTATION
+# SERVICE REGISTRY IMPLEMENTATION
 # ============================================================================
 
 
+@singleton
 class ServiceRegistry:
     """
-    Simple service locator implementation.
-    The purpose of this service locator is to provide a simple way to register and retrieve services in the application.
+    Simple service registry implementation.
+    The purpose of this service registry is to provide a simple way to register and retrieve services in the application.
     It supports both singleton and transient services. For singleton services, the same instance will be returned on every request. For transient services, a new instance will be created on each request.
     Usage:
     ```python
     # Registering a service
-    service_locator.register(IMyService, MyServiceImplementation, singleton=True)
+    service_registry.register(IMyService, MyServiceImplementation, singleton=True)
     # Retrieving a service
-    my_service = service_locator.get(IMyService)
+    my_service = service_registry.get(IMyService)
     ```
     """
 
+    instance: Optional[ServiceRegistry] = None
     _logger: Optional[Logger] = None
 
     @property
@@ -123,19 +127,8 @@ class ServiceRegistry:
                     break  # only call the first matching method
 
 
-# ============================================================================
-# GLOBAL SERVICE LOCATOR
-# ============================================================================
-
-_service_registry: Optional[ServiceRegistry] = None
-
-
 def get_service_registry() -> ServiceRegistry:
-    """Get global service locator instance."""
-    global _service_registry
-    if _service_registry is None:
-        _service_registry = ServiceRegistry()
-    return _service_registry
+    return ServiceRegistry()
 
 
 def register_service[T](

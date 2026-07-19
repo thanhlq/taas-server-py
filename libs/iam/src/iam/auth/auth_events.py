@@ -27,7 +27,7 @@ Wire format produced by ``event.as_dict()``::
         "tenant": "{\\"id\\":\\"...\\",...}"   # JSON-serialised tenant dict
     }
 """
-from dataclasses import dataclass, field
+from dataclasses import field
 
 from foundation.messaging.types import BaseEvent
 from foundation.serialization import BaseEventPayload
@@ -68,7 +68,6 @@ class UserDirectoryEventPayload(BaseEventPayload):
     tenant: DirectoryTenant
 
 
-@dataclass
 class UserDirectoryCreatedEvent(BaseEvent[UserDirectoryEventPayload]):
     """
     Fired when a user is created in the identity directory (e.g. Keycloak).
@@ -122,7 +121,6 @@ class UserDirectoryCreatedEvent(BaseEvent[UserDirectoryEventPayload]):
     #     return Tenant(**tenant)
 
 
-@dataclass
 class UserRegisteredEvent(UserDirectoryCreatedEvent):
     """
     Fired when user registration is fully persisted in the internal DB.

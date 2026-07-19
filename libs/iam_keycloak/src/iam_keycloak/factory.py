@@ -1,5 +1,5 @@
 """The factory to create related Keycloak IAM service"""
-from db.repository import IRepositoryFactory
+from db.common import IRepositoryFactory
 from foundation.state import get_service
 from foundation.state.service_registry import register_service
 from foundation.utils.singleton import singleton

@@ -70,15 +70,19 @@ class TracingFactory:
             engines = EngineFactory.get_all_engines()
 
             if engines:
-                SQLAlchemyInstrumentor().instrument(engines=engines)
+                for _eng in engines:
+                    self.logger.info('🔭 Instrumenting SQLAlchemy engine: %s', _eng)
+                    SQLAlchemyInstrumentor().instrument(engines=_eng)
 
                 # Per-database dependency resource ("postgresql/<db>"): the
                 # instrumentor only sets db.system, so a before_cursor_execute
                 # listener (registered after it) stamps peer.service per query.
-                from sqlalchemy import event
+                    try:
+                        from sqlalchemy import event
+                        event.listen(_eng, 'before_cursor_execute', _set_db_peer_service)
+                    except Exception as e:
+                        self.logger.warning('Failed to set before_cursor_execute listener for engine %s: %s', _eng, e)
 
-                for _eng in engines:
-                    event.listen(_eng, 'before_cursor_execute', _set_db_peer_service)
             else:
                 SQLAlchemyInstrumentor().instrument()
 

@@ -1,4 +1,5 @@
 """Centralized service to interact with Keycloak"""
+from foundation.iam.auth import TokenType
 import json
 from typing import Any, Dict, List, Optional, Union, cast
 

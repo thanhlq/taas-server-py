@@ -20,7 +20,6 @@ from foundation.messaging.types import (
 )
 
 from iam.auth.auth_events import UserDirectoryCreatedEvent, UserRegisteredEvent
-from iam.auth.handlers.iam_event_flows import IAM_ALL_FLOWS
 from iam.iam_constants import IamEvents, IamTopics, get_topic_for_event
 
 # Re-exports kept for tests / external imports that still reference them.
@@ -48,6 +47,7 @@ def register_iam_schema_registry_schemas(msg_service: IMessagingService) -> None
     """Register Avro schemas for every topic referenced by IAM flows."""
     # Imported here, not at module level: iam_event_flows imports the handler
     # classes from this package, so a top-level back-import is circular.
+    from iam.auth.handlers.iam_event_flows import IAM_ALL_FLOWS
 
     register_schema_registry_schemas(
         msg_service, flows=IAM_ALL_FLOWS, topic_for_event=_iam_topic_for_event,
@@ -61,6 +61,7 @@ def register_iam_handlers(
 ) -> None:
     """Register IAM event handlers from ``IAM_ALL_FLOWS`` into ``registry``."""
     # See register_iam_schema_registry_schemas for why this import is deferred.
+    from iam.auth.handlers.iam_event_flows import IAM_ALL_FLOWS
 
     register_handlers_from_flows(
         flows=IAM_ALL_FLOWS,

@@ -3,8 +3,8 @@ from typing import Any, cast
 
 from advanced_alchemy.base import ModelProtocol
 from db import BaseAsyncRepository
+from db.common import IRepositoryFactory
 from db.models import User
-from db.repository import IRepositoryFactory
 from ews.core import CoreRepositoryFactory
 from ews.core.repos import TenantRepository, UserRepository
 from ews.core.repos._organization_repo import OrganizationRepository
@@ -12,7 +12,6 @@ from foundation import BaseService
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.messaging.events.event_handler import BaseEventHandler
 
-from iam.admin.services import AdminService, get_admin_service
 from iam.auth.types import IamDirectoryServiceT
 from iam.types import IIamServiceFactory
 
@@ -83,11 +82,12 @@ class BaseIamEventHandler[EventT: Any](BaseEventHandler[EventT], ABC):
         """
         return self.get_service(IIamServiceFactory)
 
-    def get_admin_service(self) -> AdminService:
-        """
-        Get the admin service instance.
-        """
-        return get_admin_service()
+    # def get_admin_service(self) -> AdminService:
+    #     """
+    #     Get the admin service instance.
+    #     """
+    #     from iam.admin.services import get_admin_service
+    #     return get_admin_service()
 
     @property
     def repository_factory(self) -> IRepositoryFactory:

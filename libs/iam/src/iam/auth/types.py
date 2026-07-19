@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from foundation.http.response import ApiResponse
 from foundation.serialization._msgspec_model import BaseEventPayload
 
-from iam.auth.auth_events import UserRegisteredEvent
 from iam.auth.schemas import SignupRequest
 from iam.auth.schemas._auth import SignupRequestOut
+
+if TYPE_CHECKING:
+    # Imported for type-checking only to break the circular import with
+    # ``iam.auth.auth_events`` (which imports DirectoryUser/DirectoryTenant from here).
+    from iam.auth.auth_events import UserRegisteredEvent
 
 
 class DirectoryUser(BaseEventPayload):
@@ -72,12 +76,12 @@ class IamDirectoryServiceT(ABC):
 
     @abstractmethod
     async def signup_send_email_verification(
-        self, user: UserRegisteredEvent, **kwargs
+        self, user: "UserRegisteredEvent", **kwargs
     ): ...
 
     @abstractmethod
     async def signup_send_welcome_email(
-        self, user: UserRegisteredEvent, **kwargs
+        self, user: "UserRegisteredEvent", **kwargs
     ): ...
 
     @abstractmethod

@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .models.base import AdvancedDeclarativeBase
-from .repository.base_repo import AsyncSession, BaseAsyncRepository, BaseModelT
-from .repository.exceptions import ConflictError, NotFoundError, RepositoryError
+from .common.base_repo import AsyncSession, BaseAsyncRepository, BaseModelT
+from .common.exceptions import ConflictError, NotFoundError, RepositoryError
 from .utils.utils import DBUtils
 
 
