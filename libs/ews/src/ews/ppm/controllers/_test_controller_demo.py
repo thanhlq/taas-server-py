@@ -80,7 +80,7 @@ def _sample_task_notifications(project_id: int) -> list[TaskNotification]:
 
 class TestController(BaseController):
     api_prefix = '/api/v1/test-apis'
-    tags = ('Project API TEST',)
+    tags = ('TEST APIS',)
 
     @get('/cached-projects')
     @cache(expire=5)  # Cache this endpoint for 5 seconds

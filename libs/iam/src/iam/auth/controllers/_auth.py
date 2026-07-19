@@ -9,7 +9,7 @@ from foundation.db.advanced_db_manager import (
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.http import BaseController, cache, delete, get, patch, post, status
 
-from iam.accounts.accounts_factory import AccountFactory
+from iam.accounts.accounts_factory import UserAccountFactory
 from iam.accounts.schemas._user import User, UserCreate, UserUpdate
 from iam.auth.types import IamDirectoryServiceT
 
@@ -42,7 +42,7 @@ class AuthController(BaseController):
             },
             'required_fields': ['email', 'password', 'first_name', 'last_name'],
             'organization_policy': {
-                'required_fields': ['name'],
+                'required_fields': ['organization_name'],
                 'require_domain_verification': False,
             },
         }
@@ -51,7 +51,7 @@ class AuthController(BaseController):
     @db_concurrent_session
     async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> User:
         """Get a user by ID."""
-        users_service = AccountFactory.get_user_service(session)
+        users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.get(user_id)
         return users_service.to_schema(db_obj, schema_type=User)
 
@@ -60,7 +60,7 @@ class AuthController(BaseController):
     @db_context_session(auto_commit=True)
     async def create_user(self, data: UserCreate, session: DBAsyncSession) -> User:
 
-        users_service = AccountFactory.get_user_service(session)
+        users_service = UserAccountFactory.get_user_service(session)
 
         data.properties = {
             'mfa_enabled': True,
@@ -82,7 +82,7 @@ class AuthController(BaseController):
         session: DBAsyncSession,
     ) -> User:
         """Update an existing user."""
-        users_service = AccountFactory.get_user_service(session)
+        users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
         return users_service.to_schema(db_obj, schema_type=User)
 
@@ -90,5 +90,5 @@ class AuthController(BaseController):
     @db_context_session
     async def delete_user(self, user_id: UUID, session: DBAsyncSession) -> None:
         """Delete a user by ID."""
-        users_service = AccountFactory.get_user_service(session)
+        users_service = UserAccountFactory.get_user_service(session)
         await users_service.delete(user_id)

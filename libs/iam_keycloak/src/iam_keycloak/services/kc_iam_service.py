@@ -1,15 +1,21 @@
 """Centralized service to interact with Keycloak"""
-from foundation.iam.auth import TokenType
 import json
 from typing import Any, Dict, List, Optional, Union, cast
 
 from foundation.config.saas_settings import SaaSSettings
 from foundation.db.types import DBAsyncSession
+from foundation.iam.auth import TokenType
+from foundation.utils.dt_utils import timestamp_to_datetime
 from iam.auth.auth_events import UserDirectoryCreatedEvent, UserDirectoryEventPayload
 from iam.auth.schemas import SignupRequest
 from iam.auth.schemas._auth import SignupRequestOut
 from iam.auth.services._auth import BaseAuthService
-from iam.auth.types import AuthResponse, DirectoryUser, IamDirectoryServiceT
+from iam.auth.types import (
+    AuthResponse,
+    DirectoryUser,
+    IamDirectoryServiceT,
+    SessionInfo,
+)
 from iam.iam_constants import IamTopics
 from iam.types import IIamServiceFactory
 from iam.utils.saas_utils import generate_saas_subdomain, get_keycloak_subdomain
@@ -1164,7 +1170,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
         """
         return await self.logout_by_user_id(user_id)
 
-    async def get_directory_user_sessions(self, userepor_id: str) -> List[SessionInfo]:
+    async def get_directory_user_sessions(self, user_id: str) -> List[SessionInfo]:
         """
         Get all active sessions for user.
 
@@ -1184,17 +1190,34 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
             self.logger.info(f'Fetched {len(sessions)} sessions for user {user_id}')
             print(sessions)
 
-            return [
-                SessionInfo(
+            _session_infos: List[SessionInfo] = []
+            for session in sessions:
+                # start_time is Long and normally in milliseconds, convert to datetime (from 1970-01-01)
+                start_time = session.get('start')
+                if start_time is not None and isinstance(start_time, int):
+                    created_at = timestamp_to_datetime(start_time / 1000)
+                else:
+                    created_at = None
+
+                lastAccess = session.get('lastAccess')
+                if lastAccess is not None and isinstance(lastAccess, int):
+                    last_activity = timestamp_to_datetime(lastAccess / 1000)
+                else:
+                    last_activity = None
+                _session_info = SessionInfo(
                     session_id=session.get('id'),
                     user_id=user_id,
+                    username=session.get('username'),
                     ip_address=session.get('ipAddress'),
-                    start_time=session.get('start'),
-                    last_access=session.get('lastAccess'),
-                    clients=list(session.get('clients', {}).keys()),
+                    # start_time=session.get('start'),
+                    created_at=created_at,
+                    last_activity=last_activity,
+                    clients=session.get('clients', {}).keys(),
+                    transient_user=session.get('transientUser', False),
                 )
-                for session in sessions
-            ]
+                _session_infos.append(_session_info)
+
+            return _session_infos
         except Exception as e:
             report_keycloak_error(
                 e,
@@ -1237,7 +1260,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
             target_username = user.get('username')
 
             keycloak_openid = KeycloakOpenID(
-                server_url=settings.KEYCLOAK_HOST,
+                server_url=settings.KEYCLOAK_API,
                 client_id=settings.KEYCLOAK_BUSINESS_IMPERSONATE_CLIENT_ID,
                 client_secret_key=settings.KEYCLOAK_BUSINESS_IMPERSONATE_CLIENT_SECRET,
                 realm_name=settings.KEYCLOAK_REALM,

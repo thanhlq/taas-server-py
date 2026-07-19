@@ -88,3 +88,19 @@ def convert_date_to_iso(dt: datetime.date) -> str:
         '2024-01-01'
     """
     return dt.isoformat()
+
+
+def timestamp_to_datetime(timestamp: int) -> datetime.datetime:
+    """Convert a timestamp to a datetime object.
+
+    Args:
+        timestamp (int): The timestamp in seconds.
+
+    Returns:
+        datetime.datetime: The corresponding datetime object.
+
+    Examples:
+        >>> timestamp_to_datetime(1700000000)
+        datetime.datetime(2024, 1, 14, 6, 13, 20)
+    """
+    return datetime.datetime.fromtimestamp(timestamp)

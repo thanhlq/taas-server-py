@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from dataclasses import dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Optional
 
 from foundation.http.response import ApiResponse
 from foundation.serialization._msgspec_model import BaseEventPayload
@@ -103,3 +105,19 @@ class AuthResponse(ApiResponse):
     not_before_policy: Optional[int] = None
     session_state: Optional[str] = None
     keep_signed_in: Optional[bool] = False
+
+@dataclass
+class SessionInfo:
+    """User session information"""
+
+    session_id: str
+    user_id: str
+    username: str | None
+    # is_active: bool
+    created_at: datetime | None = None
+    last_activity: datetime | None = None
+    expires_at: Optional[datetime] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    transient_user: Optional[bool] = False
+    clients: dict[str, Any] | None = None

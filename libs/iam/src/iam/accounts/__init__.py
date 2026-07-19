@@ -1,5 +1,10 @@
-from .controllers._users import UserController
+from .controllers._account import AccountController
 
-account_controllers = [UserController()]
 
-__all__ = ['account_controllers']
+def get_account_controllers() -> list:
+    """Return a list of all auth controllers."""
+    account_controllers = [AccountController()]
+    return account_controllers
+
+
+__all__ = ['get_account_controllers']
