@@ -18,7 +18,7 @@ from foundation.models import ListResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from iam.accounts.accounts_factory import UserAccountFactory
-from iam.accounts.schemas._user import User, UserCreate, UserUpdate
+from iam.accounts.schemas._user import UserCreate, UserProfile, UserUpdate
 from iam.accounts.services._users import UserService
 
 # async def provide_users_service(
@@ -48,7 +48,7 @@ class AccountController(BaseController):
         self,
         session: DBAsyncSession,
         ctx: Context,
-    ) -> OffsetPagination[User]:
+    ) -> OffsetPagination[UserProfile]:
         """List all users."""
 
         # SLOW
@@ -58,13 +58,13 @@ class AccountController(BaseController):
             LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
         )
 
-        return users_service.to_schema(results, total, schema_type=User)
+        return users_service.to_schema(results, total, schema_type=UserProfile)
 
     @get('/slow2')
     @db_concurrent_session
     async def list_users_slow2(
         self, session: async_scoped_session[AsyncSession]
-    ) -> OffsetPagination[User]:
+    ) -> OffsetPagination[UserProfile]:
         """List all users."""
 
         users_service = UserAccountFactory.get_user_service(session)
@@ -72,33 +72,33 @@ class AccountController(BaseController):
             LimitOffset(offset=0, limit=50), OrderBy(field_name='id', sort_order='asc')
         )
 
-        return users_service.to_schema(results, total, schema_type=User)
+        return users_service.to_schema(results, total, schema_type=UserProfile)
 
         # return create_paginated_response[User](results, total=total)
 
     @get('/list_fast')
     @db_concurrent_session
     # @cache(expire=60)  # Cache the response for 60 seconds
-    async def list_fast(self, session: DBAsyncScopedSession) -> OffsetPagination[User]:
+    async def list_fast(self, session: DBAsyncScopedSession) -> OffsetPagination[UserProfile]:
         users_service = UserAccountFactory.get_user_service(session)
         results: ListResult[m.User] = await users_service.list_users_fast()
         return users_service.to_schema(
-            results.data, results.total_count, schema_type=User
+            results.data, results.total_count, schema_type=UserProfile
         )
 
     @get('/{user_id}')
     @db_concurrent_session
-    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> User:
+    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> UserProfile:
         """Get a user by ID."""
         users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.get(user_id)
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
     # @db_concurrent_session
-    async def create_user(self, data: UserCreate, session: DBAsyncScopedSession) -> User:
+    async def create_user(self, data: UserCreate, session: DBAsyncScopedSession) -> UserProfile:
 
         users_service = UserAccountFactory.get_user_service(session)
 
@@ -111,7 +111,7 @@ class AccountController(BaseController):
         }
 
         db_obj = await users_service.create(data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     @patch('/{user_id}')
     @db_context_session
@@ -120,11 +120,11 @@ class AccountController(BaseController):
         user_id: UUID,
         data: UserUpdate,
         session: DBAsyncSession,
-    ) -> User:
+    ) -> UserProfile:
         """Update an existing user."""
         users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     @delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session

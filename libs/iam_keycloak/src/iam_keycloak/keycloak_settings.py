@@ -8,7 +8,7 @@ via an environment variable of the same name.
 
 Field names deliberately keep the ``KEYCLOAK_`` prefix so they match both the
 keys in ``sample.env`` and the existing call sites (e.g.
-``settings.KEYCLOAK_API``, ``settings.KEYCLOAK_LOGIN_CLIENT_ID``).
+``settings.KEYCLOAK_HOST``, ``settings.KEYCLOAK_LOGIN_CLIENT_ID``).
 
 See :mod:`iam_keycloak` ``sample.env`` for the full list of keys.
 """
@@ -38,8 +38,8 @@ class KeycloakSettings:
     )
     """🏛️ Keycloak realm name."""
 
-    KEYCLOAK_API: str = field(
-        default_factory=get_env('KEYCLOAK_API', 'http://localhost:9090', str)
+    KEYCLOAK_HOST: str = field(
+        default_factory=get_env('KEYCLOAK_HOST', 'http://localhost:9090', str)
     )
     """🔗 Keycloak server API/base URL (e.g. ``https://kc.example.com``)."""
 
@@ -122,9 +122,9 @@ class KeycloakSettings:
 
     def __post_init__(self):
         """Validate settings after initialization."""
-        if not self.KEYCLOAK_API:
+        if not self.KEYCLOAK_HOST:
             raise ValueError(
-                "Keycloak API URL [KEYCLOAK_API] is not set in the environment."
+                "Keycloak API URL [KEYCLOAK_HOST] is not set in the environment."
             )
 
         if not self.KEYCLOAK_REALM:

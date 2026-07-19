@@ -1185,6 +1185,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
         self._ensure_admin_client()
 
         try:
+            # https://www.keycloak.org/docs-api/latest/rest-api/index.html#UserSessionRepresentation
             sessions = await self._delegate.keycloak_admin.a_get_sessions(user_id)
 
             self.logger.info(f'Fetched {len(sessions)} sessions for user {user_id}')
@@ -1260,7 +1261,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
             target_username = user.get('username')
 
             keycloak_openid = KeycloakOpenID(
-                server_url=settings.KEYCLOAK_API,
+                server_url=settings.KEYCLOAK_HOST,
                 client_id=settings.KEYCLOAK_BUSINESS_IMPERSONATE_CLIENT_ID,
                 client_secret_key=settings.KEYCLOAK_BUSINESS_IMPERSONATE_CLIENT_SECRET,
                 realm_name=settings.KEYCLOAK_REALM,

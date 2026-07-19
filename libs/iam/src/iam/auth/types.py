@@ -108,7 +108,11 @@ class AuthResponse(ApiResponse):
 
 @dataclass
 class SessionInfo:
-    """User session information"""
+    """
+    User session information
+
+    @See https://www.keycloak.org/docs-api/latest/rest-api/index.html#UserSessionRepresentation
+    """
 
     session_id: str
     user_id: str

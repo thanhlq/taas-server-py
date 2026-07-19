@@ -10,7 +10,7 @@ from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.http import BaseController, cache, delete, get, patch, post, status
 
 from iam.accounts.accounts_factory import UserAccountFactory
-from iam.accounts.schemas._user import User, UserCreate, UserUpdate
+from iam.accounts.schemas._user import UserCreate, UserProfile, UserUpdate
 from iam.auth.types import IamDirectoryServiceT
 
 
@@ -49,16 +49,16 @@ class AuthController(BaseController):
 
     @get('/{user_id}')
     @db_concurrent_session
-    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> User:
+    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> UserProfile:
         """Get a user by ID."""
         users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.get(user_id)
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     # ratelimit='5000/minute' does not work
     @post('/', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
-    async def create_user(self, data: UserCreate, session: DBAsyncSession) -> User:
+    async def create_user(self, data: UserCreate, session: DBAsyncSession) -> UserProfile:
 
         users_service = UserAccountFactory.get_user_service(session)
 
@@ -71,7 +71,7 @@ class AuthController(BaseController):
         }
 
         db_obj = await users_service.create(data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     @patch('/{user_id}')
     @db_context_session
@@ -80,11 +80,11 @@ class AuthController(BaseController):
         user_id: UUID,
         data: UserUpdate,
         session: DBAsyncSession,
-    ) -> User:
+    ) -> UserProfile:
         """Update an existing user."""
         users_service = UserAccountFactory.get_user_service(session)
         db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=User)
+        return users_service.to_schema(db_obj, schema_type=UserProfile)
 
     @delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session

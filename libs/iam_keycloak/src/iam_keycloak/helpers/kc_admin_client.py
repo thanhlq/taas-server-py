@@ -31,7 +31,7 @@ class keycloaiAdminClient:
 
     @property
     def host(self) -> str:
-        return self.rest_admin.settings.KEYCLOAK_API
+        return self.rest_admin.settings.KEYCLOAK_HOST
 
     @property
     def ssl_verify(self) -> bool:

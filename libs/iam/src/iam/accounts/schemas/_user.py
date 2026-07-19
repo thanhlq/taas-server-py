@@ -1,11 +1,11 @@
 """User-related account schemas."""
-
 from datetime import datetime
 from uuid import UUID
 
 import msgspec
-from foundation.iam.types import Phone, UserStatus
-from foundation.serialization._msgspec_model import CamelizedBaseStruct, ApiRequest
+from foundation.http.response import ApiResponse
+from foundation.iam.types import Phone, TeamRoles, UserStatus
+from foundation.serialization._msgspec_model import ApiRequest, CamelizedBaseStruct
 from foundation.utils.validation import (
     validate_email,
     validate_name,
@@ -13,7 +13,7 @@ from foundation.utils.validation import (
     validate_phone,
     validate_username,
 )
-from foundation.iam.types import TeamRoles
+
 
 class UserTeam(CamelizedBaseStruct):
     """Holds team details for a user.
@@ -60,7 +60,7 @@ class OauthAccount(CamelizedBaseStruct):
     account_email: str
 
 
-class User(CamelizedBaseStruct):
+class UserProfile(ApiResponse):
     """User properties to use for a response."""
 
     id: UUID
