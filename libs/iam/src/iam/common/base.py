@@ -12,7 +12,7 @@ from foundation import BaseService
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.messaging.events.event_handler import BaseEventHandler
 
-from iam.auth.types import IamDirectoryServiceT
+from iam.auth.types import IamDirectoryServiceT, IamDirectorySignupServiceT
 from iam.types import IIamServiceFactory
 
 
@@ -38,7 +38,7 @@ class BaseIamService(BaseService, ABC):
         """
         Get the repository factory instance of the actual directory platform (i.e. linked to keycloak DB).
         """
-        return self.iam_service_factory.get_repository_factory()
+        return self.iam_service_factory.get_directory_repository_factory()
 
     def get_repository(
         self, model: type[ModelProtocol], session: DBAsyncSession | DBAsyncScopedSession
@@ -69,6 +69,13 @@ class BaseIamEventHandler[EventT: Any](BaseEventHandler[EventT], ABC):
         super().__init__(event_class=event_class, handler_name=handler_name, **kwargs)
 
     @property
+    def iam_service_factory(self) -> IIamServiceFactory:
+        """
+        Get the IAM service factory instance.
+        """
+        return self.get_service(IIamServiceFactory)
+
+    @property
     def directory_service(self) -> IamDirectoryServiceT:
         """
         Get the directory service instance.
@@ -76,11 +83,12 @@ class BaseIamEventHandler[EventT: Any](BaseEventHandler[EventT], ABC):
         return self.get_service(IamDirectoryServiceT)
 
     @property
-    def iam_service_factory(self) -> IIamServiceFactory:
+    def directory_signup_service(self) -> IamDirectorySignupServiceT:
         """
         Get the IAM service factory instance.
         """
-        return self.get_service(IIamServiceFactory)
+        return self.iam_service_factory.get_directory_signup_service()
+
 
     # def get_admin_service(self) -> AdminService:
     #     """
@@ -94,4 +102,4 @@ class BaseIamEventHandler[EventT: Any](BaseEventHandler[EventT], ABC):
         """
         Get the repository factory instance.
         """
-        return self.iam_service_factory.get_repository_factory()
+        return self.iam_service_factory.get_directory_repository_factory()

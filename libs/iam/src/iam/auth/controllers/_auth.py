@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from foundation.db.advanced_db_manager import (
     db_concurrent_session,
-    db_context_session,
 )
-from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
-from foundation.http import BaseController, cache, delete, get, patch, post, status
+from foundation.db.types import DBAsyncScopedSession
+from foundation.http import BaseController, cache, get, post, status
 
-from iam.accounts.accounts_factory import UserAccountFactory
-from iam.accounts.schemas._user import UserCreate, UserProfile, UserUpdate
-from iam.auth.types import IamDirectoryServiceT
+from iam.auth.schemas._auth import SignupEmailVerification, SignupRequestOut
+from iam.types import IIamServiceFactory
 
 
-def get_iam_directory_service() -> IamDirectoryServiceT:
+def get_iam_service_factory() -> IIamServiceFactory:
     from iam.iam_factory import IamFactory
-
-    return IamFactory.get_directory_service()
+    return IamFactory.get_iam_service_factory()
 
 
 class AuthController(BaseController):
@@ -47,48 +42,15 @@ class AuthController(BaseController):
             },
         }
 
-    @get('/{user_id}')
-    @db_concurrent_session
-    async def get_user(self, user_id: UUID, session: DBAsyncScopedSession) -> UserProfile:
-        """Get a user by ID."""
-        users_service = UserAccountFactory.get_user_service(session)
-        db_obj = await users_service.get(user_id)
-        return users_service.to_schema(db_obj, schema_type=UserProfile)
-
     # ratelimit='5000/minute' does not work
-    @post('/', status_code=status.HTTP_201_CREATED)
-    @db_context_session(auto_commit=True)
-    async def create_user(self, data: UserCreate, session: DBAsyncSession) -> UserProfile:
+    @post('/signup/email-verification', status_code=status.HTTP_201_CREATED)
+    async def signup_01_verify_email(
+        self, data: SignupEmailVerification
+    ) -> SignupRequestOut:
 
-        users_service = UserAccountFactory.get_user_service(session)
+        # users_service = UserAccountFactory.get_user_service(session)
+        signup_service = (
+            get_iam_service_factory().get_directory_signup_service()
+        )
 
-        data.properties = {
-            'mfa_enabled': True,
-            'backup_codes': 'asdfasf',
-            'mfa_method': 'google',
-            'mfa_secret': 'aasdfasf',
-            'mfa_recovery_codes': ['code1', 'code2', 'code3'],
-        }
-
-        db_obj = await users_service.create(data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=UserProfile)
-
-    @patch('/{user_id}')
-    @db_context_session
-    async def update_user(
-        self,
-        user_id: UUID,
-        data: UserUpdate,
-        session: DBAsyncSession,
-    ) -> UserProfile:
-        """Update an existing user."""
-        users_service = UserAccountFactory.get_user_service(session)
-        db_obj = await users_service.update(item_id=user_id, data=data.as_dict())
-        return users_service.to_schema(db_obj, schema_type=UserProfile)
-
-    @delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
-    @db_context_session
-    async def delete_user(self, user_id: UUID, session: DBAsyncSession) -> None:
-        """Delete a user by ID."""
-        users_service = UserAccountFactory.get_user_service(session)
-        await users_service.delete(user_id)
+        return await signup_service.signup_01_onboarding_with_email(data.email)

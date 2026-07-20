@@ -5,7 +5,14 @@ from foundation.http.response import ApiResponse
 from foundation.iam.types import Phone
 from foundation.serialization import BaseModel
 from foundation.serialization._msgspec_model import ApiRequest
+from foundation.utils.validation import validate_email
 
+
+class SignupEmailVerification(ApiRequest):
+    email: str
+
+    def __post_init__(self) -> None:
+        validate_email(self.email)
 
 class SignupRequest(ApiRequest):
     """Holds team details for a user.
@@ -54,7 +61,9 @@ class SignupRequest(ApiRequest):
 
 class SignupRequestOut(ApiResponse):
     id: str | None = None
+    email: str | None = None
     user: Optional[dict] = None
+    """ More user details can be added here if needed. """
     status: Literal['PENDING', 'VERIFICATION_SENT', 'OK', 'FAILED', 'EXISTED'] = 'OK'
     message: Optional[str] = None
 

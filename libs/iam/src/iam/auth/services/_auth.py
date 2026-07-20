@@ -2,17 +2,20 @@ from __future__ import annotations
 
 from abc import ABC
 
-from foundation import BaseService
 from foundation.config import Settings, get_settings
 from foundation.email.types import EmailMessage, IEmailService
 from foundation.utils.id import generate_otp
 
 from iam.auth.auth_events import UserRegisteredEvent
+from iam.auth.schemas._auth import SignupRequestOut
 from iam.auth.types import IamDirectoryServiceT
+from iam.common.base import BaseIamService
 from iam.iam_constants import IamFrontendRoutes, IamTemplates
 
 
-class BaseAuthService(BaseService, IamDirectoryServiceT, ABC):
+class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
+    """ This is the base class for all authentication services. It provides common functionality and interfaces for different authentication implementations. """
+
     settings: Settings
 
     def __init__(self):
@@ -23,15 +26,37 @@ class BaseAuthService(BaseService, IamDirectoryServiceT, ABC):
     def email_service(self) -> IEmailService:
         return self.get_service(IEmailService)
 
-    async def signup_send_email_verification(self, user: UserRegisteredEvent, **kwargs):
+    async def signup_01_onboarding_with_email(self, email: str, **kwargs) -> SignupRequestOut:
+        """
+        Handle the first step of user onboarding with email verification.
+        This method checks if the email already exists in the system. If it does, it returns a response indicating that the email is already registered. If not, it sends an email verification to the provided email address and returns a response indicating that the verification email has been sent.
+        1. Check if the email already exists in the system.
+        2. If the email exists, return a response indicating that the email is already registered.
+        3. If the email does not exist, send an email verification to the provided email address.
+        4. Return a response indicating that the verification email has been sent.
+        5. The response includes the email and the status of the operation, which can be 'EXISTED' if the email is already registered or 'VERIFICATION_SENT' if the verification email has been sent successfully.
+        6. This method can be used as part of a user registration workflow where email verification is required before proceeding with the registration process.
+        """
+
+        count = await self.count_users_by_email(email, **kwargs)
+
+        if count > 0:
+            self.logger.info(f"Email {email} already exists in the system.")
+            return SignupRequestOut(email=email, status="EXISTED")
+
+        await self.signup_send_email_verification(email, **kwargs)
+
+
+        return SignupRequestOut(email=email, status="VERIFICATION_SENT")
+
+    async def signup_send_email_verification(self, email: str, **kwargs):
         """
         Send a new account email to the specified address for verification.
         """
 
-        to_email = user.email
 
         message = EmailMessage(
-            to=to_email,
+            to=email,
             subject=f'{self.settings.app.NAME} - Verify your new account',
         )
 
@@ -40,9 +65,9 @@ class BaseAuthService(BaseService, IamDirectoryServiceT, ABC):
             template=IamTemplates.ACCOUNT_EMAIL_VERIFICATION,
             template_data={
                 'project_name': self.settings.app.NAME,
-                'email': to_email,
+                'email': email,
                 'otp': generate_otp(6),
-                'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={to_email}',
+                'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={email}',
             },
         )
 

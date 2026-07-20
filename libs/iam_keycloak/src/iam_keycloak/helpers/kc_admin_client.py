@@ -1,5 +1,6 @@
 from typing import Any
 
+from foundation.cli import cli
 from foundation.observability.log_factory import LogFactory
 from keycloak import KeycloakAdmin, KeycloakOpenID
 
@@ -11,9 +12,42 @@ class keycloaiAdminClient:
     The Keycloak server admin manager - to manage everything at server level.
     """
 
-    _rest_admin: KeycloakAdminRestClient
+    _rest_admin: KeycloakAdminRestClient | None = None
+    _realm_id: str | None = None
+    """ Normally querying from keycloak admin service from realm name """
 
     logger = LogFactory().get_logger('FastAPICache')
+
+    async def get_realm_info(self, realm_name: str) -> dict[str, Any]:
+        """
+        Get information about a specific realm in Keycloak.
+
+        Args:
+            realm_name (str): The name of the realm to retrieve information for.
+        Returns:
+            dict: Information about the specified realm.
+        """
+        _r = await self.keycloak_admin.a_get_realm(realm_name)
+        # print_dict_pretty(_r, f'Keycloak realm info for {realm_name}')
+        cli.info_table('Keycloak realm info', _r)
+        return _r
+
+    @property
+    def realm_id(self) -> str | None:
+        """
+        Get the ID of the realm currently being managed by the Keycloak admin client.
+
+        Returns:
+            str | None: The ID of the realm, or None if no realm is set.
+        """
+        return self._realm_id
+
+    async def get_realm_id(self, realm_name: str) -> str:
+        if self._realm_id:
+            return self._realm_id
+        realm_info = await self.get_realm_info(realm_name)
+        self._realm_id = realm_info.get('id')
+        return self._realm_id
 
     @property
     def rest_admin(self) -> KeycloakAdminRestClient:

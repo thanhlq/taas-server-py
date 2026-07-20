@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from db.common import IRepositoryFactory
 from starlette.authentication import AuthenticationBackend
 
-from iam.auth.types import IamDirectoryServiceT
+from iam.auth.types import IamDirectoryServiceT, IamDirectorySignupServiceT
 
 
 class IIamServiceFactory(ABC):
@@ -26,5 +26,12 @@ class IIamServiceFactory(ABC):
         ...
 
     @abstractmethod
-    def get_repository_factory(self) -> IRepositoryFactory: ...
+    def get_directory_signup_service(self) -> IamDirectorySignupServiceT:
+        """
+        Get the directory signup service instance which is responsible for handling user signup and related operations (e.g., Keycloak, Auth0).
+        """
+        ...
+
+    @abstractmethod
+    def get_directory_repository_factory(self) -> IRepositoryFactory: ...
     """ Create and return an IRepositoryFactory instance for the actual directory platform (i.e. linked to keycloak DB)."""

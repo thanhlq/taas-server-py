@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any
 
 import db.models.core as core_models
@@ -25,6 +26,27 @@ from ._user_repo import UserRepository
 from ._user_role_repo import UserRoleRepository
 
 type SessionLike = DBAsyncSession | DBAsyncScopedSession
+
+
+class CoreRepos(StrEnum):
+    """Enum for repository names."""
+
+    AUDIT_LOG = 'audit_log'
+    CASBIN_RULE = 'casbin_rule'
+    EMAIL_VERIFICATION_TOKEN = 'email_verification_token'
+    PASSWORD_RESET_TOKEN = 'password_reset_token'
+    REFRESH_TOKEN = 'refresh_token'
+    ROLE = 'role'
+    TAG = 'tag'
+    TAG_MAPPING = 'tag_mapping'
+    TEAM = 'team'
+    TEAM_INVITATION = 'team_invitation'
+    TEAM_MEMBER = 'team_member'
+    USER = 'user'
+    USER_OAUTH_ACCOUNT = 'user_oauth_account'
+    USER_ROLE = 'user_role'
+    ORGANIZATION = 'organization'
+    TENANT = 'tenant'
 
 
 ALL_REPOSITORIES = {
@@ -86,7 +108,7 @@ class CoreRepositoryFactory:
         return repository_type(session=session)
 
     @staticmethod
-    def get_repo_by_name(name: str, session: SessionLike) -> BaseAsyncRepository:
+    def get_repo_by_name(name: CoreRepos, session: SessionLike) -> BaseAsyncRepository:
         repository_type = ALL_REPOSITORIES.get(name)
         if repository_type is None:
             raise KeyError(f'No repository found for name: {name}')

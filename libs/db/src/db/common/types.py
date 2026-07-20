@@ -4,7 +4,6 @@ from abc import abstractmethod
 
 from advanced_alchemy.base import ModelProtocol
 from advanced_alchemy.extensions.fastapi import repository
-from foundation.serialization import BaseEntity
 
 
 class IAsyncRepository[ModelT: ModelProtocol](
@@ -13,7 +12,7 @@ class IAsyncRepository[ModelT: ModelProtocol](
     pass
 
 
-class IRepositoryFactory[ModelT: BaseEntity]:
+class IRepositoryFactory[ModelT: ModelProtocol]:
     """
     Factory Pattern: Define a stateless repositories (Single Responsibility Principle better)
     """

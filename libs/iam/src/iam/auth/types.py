@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
+from foundation.db.types import DBAsyncSession
 from foundation.http.response import ApiResponse
 from foundation.serialization._msgspec_model import BaseEventPayload
 
@@ -55,8 +56,39 @@ class DirectoryTenant(BaseEventPayload):
     is_root_tenant: bool = False
     """ The tenant own the platform, and can manage other tenants. """
 
+class IamDirectorySignupServiceT(ABC):
+    """ Containing all authentication related methods for the directory service (e.g. Keycloak, Zitadel). """
+
+    @abstractmethod
+    async def signup_01_onboarding_with_email(self, email: str, **kwargs) -> SignupRequestOut:...
+
+    @abstractmethod
+    async def signup_send_email_verification(
+        self, email: str, **kwargs
+    ): ...
+
+    @abstractmethod
+    async def signup_send_welcome_email(
+        self, user: "UserRegisteredEvent", **kwargs
+    ): ...
+
+    @abstractmethod
+    async def signup_send_otp_to_email(
+        self,
+        email: str,
+        otp: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+    ):...
 
 class IamDirectoryServiceT(ABC):
+    """
+    Containing all directory service related methods for the directory service (e.g. Keycloak, Zitadel).
+    This is the main interface for interacting with the directory service.
+    """
+
+    @abstractmethod
+    async def count_users_by_email(self, email: str, session: DBAsyncSession | None = None,  **kwargs) -> int:...
 
     # REQ-AUTH-001: User Registration
     @abstractmethod
@@ -75,25 +107,6 @@ class IamDirectoryServiceT(ABC):
         The user will be assigned to a new tenant.
         """
         pass
-
-    @abstractmethod
-    async def signup_send_email_verification(
-        self, user: "UserRegisteredEvent", **kwargs
-    ): ...
-
-    @abstractmethod
-    async def signup_send_welcome_email(
-        self, user: "UserRegisteredEvent", **kwargs
-    ): ...
-
-    @abstractmethod
-    async def signup_send_otp_to_email(
-        self,
-        email: str,
-        otp: str | None = None,
-        title: str | None = None,
-        description: str | None = None,
-    ):...
 
 class AuthResponse(ApiResponse):
     access_token: str

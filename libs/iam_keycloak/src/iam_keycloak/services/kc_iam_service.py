@@ -3,6 +3,7 @@ import json
 from typing import Any, Dict, List, Optional, Union, cast
 
 from foundation.config.saas_settings import SaaSSettings
+from foundation.db.advanced_db_manager import AdvancedDBManager
 from foundation.db.types import DBAsyncSession
 from foundation.iam.auth import TokenType
 from foundation.utils.dt_utils import timestamp_to_datetime
@@ -14,6 +15,7 @@ from iam.auth.types import (
     AuthResponse,
     DirectoryUser,
     IamDirectoryServiceT,
+    IamDirectorySignupServiceT,
     SessionInfo,
 )
 from iam.iam_constants import IamTopics
@@ -26,6 +28,7 @@ from keycloak import (
     KeycloakOperationError,
 )
 
+from iam_keycloak.db.kc_db import KeycloakDBManager
 from iam_keycloak.db.repositories.kc_user_repo import KeycloakUserRepository
 from iam_keycloak.keycloak_settings import get_keycloak_settings
 
@@ -42,7 +45,7 @@ from ..helpers.serializers import (
 from .keycloak_init import get_keycloak_openid
 
 
-class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
+class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySignupServiceT):
     """
     Keycloak IAM service implementation. This service interacts with Keycloak server
     to perform user authentication, registration, and management operations.
@@ -107,6 +110,39 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
     ) -> SignupRequestOut:
         return await self._create_directory_user(registration_data, **kwargs)
 
+    @property
+    def directory_database(self) -> AdvancedDBManager:
+        """
+        Get a database session for directory operations.
+        """
+        return KeycloakDBManager()
+
+    def get_user_repo(self, session: DBAsyncSession) -> KeycloakUserRepository:
+        """
+        Get the Keycloak user repository for user management operations.
+        """
+        return KeycloakUserRepository(session=session)
+
+    async def count_users_by_email(self, email: str, session: DBAsyncSession | None = None,  **kwargs) -> int:
+        """
+        Count the number of users with the given email in Keycloak.
+        Returns the count as an integer.
+        """
+
+        realm_id = await self._delegate.get_realm_id(self.keycloak_openid.realm_name)
+
+        if session:
+            # If no session is provided, create a new session for the operation
+            user_repo = self.get_user_repo(session)  # type: ignore
+            existed_user = await user_repo.count_users_by_email(email, realm_id, session)
+        else:
+            # If a session is provided, use it for the operation
+                async with self.directory_database.new_session() as session:
+                    user_repo = self.get_user_repo(session)  # type: ignore
+                    existed_user = await user_repo.count_users_by_email(email, realm_id, session)
+
+        return existed_user
+
     @kc_db_session_async(transaction=True)
     async def _create_directory_user(
         self, registration_data: SignupRequest, session: DBAsyncSession, **kwargs
@@ -153,15 +189,15 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT):
 
         user_repo = cast(
             KeycloakUserRepository,
-            self._iam_service_factory.get_repository_factory().get_async(KeycloakUser),
+            self._iam_service_factory.get_directory_repository_factory().get_async(KeycloakUser),
         )
         email: str = registration_data.email # type: ignore
         username = registration_data.username
 
         if username:
-            existed_user = await user_repo.count_user_by_username(username, session)
+            existed_user = await user_repo.count_users_by_username(username, session)
         elif email:
-            existed_user = await user_repo.count_user_by_email(email, session)
+            existed_user = await self.count_users_by_email(email, session)
         else:
             raise ValueError('Either username or email must be provided for registration.')
 

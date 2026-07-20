@@ -45,6 +45,8 @@ from ...domains.entities import KeycloakUser
 class KeycloakUserRepository(
     KeycloakBaseRepository[KeycloakUserEntityOrm]
 ):
+    model_type = KeycloakUserEntityOrm
+
     """
     The implementation of a sepcific realm based user repository for Keycloak.
     """
@@ -52,11 +54,20 @@ class KeycloakUserRepository(
     _realm_name: str | None = None
     _realm_id = None
 
+
+    # def __init__(self, session: DBAsyncSession):
+    #     super().__init__(session=session)
+    #     self._realm_name = None
+    #     self._realm_id = None
+
+    @property
+    def settings(self):
+        return get_keycloak_settings()
+
     @property
     def realm_name(self) -> str:
         if self._realm_name is None:
-            settings = get_keycloak_settings()
-            self._realm_name = settings.KEYCLOAK_REALM
+            self._realm_name = self.settings.KEYCLOAK_REALM
             if not self._realm_name:
                 raise ValueError(
                     "Keycloak realm [KEYCLOAK_REALM] is not set in the environment."
@@ -65,19 +76,27 @@ class KeycloakUserRepository(
         else:
             return self._realm_name
 
-    async def count_user_by_email(self, email: str, session: AsyncSession) -> int:
-        repository = SQLAlchemyAsyncQueryRepository(session=session)
+    async def count_users_by_email(self, email: str, realm_id: str, session: AsyncSession | None = None) -> int:
+        _session = session or self.session
+        repository = SQLAlchemyAsyncQueryRepository(session=_session)
         result = await repository.get_many(
-            select(UserOrm.email, func.count(UserOrm.id)).where(UserOrm.email.is_(email)).group_by(UserOrm.email)
+            select(UserOrm.email, UserOrm.realm_id, func.count(UserOrm.id))
+            .where(UserOrm.email == email, UserOrm.realm_id == realm_id)
+            .group_by(UserOrm.email, UserOrm.realm_id)
         )
-        count = result[0][1] if result else 0
+        count = result[0][2] if result else 0
+
+        # cli.info_table(f"Count users by email '{email}'", {"email": email, "realm_id": realm_id, "count": count})
+
         return count
 
 
-    async def count_user_by_username(self, username: str, session: AsyncSession) -> int:
+    async def count_users_by_username(self, username: str, realm_id: str, session: AsyncSession) -> int:
         repository = SQLAlchemyAsyncQueryRepository(session=session)
         result = await repository.get_many(
-            select(UserOrm.username, func.count(UserOrm.id)).where(UserOrm.username.is_(username)).group_by(UserOrm.username)
+            select(UserOrm.username, UserOrm.realm_id, func.count(UserOrm.id))
+            .where(UserOrm.username.is_(username), UserOrm.realm_id == realm_id)
+            .group_by(UserOrm.username, UserOrm.realm_id)
         )
         count = result[0][1] if result else 0
         return count

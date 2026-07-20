@@ -11,7 +11,7 @@ class KeycloakAdminRestClient(CommonRestClient):
     A subclass of KeycloakAdmin that adds a method to get the access token.
     """
 
-    _kc_admin: KeycloakAdmin
+    _kc_admin: KeycloakAdmin | None = None
 
     def __init__(self):
 

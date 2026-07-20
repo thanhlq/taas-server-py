@@ -1,16 +1,17 @@
 """
 Since Keycloak is a separate database, This class is for managing Keycloak database instance
 """
-
 from collections.abc import Callable
 from functools import wraps
 from typing import Union
 
 from foundation.db.advanced_db_manager import AdvancedDBManager
+from foundation.utils.singleton import singleton
 
 from .kc_db_settings import get_keycloak_db_settings
 
 
+@singleton
 class KeycloakDBManager(AdvancedDBManager):
     _instance = None
 
@@ -19,7 +20,6 @@ class KeycloakDBManager(AdvancedDBManager):
         super().__init__(settings)
 
 
-kc_db = KeycloakDBManager()
 
 
 # def kc_db_session_async(func: Callable) -> Callable:
@@ -61,7 +61,7 @@ def kc_db_session_async(
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # current_depth = _call_depth.get()
-            existing_session = kc_db.get_current_context_session()
+            existing_session = KeycloakDBManager().get_current_context_session()
 
             if existing_session is not None:
                 # Use existing session from context - pass it in kwargs
@@ -72,7 +72,7 @@ def kc_db_session_async(
                 # async with db_context_transaction(transaction) as new_session:
                 # No existing session, create a new transaction context
                 # Increment call depth to track we're the root caller
-                async with kc_db.get_session_generator(transaction) as new_session:
+                async with KeycloakDBManager().get_session_generator(transaction) as new_session:
                     result = await func(*args, session=new_session, **kwargs)
                     return result
 
