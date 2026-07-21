@@ -1,13 +1,11 @@
-from typing import TYPE_CHECKING, cast
+from typing import Any, cast
 
+from foundation.cli import cli
 from foundation.config import get_settings
+from foundation.email import EmailConfig
 from foundation.email.backends import BaseEmailBackend
-from foundation.email.types import EmailServiceT
+from foundation.email.types import EmailMessage, EmailMultiAlternatives, EmailServiceT
 from foundation.storage.factory import StorageServiceFactory
-
-if TYPE_CHECKING:
-    from foundation.email.config import EmailConfig
-    from foundation.email.types import EmailMessage
 
 __all__ = ('EmailService',)
 
@@ -32,6 +30,19 @@ class EmailService(EmailServiceT):
         self._backend: BaseEmailBackend | None = None
         self._subject_prefix = f'{get_settings().app.NAME} - '
         """ i.e. eWorksuite - Task assigned """
+
+        init_info: dict[str, Any] = {
+            'backend': self.get_configured_email_service_provider(),
+            'from_email': self.config.from_email,
+            'subject_prefix': self._subject_prefix,
+        }
+        init_info.update(self.config.info())
+        if (not isinstance(self.config.backend, str)) and hasattr(
+            self.config.backend, 'info'
+        ):
+            init_info.update(self.config.backend.info()) # type: ignore
+
+        cli.info_table('Email Service Initialized', init_info)
 
     @property
     def config(self) -> 'EmailConfig':
@@ -68,7 +79,7 @@ class EmailService(EmailServiceT):
         bcc: list[str] | None = None,
         attachments: list[tuple[str, bytes, str]] | None = None,
         alternatives: list[tuple[str, str]] | None = None,
-    ) -> 'EmailMessage':
+    ) -> 'EmailMultiAlternatives':
         """Build an email message from a template.
 
         Args:
@@ -91,9 +102,10 @@ class EmailService(EmailServiceT):
 
         subject = f'{self._subject_prefix}{subject}'
 
-        message = EmailMessage(
+        message = EmailMultiAlternatives(
             to=to,
-            body=body,
+            # body=body,
+            html_body=body,
             subject=subject,
             from_email=from_email or self.config.from_email,
             cc=cc or [],

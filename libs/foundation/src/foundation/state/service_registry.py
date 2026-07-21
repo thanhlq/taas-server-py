@@ -65,7 +65,7 @@ class ServiceRegistry:
             self._singletons[interface_type] = implementation
 
         self.logger.info(
-            f'{"🔷 Registered" if singleton else "🔷 Registered transient"}: {interface_type.__name__} -> {implementation if callable(implementation) else type(implementation).__name__}'
+            f'{"🔵 Registered" if singleton else "🔵 Registered transient"}: {interface_type.__name__} -> {implementation if callable(implementation) else type(implementation).__name__}'
         )
         return cast(T, implementation)
 
@@ -73,7 +73,7 @@ class ServiceRegistry:
         """Get service instance."""
         if interface_type not in self._services:
             if raise_if_not_found:
-                raise ValueError(f'Service {interface_type.__name__} not registered')
+                raise ValueError(f'🔴 Service {interface_type.__name__} not registered')
             else:
                 return None  # type: ignore
 

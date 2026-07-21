@@ -4,7 +4,8 @@
 		{
 			"label": "Start ews Server",
 			"type": "shell",
-			"command": "uv run uvicorn ews_api.main:app --reload --host 0.0.0.0 --port 8191",
+      // uv run --no-sync python -m ews_api
+			"command": "uv run uvicorn ews_api.app:app --reload --host 0.0.0.0 --port 8191",
 			"isBackground": true,
 			"problemMatcher": [],
 			"group": "build"

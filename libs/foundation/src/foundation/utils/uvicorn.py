@@ -34,6 +34,8 @@ def run_uvicorn(
             kubernetes: 0.0.0.0
         - port: The port number to bind the Uvicorn server to.
     """
+    from foundation.cli import cli
+    cli.info(f"Starting Uvicorn server on {host}:{port} with reload={reload}, workers={workers}, mode={'direct' if isinstance(app, Callable) else 'import string'}")
 
     uvicorn.run(
         app,

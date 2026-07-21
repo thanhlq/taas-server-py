@@ -1,7 +1,7 @@
 # .venv/lib/python3.13/site-packages/litestar_email/backends/base.py
 from abc import ABC, abstractmethod
 from email.utils import formataddr, parseaddr
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import Self
 
@@ -45,6 +45,19 @@ class BaseEmailBackend(ABC):
         self.fail_silently = fail_silently
         self._default_from_email = default_from_email
         self._default_from_name = default_from_name
+
+    def info(self) -> dict[str, Any]:
+        """Return information about the backend.
+
+        Returns:
+            A dictionary containing backend information.
+        """
+        return {
+            "backend": self.__class__.__name__,
+            "default_from_email": self._default_from_email,
+            "default_from_name": self._default_from_name,
+            "fail_silently": self.fail_silently,
+        }
 
     async def open(self) -> bool:
         """Open a connection to the email server.

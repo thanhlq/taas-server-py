@@ -29,6 +29,10 @@ class StorageServiceFactory:
                 StorageServiceFactory._template_storage_service,
                 singleton=True,
             )
+        else:
+            raise NotImplementedError(
+                f"Template storage provider '{storage_config.template_storage_provider}' is not implemented."
+            )
 
     @staticmethod
     def get_storage_config() -> StorageConfig:

@@ -46,7 +46,7 @@
       "request": "launch",
       "module": "uvicorn",
       "args": [
-        "ews_api.main:app",
+        "ews_api.app:app",
         "--reload",
         "--host",
         "0.0.0.0",

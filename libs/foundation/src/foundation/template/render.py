@@ -1,8 +1,14 @@
 from typing import Any
 
-from jinja2 import Template
+from jinja2 import Environment, Template
 
 # from jinja2 import Template
+
+# 1. Enable async mode in the environment
+environment = Environment(
+    # loader=FileSystemLoader("templates"),
+    enable_async=True  # <-- Add this line
+)
 
 
 def render_template_sync(template_str: str, context: dict[str, Any]) -> str:
@@ -16,7 +22,7 @@ def render_template_sync(template_str: str, context: dict[str, Any]) -> str:
     Returns:
         str: The rendered template string.
     """
-    return Template(template_str).render(context)
+    return Template(source=template_str, enable_async=True).render(context)
 
 
 async def render_template(template_str: str, context: dict[str, Any]) -> str:
@@ -30,4 +36,4 @@ async def render_template(template_str: str, context: dict[str, Any]) -> str:
     Returns:
         str: The rendered template string.
     """
-    return Template(template_str).render_async(context)
+    return await Template(source=template_str, enable_async=True).render_async(context)

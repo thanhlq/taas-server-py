@@ -29,6 +29,9 @@ class FoundationFactory:
         # Register the default services
         register_service(EmailServiceT, EmailServiceFactory.get_email_service(), singleton=True)
 
+        from foundation.storage.factory import StorageServiceFactory
+        StorageServiceFactory()
+
     @staticmethod
     def use_resiliant(factory: ResiliantServiceFactoryT):
         """

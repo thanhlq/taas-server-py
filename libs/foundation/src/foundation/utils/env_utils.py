@@ -3,7 +3,16 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, get_args, get_origin, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    TypeVar,
+    cast,
+    get_args,
+    get_origin,
+    overload,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -149,6 +158,9 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
         To get list[Path] in this case, provide a type hint (e.g., type_hint=list[Path]).
     """
     str_value = os.getenv(key)
+
+    # print(f"get_config_val: key={key}, str_value={str_value}, default={default}, type_hint={type_hint}")
+
     if str_value is None:
         return default
     value: str = str_value

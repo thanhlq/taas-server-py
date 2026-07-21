@@ -44,7 +44,11 @@ class EwsWorker(BaseWorker):
         # isn't defined in this repo's Settings; read it from the environment
         # instead. Default 7100 avoids macOS AirPlay's use of port 7000.
         self.health_check_server_port = int(os.getenv('WORKER_LISTEN_PORT', '7100'))
-        FoundationFactory.use_resiliant(ResiliantServiceFactory())
+
+    def _init_internal_services(self) -> None:
+        resiliant_factory = ResiliantServiceFactory()
+        FoundationFactory.init_default_services()
+        FoundationFactory.use_resiliant(resiliant_factory)
 
     # ------------------------------------------------------------------ cache
     def _init_cache(self) -> None:
@@ -86,6 +90,8 @@ class EwsWorker(BaseWorker):
         """
         # 1. Cache (same as the API lifespan).
         self._init_cache()
+
+        self._init_internal_services()
 
         # 2. Messaging service — also registers ``IMessagingService`` in the
         #    service locator so publishers elsewhere can resolve it.

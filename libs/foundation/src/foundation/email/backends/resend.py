@@ -1,5 +1,4 @@
 """Resend email backend using the Resend HTTP API."""
-
 import base64
 from typing import TYPE_CHECKING, Any
 
@@ -9,11 +8,12 @@ from foundation.email.exceptions import (
     EmailRateLimitError,
 )
 from foundation.email.utils.module_loader import ensure_httpx
+from foundation.exceptions.report_error import report_error
 
 if TYPE_CHECKING:
     from foundation.email.config import ResendConfig
-    from foundation.email.types import EmailMessage
     from foundation.email.transports.base import HTTPTransport
+    from foundation.email.types import EmailMessage
 
 __all__ = ("ResendBackend",)
 
@@ -95,6 +95,24 @@ class ResendBackend(BaseEmailBackend):
         self._config = config
         self._transport: "HTTPTransport | None" = None
 
+    def info(self) -> dict[str, Any]:
+        """Return information about the backend.
+
+        Returns:
+            A dictionary containing backend information.
+        """
+        info: dict[str, Any] = super().info()
+        info.update(
+            {
+                'backend': self.__class__.__name__,
+                'api_key': self._config.api_key,
+                'http_transport': self._config.http_transport,
+                'timeout': self._config.timeout,
+            }
+        )
+        info.update(self._config.info())
+        return info
+
     async def open(self) -> bool:
         """Open an HTTP transport for sending emails.
 
@@ -155,6 +173,7 @@ class ResendBackend(BaseEmailBackend):
                     # Re-raise rate limit errors for proper handling
                     raise
                 except Exception as exc:
+                    report_error(exc)
                     if not self.fail_silently:
                         msg = f"Failed to send email to {message.to} via Resend"
                         raise EmailDeliveryError(msg) from exc

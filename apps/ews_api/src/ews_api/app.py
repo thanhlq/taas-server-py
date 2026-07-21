@@ -4,6 +4,9 @@ The module is responsible for setting up the FastAPI app, including:
   - exception handlers
   - cors
   - routes
+
+IMPORTANT:
+- This app can be started directly with uvicorn, or it can be imported and used as a module in another FastAPI app.
 """
 from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
@@ -136,6 +139,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     def _init_services(self) -> None:
         # Initialize the ResiliantServiceFactory and register it with the FoundationFactory
         resiliant_factory = ResiliantServiceFactory()
+        FoundationFactory.init_default_services()
         FoundationFactory.use_resiliant(resiliant_factory)
 
         IamFactory.set_iam_service_factory(IamServiceFactory())

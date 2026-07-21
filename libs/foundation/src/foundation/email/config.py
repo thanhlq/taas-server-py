@@ -139,6 +139,27 @@ class ResendConfig:
     timeout: int = 30
     http_transport: "str | type[HTTPTransport]" = "httpx"
 
+    def __post_init__(self) -> None:
+        """Validate the configuration after initialization.
+
+        Raises:
+            ValueError: If the API key is not provided.
+        """
+        if not self.api_key:
+            raise ValueError("Resend API key must be provided in ResendConfig.")
+
+    def info(self) -> dict[str, Any]:
+        """Return a dictionary of configuration info.
+
+        Returns:
+            A dictionary containing the API key and timeout.
+        """
+        return {
+            "api_key": '*******' if self.api_key else 'not set',
+            "timeout": self.timeout,
+            "http_transport": self.http_transport,
+        }
+
 
 @dataclass(slots=True)
 class SendGridConfig:
@@ -249,6 +270,20 @@ class EmailConfig:
     fail_silently: bool = False
     email_service_dependency_key: str = "mailer"
     email_service_state_key: str = "mailer"
+
+    def info(self) -> dict[str, Any]:
+        """Return a dictionary of configuration info.
+
+        Returns:
+            A dictionary containing the backend type, from email, and from name.
+        """
+        return {
+            "backend": self.backend.__class__.__name__
+            if not isinstance(self.backend, str)
+            else self.backend,
+            "from_email": self.from_email,
+            "from_name": self.from_name,
+        }
 
     @property
     def signature_namespace(self) -> dict[str, Any]:
