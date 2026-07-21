@@ -1,8 +1,10 @@
 """
 Contains types and domain models specific to Keycloak integration for IAM (Identity and Access Management).
 """
+from enum import StrEnum
+from typing import Optional
 
-from enum import Enum, StrEnum
+from foundation.serialization import BaseModel
 
 # region KEYCLOAK NATIVE TYPES
 
@@ -43,3 +45,15 @@ class KeycloakRequiredActions(StrEnum):
     VERIFY_EMAIL = 'VERIFY_EMAIL'
     UPDATE_PASSWORD = 'UPDATE_PASSWORD'
     UPDATE_PROFILE = 'UPDATE_PROFILE'
+
+class KeycloakDomain(BaseModel):
+    name: str
+    verified: bool = False
+
+class KeycloakOrganization(BaseModel):
+    id: str
+    name: str
+    enabled: str
+    alias: Optional[str] = None
+    parent_id: Optional[str] = None
+    domains: list[KeycloakDomain] = []

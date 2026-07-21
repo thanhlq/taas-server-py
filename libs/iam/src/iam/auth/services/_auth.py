@@ -8,6 +8,7 @@ from foundation.email.types import EmailMessage, EmailServiceT
 from foundation.utils.id import generate_otp
 
 from iam.auth.auth_events import UserRegisteredEvent
+from iam.auth.schemas import SignupRequest
 from iam.auth.schemas._auth import SignupRequestOut
 from iam.auth.types import IamDirectoryServiceT
 from iam.common.base import BaseIamService
@@ -60,6 +61,11 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
         )
 
         return SignupRequestOut(email=email, status='VERIFICATION_SENT')
+
+    async def signup_02_submit(self, data: SignupRequest, **kwargs) -> SignupRequestOut:
+
+        return await self.directory_service.create_directory_user(data, **kwargs)
+
 
 
     async def send_otp_to_email(self, email: str,

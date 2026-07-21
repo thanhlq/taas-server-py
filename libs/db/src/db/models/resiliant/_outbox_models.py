@@ -92,9 +92,10 @@ class OutboxEventTable(UUIDv7AuditBase):
     # )
 
     # processed_at = Column(DateTime, nullable=True)
-    processed_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=False), server_default=func.now()
+    processed_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=False), nullable=True
     )
+    # default=lambda: datetime.datetime.now(datetime.timezone.utc),
     """When the event was successfully published"""
 
     # Metadata

@@ -30,7 +30,7 @@ def get_keycloak_subdomain(domain_alias: str, max_length: int = 20) -> str:
         root_domain = f'{domain_alias}.{root_domain}'
     elif 'http://' in root_domain:
         root_domain = root_domain.replace('http://', '')
-        root_domain = f'{domain_alias}.{root_domain}'
+        root_domain = f'http://{domain_alias}.{root_domain}'
     return root_domain
 
 # Example usage:

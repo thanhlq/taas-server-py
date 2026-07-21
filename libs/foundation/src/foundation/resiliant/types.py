@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 
-from foundation import BaseService
 from foundation.messaging.types import IMessageRoutingService
 from foundation.resiliant.dlq import IDLQService
 from foundation.resiliant.idempotency import IIdempotencyService
 from foundation.resiliant.outbox import IOutboxService
 
 
-class ResiliantServiceFactoryT(BaseService, ABC):
+class ResiliantServiceFactoryT(ABC):
     """
     This is an abstract base class that defines the interface for creating resiliant services.
     """

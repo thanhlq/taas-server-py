@@ -6,7 +6,7 @@ live in ``foundation.resiliant``; the DB models live in ``db.models.resiliant``.
 """
 
 from .dlq import DLQRepository, DLQService
-from .factory import ResiliantServiceFactory
+from .resiliant_factory import ResiliantServiceFactory
 from .idempotency import IdempotencyRepository, IdempotencyService
 from .outbox import OutboxRepository, OutboxService
 from .service_builder import ResiliantServiceBuilder

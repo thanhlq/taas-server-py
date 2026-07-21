@@ -1,6 +1,7 @@
 """Centralized service to interact with Keycloak"""
+
 import json
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 from foundation.config.saas_settings import SaaSSettings
 from foundation.db.advanced_db_manager import AdvancedDBManager
@@ -22,6 +23,7 @@ from iam.iam_constants import IamTopics
 from iam.types import IIamServiceFactory
 from iam.utils.saas_utils import generate_saas_subdomain, get_keycloak_subdomain
 from keycloak import (
+    KeycloakAdmin,
     KeycloakAuthenticationError,
     KeycloakError,
     KeycloakOpenID,
@@ -33,19 +35,20 @@ from iam_keycloak.db.repositories.kc_user_repo import KeycloakUserRepository
 from iam_keycloak.keycloak_settings import get_keycloak_settings
 
 from ..db.kc_db import kc_db_session_async
-from ..domains.entities import KeycloakUser
 from ..helpers.kc_admin_client import keycloaiAdminClient
 from ..helpers.report_kc_error import report_keycloak_error
 from ..helpers.serializers import (
     parse_keycloak_registered_organization,
     parse_keycloak_registered_user,
     parse_keycloak_user_data,
-    user_registration_form_to_keycloak_data,
+    parse_keycloak_user_from_signup_data,
 )
 from .keycloak_init import get_keycloak_openid
 
 
-class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySignupServiceT):
+class KeycloakIamService(
+    BaseAuthService, IamDirectoryServiceT, IamDirectorySignupServiceT
+):
     """
     Keycloak IAM service implementation. This service interacts with Keycloak server
     to perform user authentication, registration, and management operations.
@@ -91,7 +94,16 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
         """
         return SaaSSettings.get_settings()
 
-    def _convert_keycloak_user_to_user_entity(self, kc_user: Dict[str, Any]) -> DirectoryUser:
+    @property
+    def keycloak(self) -> KeycloakAdmin:
+        """
+        Get Keycloak OpenID client for user operations.
+        """
+        return self._delegate.keycloak_admin
+
+    def _convert_keycloak_user_to_user_entity(
+        self, kc_user: Dict[str, Any]
+    ) -> DirectoryUser:
         return parse_keycloak_user_data(kc_user)
 
     def _ensure_admin_client(self):
@@ -123,7 +135,9 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
         """
         return KeycloakUserRepository(session=session)
 
-    async def count_users_by_email(self, email: str, session: DBAsyncSession | None = None,  **kwargs) -> int:
+    async def count_users_by_email(
+        self, email: str, session: DBAsyncSession | None = None, **kwargs
+    ) -> int:
         """
         Count the number of users with the given email in Keycloak.
         Returns the count as an integer.
@@ -134,12 +148,16 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
         if session:
             # If no session is provided, create a new session for the operation
             user_repo = self.get_user_repo(session)  # type: ignore
-            existed_user = await user_repo.count_users_by_email(email, realm_id, session)
+            existed_user = await user_repo.count_users_by_email(
+                email, realm_id, session
+            )
         else:
             # If a session is provided, use it for the operation
-                async with self.directory_database.new_session() as session:
-                    user_repo = self.get_user_repo(session)  # type: ignore
-                    existed_user = await user_repo.count_users_by_email(email, realm_id, session)
+            async with self.directory_database.new_session() as session:
+                user_repo = self.get_user_repo(session)  # type: ignore
+                existed_user = await user_repo.count_users_by_email(
+                    email, realm_id, session
+                )
 
         return existed_user
 
@@ -160,7 +178,10 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
         """
         self._ensure_admin_client()
 
-        # Verify OPT for email ++ (rem this code to disable otp check)
+        #
+        # 01. Verify OPT for email ++ (rem this code to disable otp check)
+        #
+
         # saved_otp = await self.get_cache_service().get(
         #     f'{IamConstants.CACHE_SIGNUP_OTP_PREFIX}{registration_data.email}'
         # )
@@ -184,82 +205,107 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
         # Verify OPT for email --
 
         #
-        # 1. Check if user existed
+        # 02. Check if user existed
         #
 
-        user_repo = cast(
-            KeycloakUserRepository,
-            self._iam_service_factory.get_directory_repository_factory().get_async(KeycloakUser),
-        )
-        email: str = registration_data.email # type: ignore
-        username = registration_data.username
-
-        if username:
-            existed_user = await user_repo.count_users_by_username(username, session)
-        elif email:
-            existed_user = await self.count_users_by_email(email, session)
-        else:
-            raise ValueError('Either username or email must be provided for registration.')
-
-        if existed_user > 0:
-            self.logger.info(
-                f'User with email {registration_data.email} or username {registration_data.username} already exists'
-            )
-            response = SignupRequestOut()
-            response.status = 'EXISTED'
-            return response
-
-
+        # user_repo = cast(
+        #     KeycloakUserRepository,
+        #     self._iam_service_factory.get_directory_repository_factory().get_async(KeycloakUser),
+        # )
+        email: str = registration_data.email  # type: ignore
+        username = registration_data.username or email.split('@')[0]
+        tenant_name = registration_data.organization_name or email.split('@')[0]
+        realm_id = await self._delegate.get_realm_id(self.keycloak_openid.realm_name)
         response = SignupRequestOut()
 
-        # user: User = User(
-        #     email=registration_data.email,
-        #     preferred_username=registration_data.email,
-        #     given_name=registration_data.first_name,
-        #     family_name=registration_data.last_name,
-        #     # username=registration_data.email,
-        #     email_verified=False,
-        # )
+        # if username:
+        #     existed_user = await self.get_user_repo(session).count_users_by_username(
+        #         username, realm_id, session
+        #     )
+        # elif email:
+        #     existed_user = await self.get_user_repo(session).count_users_by_email(
+        #         email, realm_id, session
+        #     )
+        # else:
+        #     raise ValueError(
+        #         'Either username or email must be provided for registration.'
+        #     )
+
+        # response = SignupRequestOut()
+        # if existed_user > 0:
+        #     self.logger.info(
+        #         f'User with email {registration_data.email} or username {registration_data.username} already exists'
+        #     )
+        #     response.status = 'EXISTED'
+        #     return response
+
+        orgs: list[dict[str, Any]] = await self.list_all_organizations(
+            {
+                'name': tenant_name,
+            }
+        )
+
+        if orgs and len(orgs) > 0:
+            # TODO -> test code
+            await self.delete_organizations([org['id'] for org in orgs])
+
+            # self.logger.info(
+            #     f'Organization with name {tenant_name} already exists in Keycloak'
+            # )
+            # response = SignupRequestOut()
+            # response.status = 'EXISTED'
+            # response.message = f'Organization with name {tenant_name} already exists.'
+            # return response
+
+        # Check users existed by email
+        users = await self.keycloak.a_get_users(
+            {
+                'email': registration_data.email,
+            }
+        )
+
+        if users and len(users) > 0:
+            # TODO -> test code
+            await self.delete_users([user['id'] for user in users])
+            # self.logger.info(
+            #     f'User with email {registration_data.email} already exists in Keycloak'
+            # )
+            # response.status = 'EXISTED'
+            # response.message = f'User with email {registration_data.email} already exists.'
+            # return response
+
+        #
+        # 03. Create user in Keycloak and tenant
+        #
 
         # Create user in Keycloak
         # user_id = generate_id()
-        kc_user_data = user_registration_form_to_keycloak_data(registration_data)
+        kc_user_data = parse_keycloak_user_from_signup_data(
+            registration_data, verify_email=True
+        )
         attributes: dict[str, Any] = kc_user_data.get('attributes', {})
         attributes['origin'] = 'signup'
+        tenant_dict = {
+            'name': tenant_name,
+            'alias': tenant_name.lower().replace(' ', '-'),
+            'domains': [get_keycloak_subdomain(generate_saas_subdomain(tenant_name))],
+            # 'domains': ['eworksuite.com']
+            # 'attributes': to_json({'origin': 'taas'})
+        }
 
-        if registration_data.organization:
-            tenant_dict = {
-                'name': registration_data.organization,
-                'alias': registration_data.organization.lower().replace(' ', '-'),
-                'domains': [
-                    get_keycloak_subdomain(
-                        generate_saas_subdomain(registration_data.organization)
-                    )
-                ],
-                # 'domains': ['eworksuite.com']
-                # 'attributes': to_json({'origin': 'taas'})
-            }
-        else:
-            tenant_dict = {
-                'name': email.split('@')[0],
-                'alias': email.split('@')[0].lower().replace(' ', '-'),
-                'domains': [
-                    get_keycloak_subdomain(
-                        generate_saas_subdomain(email.split('@')[0])
-                    )
-                ],
-            }
         try:
             created_tenant = await self._delegate.create_organization(tenant_dict)
-            tenant_id = created_tenant['id']
-            attributes['tenant_id'] = tenant_id
+            tenant_directory_id = created_tenant['id']
+            attributes['tenant_directory_id'] = tenant_directory_id
             attributes['is_root_account'] = True
             created_kc_user = await self._delegate.create_user(kc_user_data, True)
             user_id = created_kc_user['id']
-            self.logger.info(f'Created user in Keycloak with ID {user_id}/{tenant_id}')
+            self.logger.info(
+                f'Created user in Keycloak with ID {user_id}/{tenant_directory_id}'
+            )
 
             # Add this user to the organization
-            await self._delegate.add_user_to_organization(user_id, tenant_id)
+            await self._delegate.add_user_to_organization(user_id, tenant_directory_id)
             response.user = created_kc_user
             response.id = user_id
 
@@ -278,8 +324,11 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             _directory_user = parse_keycloak_registered_user(created_kc_user)
             _directory_tenant = parse_keycloak_registered_organization(created_tenant)
 
+            #
+            # 04. Publish UserDirectoryCreatedEvent to IAM_USER_REGISTER topic
+            #
 
-            _payload = UserDirectoryEventPayload  (
+            _payload = UserDirectoryEventPayload(
                 user=_directory_user,
                 tenant=_directory_tenant,
             )
@@ -288,7 +337,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
                 email=_directory_user.email,
                 username=_directory_user.username,
                 realm_name=self.keycloak_openid.realm_name,
-                tenant_id=tenant_id,
+                tenant_id=tenant_directory_id,
                 # payload=parse_keycloak_registered_user(kc_user=created_kc_user).as_dict(),
                 # tenant=parse_keycloak_registered_organization(created_tenant).as_dict(),
                 # payload={
@@ -299,18 +348,21 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             e_user_directory_created.set_payload_object(_payload)
 
             try:
-                await self.message_routing_service.publish_event(e_user_directory_created, IamTopics.IAM_USER_REGISTER)
-
-                # await IamEventPublisher().publish_user_directory_created_event(e_user_directory_created)
+                await self.message_routing_service.publish_event(
+                    e_user_directory_created, IamTopics.IAM_USER_REGISTER
+                )
             except Exception as publish_exc:
-                # TODO: handle failed event publishing (e.g., retry, compensation)
-                # Report error and rollback
+                # TODO:
+                #   - handle failed event publishing (e.g., retry, compensation)
+                #   - or delete directory user and tenant if event publishing fails
+
                 report_keycloak_error(
                     publish_exc,
                     title='IAM Event Publish Error',
                     extra_context={'payload': str(e_user_directory_created)},
                     logger=self.logger,
                 )
+                raise publish_exc
         except KeycloakError as e:
             response.status = 'FAILED'
             error_message = report_keycloak_error(
@@ -318,6 +370,7 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             )
             response.message = error_message
             # raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error)
+            raise e
 
         return response
 
@@ -338,16 +391,17 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             await self._delegate.loggout_user(user_id)
             return True
         except Exception as e:
-            self.logger.warning(f'Failed to logout user {user_id} with session {session_id}, error: {e}')
+            self.logger.warning(
+                f'Failed to logout user {user_id} with session {session_id}, error: {e}'
+            )
             return False
 
     async def logout_by_access_token(self, access_token: str) -> bool:
         session_id = self.get_session_id_from_token(access_token)
         if not session_id:
             return False
-        keycloak_admin = self._delegate.rest_admin.admin_delete_session(session_id)
         try:
-            keycloak_admin.user_logout(user_id)
+            self._delegate.rest_admin.admin_delete_session(session_id)
             return True
         except Exception:
             return False
@@ -1623,7 +1677,9 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             )
             return None
 
-    async def directory_get_user_by_username(self, username: str) -> Optional[UserEntity]:
+    async def directory_get_user_by_username(
+        self, username: str
+    ) -> Optional[UserEntity]:
         """
         Get user by username.
 
@@ -2009,3 +2065,110 @@ class KeycloakIamService(BaseAuthService, IamDirectoryServiceT, IamDirectorySign
             pass
 
         return None
+
+    # ================================
+    # Tenant management
+    # ================================
+    def list_all_realms(self) -> List[Dict[str, Any]]:
+        """
+        List all tenants (Keycloak realms).
+
+        Returns:
+            List of dicts with tenant information
+        """
+        self._ensure_admin_client()
+
+        try:
+            realms = self._delegate.keycloak_admin.get_realms()
+            return [
+                {
+                    'realm': realm['realm'],
+                    'enabled': realm.get('enabled', False),
+                    'display_name': realm.get('displayName', ''),
+                }
+                for realm in realms
+            ]
+        except Exception as e:
+            report_keycloak_error(
+                e,
+                title='IAM List All Tenants Error',
+                extra_context={},
+                logger=self.logger,
+            )
+            return []
+
+    async def list_all_organizations(
+        self, query: dict | None | None
+    ) -> List[Dict[str, Any]]:
+        """
+        List all organizations (Keycloak clients).
+
+        Returns:
+            List of dicts with organization information
+        """
+        self._ensure_admin_client()
+
+        try:
+            orgs = await self._delegate.keycloak_admin.a_get_organizations(query)
+            return orgs
+        except Exception as e:
+            report_keycloak_error(
+                e,
+                title='IAM List All Organizations Error',
+                extra_context={},
+                logger=self.logger,
+            )
+            return []
+
+    async def delete_users(self, user_ids: list[str]) -> bool:
+        """
+        Delete users (Keycloak users).
+
+        Args:
+            user_ids: List of User IDs
+
+        Returns:
+            bool: True if deleted successfully
+        """
+        self._ensure_admin_client()
+
+        try:
+            for id in user_ids:
+                await self._delegate.keycloak_admin.a_delete_user(id)
+                self.logger.info(f'User {id} deleted')
+            return True
+        except Exception as e:
+            report_keycloak_error(
+                e,
+                title='IAM Delete Users Error',
+                extra_context={'user_ids': user_ids},
+                logger=self.logger,
+            )
+            return False
+
+
+    async def delete_organizations(self, organization_id: list[str]) -> bool:
+        """
+        Delete an organization (Keycloak client).
+
+        Args:
+            organization_id: Organization ID
+
+        Returns:
+            bool: True if deleted successfully
+        """
+        self._ensure_admin_client()
+
+        try:
+            for id in organization_id:
+                await self._delegate.keycloak_admin.a_delete_organization(id)
+                self.logger.info(f'Organization {id} deleted')
+            return True
+        except Exception as e:
+            report_keycloak_error(
+                e,
+                title='IAM Delete Organization Error',
+                extra_context={'organization_id': organization_id},
+                logger=self.logger,
+            )
+            return False

@@ -133,9 +133,8 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
     def _init_services(self) -> None:
         # Initialize the ResiliantServiceFactory and register it with the FoundationFactory
-        resiliant_factory = ResiliantServiceFactory()
         FoundationFactory.init_default_services()
-        FoundationFactory.use_resiliant(resiliant_factory)
+        FoundationFactory.use_resiliant(ResiliantServiceFactory())
 
         IamFactory.set_iam_service_factory(IamServiceFactory())
 

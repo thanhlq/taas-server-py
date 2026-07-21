@@ -34,8 +34,8 @@ from foundation.db.sa_config import (
 from foundation.utils.env_utils import get_env
 from foundation.utils.module_loader import module_to_os_path
 
-from .db_settings import DatabaseSettings
 from ..email.email_settings import EmailSettings
+from .db_settings import DatabaseSettings
 
 CONFIG_PREFIX = 'TAAS'
 
@@ -81,7 +81,7 @@ class AppSettings:
     """Application contact name"""
     CONTACT_EMAIL: str = field(default='admin@eworksuite.com')
     """Application contact email"""
-    FRONTEND_URL: str = field(default_factory=get_env('APP_URL', 'http://localhost:8191'))
+    FRONTEND_URL: str = field(default_factory=get_env('APP_URL', 'http://localhost'))
     """The frontend base URL"""
     TENANT_PREFIX: str = field(default_factory=get_env('TENANT_PREFIX', 'taas'))
     SERVICE_NAME: str = field(default_factory=get_env(f'{CONFIG_PREFIX}_SERVICE_NAME', ''))

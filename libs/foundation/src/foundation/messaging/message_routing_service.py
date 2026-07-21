@@ -6,6 +6,7 @@ from foundation.cli import cli
 from foundation.db.advanced_db_manager import MainDatabase
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig
+from foundation.serialization import BaseEvent
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
@@ -78,7 +79,7 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
 
     async def publish_event(
         self,
-        event: Any,
+        event: BaseEvent,
         channel: str,
         *,
         session: DBAsyncSession | DBAsyncScopedSession | None = None,

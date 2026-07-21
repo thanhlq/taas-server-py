@@ -22,8 +22,9 @@ def parse_keycloak_error(e: KeycloakError) -> str:
 user_attributes_json_fields = ['taxNumbers']
 
 
-def user_registration_form_to_keycloak_data(
-    registration_data: SignupRequest
+def parse_keycloak_user_from_signup_data(
+    registration_data: SignupRequest,
+    verify_email: bool = False,
 ) -> dict:
     """
     Convert UserRegistrationForm to keycloak user data dictionary for Keycloak API
@@ -37,7 +38,7 @@ def user_registration_form_to_keycloak_data(
         # 'displayName': f'{registration_data.first_name} {registration_data.last_name}',
         'password': registration_data.password,
         'emailVerified': False,
-        'enabled': True,
+        'enabled': verify_email,
     }
     return kc_user_data
 

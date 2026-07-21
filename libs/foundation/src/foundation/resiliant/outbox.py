@@ -277,9 +277,7 @@ __all__ = [
     "IOutboxService",
     "OutboxConfig",
     "OutboxError",
-    "OutboxFactory",
     "OutboxMessage",
     "OutboxPublishError",
-    "OutboxService",
     "OutboxStatus",
 ]

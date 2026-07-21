@@ -63,6 +63,9 @@ class IamDirectorySignupServiceT(ABC):
     async def signup_01_onboarding_with_email(self, email: str, **kwargs) -> SignupRequestOut:...
 
     @abstractmethod
+    async def signup_02_submit(self, data: SignupRequest, **kwargs) -> SignupRequestOut:...
+
+    @abstractmethod
     async def send_otp_to_email(
         self,
         email: str,

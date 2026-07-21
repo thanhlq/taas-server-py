@@ -12,4 +12,4 @@ Definition of common patterns for resilience services, such as:
 
 from .register_services import register_resiliant_factory
 
-__all__ = ["register_resiliant_service_factory"]
+__all__ = ["register_resiliant_factory"]

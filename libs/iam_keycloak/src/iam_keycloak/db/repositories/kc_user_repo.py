@@ -95,10 +95,10 @@ class KeycloakUserRepository(
         repository = SQLAlchemyAsyncQueryRepository(session=session)
         result = await repository.get_many(
             select(UserOrm.username, UserOrm.realm_id, func.count(UserOrm.id))
-            .where(UserOrm.username.is_(username), UserOrm.realm_id == realm_id)
+            .where(UserOrm.username == username, UserOrm.realm_id == realm_id)
             .group_by(UserOrm.username, UserOrm.realm_id)
         )
-        count = result[0][1] if result else 0
+        count = result[0][2] if result else 0
         return count
 
     def set_realm(self, realm_id: str | None = None, realm_name: str | None = None):

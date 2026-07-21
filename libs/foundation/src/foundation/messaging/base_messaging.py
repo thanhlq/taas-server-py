@@ -1,3 +1,4 @@
+from foundation import BaseService
 from typing import Literal, Optional
 
 from foundation.exceptions.report_error import report_error
@@ -15,7 +16,7 @@ from .sr import SchemaRegistryConfig, SchemaRegistryEncoder
 from .types import BaseEvent, DlqEvent, IMessageEncoder, MessageServiceStats
 
 
-class BaseMessagingService(IMessagingService):
+class BaseMessagingService(BaseService, IMessagingService):
     """Base kafka messaging service that provides common functionality for all messaging services."""
 
     messaging_config: MessagingConfig

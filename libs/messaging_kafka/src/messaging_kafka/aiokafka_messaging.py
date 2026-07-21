@@ -60,24 +60,11 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from aiokafka.structs import RecordMetadata
-
-from core.events import EventProcessorFast as EventProcessor
-from core.events.types import BaseEvent, DlqEvent
-from core.messaging.base_messaging import BaseMessagingService
-from core.messaging.types import (
-    IMessagingPubSubService,
-    MessageHandler,
-    MessageServiceStats,
-    MessagingProvider,
-)
-from core.messaging.utils.msg_encoder import MsgDecoderError
-from core.observability.error_reporter import report_error
-from core.observability.types import ITracingManager
-from core.observability.trace_factory import TracingFactory
-from core.safety.retry import retry
+from foundation.messaging.base_messaging import BaseMessagingService
+from foundation.messaging.types import IMessagingService, MessageHandler
+from foundation.utils.singleton import singleton
 
 from .aiokafka_helper import AiokafkaHelper
-
 
 # ---------------------------------------------------------------------------
 # Internal data structures
@@ -101,7 +88,7 @@ class _SubscriptionInfo:
 # ---------------------------------------------------------------------------
 
 @singleton
-class AiokafkaMessagingService(BaseMessagingService, IMessagingPubSubService):
+class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     """
     Kafka pub/sub service using pure ``aiokafka``.
 

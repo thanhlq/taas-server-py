@@ -1,3 +1,4 @@
+from foundation import BaseService
 from foundation.messaging.message_routing_service import MessageRoutingService
 from foundation.messaging.types import IMessageRoutingService
 from foundation.resiliant.dlq import IDLQService
@@ -11,7 +12,7 @@ from resiliant.service_builder import ResiliantServiceBuilder
 
 
 @singleton
-class ResiliantServiceFactory(ResiliantServiceFactoryT):
+class ResiliantServiceFactory(BaseService, ResiliantServiceFactoryT):
 
     def __init__(self):
         super().__init__()

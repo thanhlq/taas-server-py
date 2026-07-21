@@ -40,3 +40,12 @@ class SaaSSettings:
             The SaaS settings.
         """
         return SaaSSettings()
+
+
+def get_saas_settings() -> SaaSSettings:
+    """Return SaaSSettings instance.
+
+    Returns:
+        The SaaS settings.
+    """
+    return SaaSSettings.get_settings()

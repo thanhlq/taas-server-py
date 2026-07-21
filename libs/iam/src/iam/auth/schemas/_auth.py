@@ -24,7 +24,7 @@ class SignupRequest(ApiRequest):
     name: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    organization: str | None = None
+    organization_name: str | None = None
     """ When SaaS is enabled, this is required. """
     mobile_phone: Phone | None = None
     password: str | None = None
@@ -40,7 +40,7 @@ class SignupRequest(ApiRequest):
             return self.email
         return None
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         from ..auth_settings import AuthSettings
 
         settings = AuthSettings()
@@ -49,8 +49,8 @@ class SignupRequest(ApiRequest):
             if not self.email:
                 raise ValueError('Email is required.')
 
-        if settings.saas_enabled and not self.organization:
-            raise ValueError('Organization is required.')
+        if settings.saas_enabled and not self.organization_name:
+            raise ValueError('organization_name is required.')
 
         if self.name and not (self.first_name and self.last_name):
             # Try to split the name into first and last names if not provided
@@ -65,6 +65,7 @@ class SignupRequestOut(ApiResponse):
     user: Optional[dict] = None
     """ More user details can be added here if needed. """
     status: Literal['PENDING', 'VERIFICATION_SENT', 'OK', 'FAILED', 'EXISTED'] = 'OK'
+    tenant_id: str | None = None
     message: Optional[str] = None
 
 class DirectoryUser(TypedDict):

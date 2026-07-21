@@ -10,12 +10,13 @@ atomically. A separate relay/poller (out of scope here) later publishes the
 
 from __future__ import annotations
 
-import uuid
 from typing import Any, Dict, Optional
 
 from db.models.resiliant import OutboxEventTable, OutboxStatus
 from foundation import BaseService
+from foundation.messaging.types import BaseEvent
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig
+from foundation.utils.id import generate_uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .outbox_repository import OutboxRepository
@@ -44,7 +45,7 @@ class OutboxService(IOutboxService, BaseService):
     async def save_event(
         self,
         session: AsyncSession,
-        event: Any,
+        event: BaseEvent,
         channel: str,
         *,
         partition_key: Optional[str] = None,
@@ -71,17 +72,25 @@ class OutboxService(IOutboxService, BaseService):
             The persisted :class:`OutboxEventTable` row (flushed, not committed).
         """
         payload = self._extract_payload(event)
-        event_id = str(getattr(event, "event_id", None) or uuid.uuid4())
+        # event_id: str | None = str(getattr(event, "event_id", None))
+
+        if event.event_id is None:
+            event_id = generate_uuid()
+        else:
+            # TODO: idempotency check: if event_id already exists in outbox, skip saving
+            event_id = event.event_id
+
 
         merged_headers: Dict[str, Any] = dict(headers or {})
-        for attr in ("correlation_id", "event_id", "source"):
-            value = getattr(event, attr, None)
-            if value is not None:
-                merged_headers.setdefault(attr, value)
+        # for attr in ("correlation_id", "event_id", "source"):
+        #     value = getattr(event, attr, None)
+        #     if value is not None:
+        #         merged_headers.setdefault(attr, value)
 
         outbox_event = OutboxEventTable(
             event_id=event_id,
-            event_type=getattr(event, "event_type", None)
+            # event_type=getattr(event, "event_type", None)
+            event_type=event.event_type
             or type(event).__name__,
             channel=channel,
             partition_key=partition_key,
@@ -93,7 +102,6 @@ class OutboxService(IOutboxService, BaseService):
             source_service=getattr(event, "source", None),
             correlation_id=getattr(event, "correlation_id", None),
             user_id=getattr(event, "user_id", None),
-            tenant_id=getattr(event, "tenant_id", None),
         )
         saved = await self.repository.save(session, outbox_event)
         self.logger.debug(
@@ -137,14 +145,17 @@ class OutboxService(IOutboxService, BaseService):
         return await self.repository.get_stats(session)
 
     @staticmethod
-    def _extract_payload(event: Any) -> Dict[str, Any]:
+    def _extract_payload(event: BaseEvent) -> Dict[str, Any]:
         """Best-effort conversion of a domain event into a JSON-safe payload."""
-        as_dict = getattr(event, "as_dict", None)
-        if callable(as_dict):
-            return as_dict()
-        to_dict = getattr(event, "to_dict", None)
-        if callable(to_dict):
-            return to_dict()
-        if isinstance(event, dict):
-            return event
-        return dict(getattr(event, "__dict__", {}) or {})
+
+        return event.as_dict()
+
+        # as_dict = getattr(event, "as_dict", None)
+        # if callable(as_dict):
+        #     return as_dict()
+        # to_dict = getattr(event, "to_dict", None)
+        # if callable(to_dict):
+        #     return to_dict()
+        # if isinstance(event, dict):
+        #     return event
+        # return dict(getattr(event, "__dict__", {}) or {})

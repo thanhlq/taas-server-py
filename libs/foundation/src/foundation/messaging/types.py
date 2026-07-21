@@ -23,7 +23,6 @@ from typing import (
 )
 
 import msgspec
-from foundation import BaseService
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig, RoutingStrategy
 from foundation.serialization import BaseEventPayload, BaseModel
@@ -155,7 +154,7 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright
     # Metadata fields (common to all events)
     ########################################################################################################################
     event_type: str
-    event_id: str = field(default_factory=generate_id)
+    event_id: str | None = None
     timestamp: datetime = field(default_factory=now_in_utc)
     retry_count: int = 0
     m_serializer: str = 'baseevent_serializer'
@@ -525,7 +524,7 @@ class IMessageEncoder(Protocol):
     def decode_field(self, val: Any) -> dict: ...
 
 
-class IMessagingService[M](BaseService, ABC):
+class IMessagingService[M](ABC):
     """
     Base messaging service interface.
 
