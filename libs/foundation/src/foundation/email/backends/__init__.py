@@ -5,22 +5,20 @@ from typing import TYPE_CHECKING, Any
 
 from foundation.email.backends.base import BaseEmailBackend
 
+# Re-export backend classes for convenience
+# Backends can be imported regardless of whether dependencies are installed.
+# They raise MissingDependencyError on instantiation if dependencies are missing.
+from foundation.email.backends.console import ConsoleBackend
+
+# from foundation.email.backends.mailgun import MailgunBackend
+# from foundation.email.backends.memory import InMemoryBackend
+from foundation.email.backends.resend import ResendBackend
+from foundation.email.backends.sendgrid import SendGridBackend
+from foundation.email.backends.smtp import SMTPBackend
+
 if TYPE_CHECKING:
     from foundation.email.config import BackendConfig, EmailConfig
 
-__all__ = (
-    "BaseEmailBackend",
-    "ConsoleBackend",
-    # "InMemoryBackend",
-    # "MailgunBackend",
-    "ResendBackend",
-    "SMTPBackend",
-    "SendGridBackend",
-    "get_backend",
-    "get_backend_class",
-    "list_backends",
-    "register_backend",
-)
 
 # Global registry of backend short names to classes
 _backend_registry: dict[str, type[BaseEmailBackend]] = {}
@@ -60,6 +58,7 @@ def _register_builtins() -> None:
     if the required packages are not available.
     """
     from foundation.email.backends.console import ConsoleBackend
+
     # from foundation.email.backends.mailgun import MailgunBackend
     # from foundation.email.backends.memory import InMemoryBackend
     from foundation.email.backends.resend import ResendBackend
@@ -124,7 +123,12 @@ def _get_backend_name_for_config(backend_config: "BackendConfig") -> str:
     Raises:
         ValueError: If the config type is not recognized.
     """
-    from foundation.email.config import MailgunConfig, ResendConfig, SendGridConfig, SMTPConfig
+    from foundation.email.config import (
+        MailgunConfig,
+        ResendConfig,
+        SendGridConfig,
+        SMTPConfig,
+    )
 
     config_to_backend: dict[type, str] = {
         SMTPConfig: "smtp",
@@ -230,12 +234,18 @@ def list_backends() -> list[str]:
     return list(_backend_registry.keys())
 
 
-# Re-export backend classes for convenience
-# Backends can be imported regardless of whether dependencies are installed.
-# They raise MissingDependencyError on instantiation if dependencies are missing.
-from foundation.email.backends.console import ConsoleBackend
-# from foundation.email.backends.mailgun import MailgunBackend
-# from foundation.email.backends.memory import InMemoryBackend
-from foundation.email.backends.resend import ResendBackend
-from foundation.email.backends.sendgrid import SendGridBackend
-from foundation.email.backends.smtp import SMTPBackend
+
+
+__all__ = (
+    "BaseEmailBackend",
+    "ConsoleBackend",
+    # "InMemoryBackend",
+    # "MailgunBackend",
+    "ResendBackend",
+    "SMTPBackend",
+    "SendGridBackend",
+    "get_backend",
+    "get_backend_class",
+    "list_backends",
+    "register_backend",
+)

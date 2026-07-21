@@ -43,7 +43,6 @@ from foundation.messaging.sr.schema_registry_fast import (
     SchemaRegistryError,
 )
 from foundation.messaging.types import IMessagingService
-from foundation.state import register_service
 
 from .decorator import messaging
 from .faststream_aiokafka_impl import FastStreamKafkaMessagingService
@@ -69,11 +68,7 @@ async def initialize_messaging_service(
 ) -> IMessagingService:
     """Initialize async services that require await."""
     settings = get_settings() if settings is None else settings
-
-    # locator = get_service_locator()
     pubsub_service = await create_pubsub_service(settings)
-    # locator.register(IMessagingService, pubsub_service)
-    register_service(IMessagingService, pubsub_service)
     return pubsub_service
 
 

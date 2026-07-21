@@ -1,7 +1,5 @@
 """The factory to create related Keycloak IAM service"""
 from db.common import IRepositoryFactory
-from foundation.state import get_service
-from foundation.state.service_registry import register_service
 from foundation.utils.singleton import singleton
 from iam.auth.types import IamDirectoryServiceT, IamDirectorySignupServiceT
 from iam.types import IIamServiceFactory
@@ -23,15 +21,10 @@ class KeycloakIamServiceFactory(IIamServiceFactory):
     def __init__(self):
         super().__init__()
         self._keycloak_iam_service = KeycloakIamService(self)
-        self._register_services()
 
-
-    def _register_services(self):
-        register_service(IamDirectoryServiceT, self._keycloak_iam_service)
-        return self
 
     def get_directory_service(self) -> IamDirectoryServiceT:
-        return get_service(IamDirectoryServiceT)
+        return self._keycloak_iam_service
 
     def get_directory_signup_service(self) -> IamDirectorySignupServiceT:
         return self._keycloak_iam_service

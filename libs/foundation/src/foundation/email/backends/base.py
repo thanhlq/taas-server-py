@@ -57,12 +57,14 @@ class BaseEmailBackend(ABC):
         """
         return True
 
+    @abstractmethod
     async def close(self) -> None:
         """Close the connection to the email server.
 
         Override this method to clean up resources.
         Called automatically when exiting the async context manager.
         """
+        ...
 
     async def __aenter__(self) -> Self:
         """Enter the async context manager.

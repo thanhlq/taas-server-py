@@ -9,11 +9,10 @@ The
 from __future__ import annotations
 
 import os
-import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from foundation.config import CONFIG_PREFIX
+from foundation.storage.providers.fs.fs_paths import FSPaths
 
 if TYPE_CHECKING:
     from foundation.config import Settings
@@ -24,11 +23,16 @@ root_path: str
 
 def setup_environment(env_file: str = '.env') -> tuple[Settings, str]:
     """Configure the environment variables and path."""
-    current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
-    sys.path.append(str(current_path))
+
+    # libs/foundation/src/foundation/storage/providers/fs/fs_paths.py
+
+    # apps/ews_api/src/ews_api/bootstrap.py
+    # current_path = Path(__file__).parent.parent.parent.parent.parent.resolve()
+    root_path = FSPaths.find_app_root()
+
+
     from foundation.config import get_settings
 
-    root_path = current_path.as_posix()
     settings = get_settings(env_file=env_file, home_path=root_path)
 
     os.environ.setdefault(f'{CONFIG_PREFIX}_APP', 'app.server.asgi:create_app')

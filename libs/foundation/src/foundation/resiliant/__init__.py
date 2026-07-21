@@ -10,6 +10,6 @@ Definition of common patterns for resilience services, such as:
   - Fallbacks
 """
 
-from .register_services import register_factory
+from .register_services import register_resiliant_factory
 
 __all__ = ["register_resiliant_service_factory"]

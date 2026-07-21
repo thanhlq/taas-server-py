@@ -35,7 +35,7 @@ from foundation.utils.env_utils import get_env
 from foundation.utils.module_loader import module_to_os_path
 
 from .db_settings import DatabaseSettings
-from .email_settings import EmailSettings
+from ..email.email_settings import EmailSettings
 
 CONFIG_PREFIX = 'TAAS'
 

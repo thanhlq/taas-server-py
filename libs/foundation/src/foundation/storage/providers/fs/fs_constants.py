@@ -1,0 +1,13 @@
+class CONFIG_CONSTANTS:
+    CONFIG_DIR = 'config'
+    LOGS_DIR = 'logs'
+    DATA_DIR = 'data'
+    TEMP_DIR = 'temp'
+    BACKUP_DIR = 'backups'
+    EXPORTS_DIR = 'exports'
+    IMPORTS_DIR = 'imports'
+    PLUGINS_DIR = 'plugins'
+    THEMES_DIR = 'themes'
+    RESOURCE_DIR = 'resources'
+    TEMPLATES_DIR = 'resources/templates'
+    EMAIL_TEMPLATES_DIR = 'resources/email_templates'

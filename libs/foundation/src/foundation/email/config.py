@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from foundation.datastructures import State
-
     from foundation.email.backends.base import BaseEmailBackend
     from foundation.email.service import EmailService
     from foundation.email.transports.base import HTTPTransport
@@ -259,8 +258,8 @@ class EmailConfig:
             A string keyed dict of names to be added to the namespace for signature forward reference resolution.
         """
         from foundation.email.backends.base import BaseEmailBackend
-        from foundation.email.types import EmailMessage, EmailMultiAlternatives
         from foundation.email.service import EmailService
+        from foundation.email.types import EmailMessage, EmailMultiAlternatives
 
         return {
             "BaseEmailBackend": BaseEmailBackend,
@@ -283,7 +282,7 @@ class EmailConfig:
     #     """
     #     from litestar.di import Provide
 
-        return {self.email_service_dependency_key: Provide(self.provide_service, sync_to_thread=False)}
+        # return {self.email_service_dependency_key: Provide(self.provide_service, sync_to_thread=False)}
 
     def get_service(self, state: "State | None" = None) -> "EmailService":
         """Return an EmailService for this configuration.

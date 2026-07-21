@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 
 from foundation.config import Settings, get_settings
-from foundation.email.types import EmailMessage, IEmailService
+from foundation.email.types import EmailMessage, EmailServiceT
 from foundation.utils.id import generate_otp
 
 from iam.auth.auth_events import UserRegisteredEvent
@@ -14,7 +14,7 @@ from iam.iam_constants import IamFrontendRoutes, IamTemplates
 
 
 class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
-    """ This is the base class for all authentication services. It provides common functionality and interfaces for different authentication implementations. """
+    """This is the base class for all authentication services. It provides common functionality and interfaces for different authentication implementations."""
 
     settings: Settings
 
@@ -23,10 +23,12 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
         self.settings = get_settings()
 
     @property
-    def email_service(self) -> IEmailService:
-        return self.get_service(IEmailService)
+    def email_service(self) -> EmailServiceT:
+        return self.get_service(EmailServiceT)
 
-    async def signup_01_onboarding_with_email(self, email: str, **kwargs) -> SignupRequestOut:
+    async def signup_01_onboarding_with_email(
+        self, email: str, **kwargs
+    ) -> SignupRequestOut:
         """
         Handle the first step of user onboarding with email verification.
         This method checks if the email already exists in the system. If it does, it returns a response indicating that the email is already registered. If not, it sends an email verification to the provided email address and returns a response indicating that the verification email has been sent.
@@ -41,34 +43,31 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
         count = await self.count_users_by_email(email, **kwargs)
 
         if count > 0:
-            self.logger.info(f"Email {email} already exists in the system.")
-            return SignupRequestOut(email=email, status="EXISTED")
+            self.logger.info(f'Email {email} already exists in the system.')
+            return SignupRequestOut(email=email, status='EXISTED')
 
         await self.signup_send_email_verification(email, **kwargs)
 
-
-        return SignupRequestOut(email=email, status="VERIFICATION_SENT")
+        return SignupRequestOut(email=email, status='VERIFICATION_SENT')
 
     async def signup_send_email_verification(self, email: str, **kwargs):
         """
         Send a new account email to the specified address for verification.
         """
-
-
-        message = EmailMessage(
-            to=email,
-            subject=f'{self.settings.app.NAME} - Verify your new account',
-        )
-
-        await self.email_service.send_email(
-            message=message,
+        message: EmailMessage = await self.email_service.build_message(
             template=IamTemplates.ACCOUNT_EMAIL_VERIFICATION,
-            template_data={
+            context={
                 'project_name': self.settings.app.NAME,
                 'email': email,
                 'otp': generate_otp(6),
                 'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={email}',
             },
+            to=[email],
+            subject='Verify your new account',
+        )
+
+        await self.email_service.send_message(
+            message=message,
         )
 
     async def signup_send_welcome_email(self, user: UserRegisteredEvent, **kwargs):
@@ -76,20 +75,19 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
         Send a new account email to the specified address for verification.
         """
 
-        to_email = user.email
-        message = EmailMessage(
-            to=to_email,
-            subject=f'{self.settings.app.NAME} - Welcome to your new account',
+        message: EmailMessage = await self.email_service.build_message(
+            template=IamTemplates.WELCOME_EMAIL,
+            context={
+                'project_name': self.settings.app.NAME,
+                'email': user.email,
+                'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={user.email}',
+            },
+            to=[user.email],
+            subject='Welcome to your new account',
         )
 
-        await self.email_service.send_email(
+        await self.email_service.send_message(
             message=message,
-            template=IamTemplates.WELCOME_EMAIL,
-            template_data={
-                'project_name': self.settings.app.NAME,
-                'email': to_email,
-                'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={to_email}',
-            },
         )
 
     async def signup_send_otp_to_email(
@@ -110,21 +108,20 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
             if description
             else 'Use the following OTP to verify your email address.'
         )
+
         otp = otp if otp else generate_otp()
-
-        message = EmailMessage(
-            to=email,
-            subject=title,
-        )
-
-        await self.email_service.send_email(
-            message=message,
-            template=IamTemplates.USER_OTP,
-            template_data={
+        message: EmailMessage = await self.email_service.build_message(
+            template=IamTemplates.WELCOME_EMAIL,
+            context={
                 'project_name': self.settings.app.NAME,
                 'description': description,
                 'email': email,
                 'otp': otp,
-                # 'link': f'{self.settings.DOMAIN_FRONTEND}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={to_email}',
             },
+            to=[email],
+            subject=title,
+        )
+
+        await self.email_service.send_message(
+            message=message,
         )

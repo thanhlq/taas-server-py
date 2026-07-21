@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from copy import deepcopy
 from threading import RLock
-from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable, Iterator, Mapping, MutableMapping, Final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generator,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+)
 
 CONNECTION_STATE_KEY: Final = "_ls_connection_state"
 
@@ -173,6 +183,15 @@ class State(ImmutableState, MutableMapping[str, Any]):
     """An object meant to store arbitrary state.
 
     It can be accessed using dot notation while exposing dict like functionalities.
+
+    Examples:
+        .. code-block:: python
+            from foundation.datastructures import State
+            state_dict = {"first": 1, "second": 2, "third": 3, "fourth": 4}
+            state = State(state_dict)
+            # state can be accessed using '.' notation
+            assert state.fourth == 4
+            del state.fourth
     """
 
     __slots__ = ("_lock",)

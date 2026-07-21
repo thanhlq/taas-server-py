@@ -49,6 +49,14 @@ class ServiceRegistry:
                 f'Transient service {interface_type.__name__} requires a callable factory, not an instance. '
                 'Pass a class or factory function, or use singleton=True.'
             )
+
+        # Check if the service is already registered
+        if interface_type in self._services:
+            self.logger.warning(
+                f'⚠️  Service {interface_type.__name__} is already registered. Overwriting.'
+            )
+            # return cast(T, implementation)
+
         self._services[interface_type] = (implementation, singleton)
         # Clear stale singleton so re-registration takes effect immediately
         self._singletons.pop(interface_type, None)
@@ -56,8 +64,8 @@ class ServiceRegistry:
         if singleton and not callable(implementation):
             self._singletons[interface_type] = implementation
 
-        print(
-            f'{"Registered" if singleton else "Registered transient"} service: {interface_type.__name__} -> {implementation if callable(implementation) else type(implementation).__name__}'
+        self.logger.info(
+            f'{"🔷 Registered" if singleton else "🔷 Registered transient"}: {interface_type.__name__} -> {implementation if callable(implementation) else type(implementation).__name__}'
         )
         return cast(T, implementation)
 
