@@ -1,3 +1,4 @@
+from typing import Any
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -88,7 +89,7 @@ class EmailServiceT(ABC):
     async def build_message(
         self,
         template: str,
-        context: dict[str, str],
+        context: dict[str, Any],
         *,
         to: list[str],
         subject: str | None = None,

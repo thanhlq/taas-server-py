@@ -18,7 +18,7 @@ from ews import get_ews_controllers
 from foundation.cli import cli_print_info
 from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
-from foundation.facade.cache import ICacheService
+from foundation.facade.cache import CacheServiceT
 from foundation.http._websocket_redis_manager import build_websocket_redis_manager
 from foundation.http.base_app import BaseApiApplication
 from foundation.state.service_registry import register_service
@@ -69,11 +69,9 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
         async def lifespan(_app: Litestar):
             cli_print_info('Starting up the application...')
 
-            # Register the cache backend so the ``@cache`` decorator on the
-            # controllers can resolve ``ICacheService`` at request time.
             _cache_config = settings.app.get_cache_config()
             _redis_client = create_redis_client(_cache_config.get_redis_config())
-            register_service(ICacheService, RedisStore(_redis_client))
+            register_service(CacheServiceT, RedisStore(_redis_client))
 
             if self.config.websocket_config and self.config.websocket_config.debug:
                 cli_print_info('🐛 WebSocket debug mode is enabled.')

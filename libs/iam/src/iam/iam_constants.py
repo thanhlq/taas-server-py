@@ -170,3 +170,30 @@ def get_topic_for_event(event_type: IamEvents) -> str:
         The Kafka topic name for this event
     """
     return EVENT_TOPIC_MAPPING.get(event_type, IamTopics.IAM)
+
+class IamConstants:
+    """Constants for IAM module."""
+
+    OTP_LENGTH = 6
+    OTP_VALIDITY_SECONDS = 300  # 5 minutes
+    OTP_SIGNUP_EMAIL_VALIDITY_SECONDS = 1800  # 30 minutes
+    PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1  # 1 hour
+    # EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = 24  # 24 hours
+    MAX_LOGIN_ATTEMPTS = 5
+    ACCOUNT_LOCK_DURATION_MINUTES = 15  # 15 minutes
+    DEFAULT_USER_ROLE = 'user'
+    ADMIN_USER_ROLE = 'admin'
+    SUPERADMIN_USER_ROLE = 'superadmin'
+    PASSWORD_MIN_LENGTH = 8
+    PASSWORD_COMPLEXITY_REGEX = (
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
+    )
+    SESSION_TIMEOUT_MINUTES = 30  # 30 minutes
+    REFRESH_TOKEN_EXPIRY_DAYS = 30  # 30 days
+
+    CACHE_SIGNUP_OTP_PREFIX = 'iam_signup_otp:'
+    CACHE_PASSWORD_RESET_OTP_PREFIX = 'iam_password_reset_otp:'
+    CACHE_EMAIL_VERIFICATION_OTP_PREFIX = 'iam_email_verification_otp:'
+    CACHE_ACCOUNT_LOCK_PREFIX = 'iam_account_lock:'
+    CACHE_LOGIN_ATTEMPTS_PREFIX = 'iam_login_attempts:'
+    CACHE_SESSION_PREFIX = 'iam_session:'

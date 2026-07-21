@@ -3,10 +3,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from datetime import timedelta
 
-from foundation import BaseService
 
-
-class ICacheService(BaseService):
+class CacheServiceT:
     """Abstract caching service interface."""
 
     @abstractmethod

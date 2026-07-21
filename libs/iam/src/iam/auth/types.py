@@ -63,8 +63,15 @@ class IamDirectorySignupServiceT(ABC):
     async def signup_01_onboarding_with_email(self, email: str, **kwargs) -> SignupRequestOut:...
 
     @abstractmethod
-    async def signup_send_email_verification(
-        self, email: str, **kwargs
+    async def send_otp_to_email(
+        self,
+        email: str,
+        *,
+        subject: str | None = 'Here is your verification code',
+        otp: str | None = None,
+        link: str | None = None,
+        description: str | None = None,
+        **kwargs,
     ): ...
 
     @abstractmethod
@@ -72,14 +79,6 @@ class IamDirectorySignupServiceT(ABC):
         self, user: "UserRegisteredEvent", **kwargs
     ): ...
 
-    @abstractmethod
-    async def signup_send_otp_to_email(
-        self,
-        email: str,
-        otp: str | None = None,
-        title: str | None = None,
-        description: str | None = None,
-    ):...
 
 class IamDirectoryServiceT(ABC):
     """

@@ -85,11 +85,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         @asynccontextmanager
         async def lifespan(application: FastAPI):
 
-            # await initFastapiCache()
-            # _cache_config = settings.app.get_cache_config()
-            # _redis_client = create_redis_client(_cache_config.get_redis_config())
-            # _redis_store = RedisStore(_redis_client)
-            # register_service(ICacheService, _redis_store)
             RedisCacheServiceFactory.create(settings.app.get_cache_config())
 
             _controllers = self.get_app_controllers()

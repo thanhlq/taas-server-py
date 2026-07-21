@@ -6,7 +6,7 @@ any web framework (FastAPI, Litestar, ...) as long as the endpoint exposes a
 optionally a ``response`` parameter (any object with ``.headers`` and
 ``.status_code``).
 
-Storage is delegated to the platform :class:`ICacheService` resolved via
+Storage is delegated to the platform :class:`CacheServiceT` resolved via
 :func:`get_cache_service`. Values are serialized with
 :func:`foundation.serialization.encode_json` / :func:`decode_json`.
 """
@@ -35,7 +35,7 @@ from typing import (
 )
 
 from foundation.config import get_settings
-from foundation.facade.cache import ICacheService
+from foundation.facade.cache import CacheServiceT
 from foundation.serialization import decode_json, encode_json
 from foundation.state.service_registry import get_service
 
@@ -84,8 +84,8 @@ class KeyBuilder(Protocol):
     ) -> Union[Awaitable[str], str]: ...
 
 
-def get_cache_service() -> ICacheService:
-    return get_service(ICacheService)
+def get_cache_service() -> CacheServiceT:
+    return get_service(CacheServiceT)
 
 
 # ---------------------------------------------------------------------------

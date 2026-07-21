@@ -3,6 +3,7 @@
 from logging import Logger
 from typing import TYPE_CHECKING
 
+from foundation.facade.cache import CacheServiceT
 from foundation.state import get_service as registry_get_service
 
 if TYPE_CHECKING:
@@ -31,7 +32,11 @@ class BaseService:
         return registry_get_service(t)
 
     @property
-    def messaging_service(self):
+    def cache_service(self) -> CacheServiceT:
+        return registry_get_service(CacheServiceT)
+
+    @property
+    def messaging_service(self) -> IMessagingService:
         return registry_get_service(IMessagingService)
 
     @property

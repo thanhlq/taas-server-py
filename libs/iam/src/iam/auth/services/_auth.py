@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from datetime import timedelta
 
 from foundation.config import Settings, get_settings
 from foundation.email.types import EmailMessage, EmailServiceT
@@ -10,7 +11,8 @@ from iam.auth.auth_events import UserRegisteredEvent
 from iam.auth.schemas._auth import SignupRequestOut
 from iam.auth.types import IamDirectoryServiceT
 from iam.common.base import BaseIamService
-from iam.iam_constants import IamFrontendRoutes, IamTemplates
+from iam.iam_constants import IamConstants, IamFrontendRoutes, IamTemplates
+from iam.utils.cache_key_builder import IamCacheKeyBuilder
 
 
 class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
@@ -25,6 +27,10 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
     @property
     def email_service(self) -> EmailServiceT:
         return self.get_service(EmailServiceT)
+
+    # ---------------------------------------------------------------------------
+    # SIGNUP
+    # ---------------------------------------------------------------------------
 
     async def signup_01_onboarding_with_email(
         self, email: str, **kwargs
@@ -46,26 +52,56 @@ class BaseAuthService(BaseIamService, IamDirectoryServiceT, ABC):
             self.logger.info(f'Email {email} already exists in the system.')
             return SignupRequestOut(email=email, status='EXISTED')
 
-        await self.signup_send_email_verification(email, **kwargs)
+        await self.send_otp_to_email(
+            email,
+            subject='Verify your new account',
+            link=f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={email}',
+            **kwargs,
+        )
 
         return SignupRequestOut(email=email, status='VERIFICATION_SENT')
 
-    async def signup_send_email_verification(self, email: str, **kwargs):
+
+    async def send_otp_to_email(self, email: str,
+                                *,
+                                subject: str | None = 'Here is your verification code',
+                                otp: str | None = None,
+                                link: str | None = None,
+                                description: str | None = None,
+                                **kwargs):
         """
         Send a new account email to the specified address for verification.
         """
+
+
+        # 01. Build message
+        _otp = otp or generate_otp()
+        # _link = link or f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={email}'
+        description = description or 'Use the following OTP to verify your email address.'
+
         message: EmailMessage = await self.email_service.build_message(
             template=IamTemplates.ACCOUNT_EMAIL_VERIFICATION,
             context={
                 'project_name': self.settings.app.NAME,
                 'email': email,
-                'otp': generate_otp(6),
-                'link': f'{self.settings.app.FRONTEND_URL}/{IamFrontendRoutes.VERIFY_ACCOUNT}?email={email}',
+                'otp': _otp,
+                'link': link,
+                'description': description,
+                **kwargs,
             },
             to=[email],
-            subject='Verify your new account',
+            subject=subject,
         )
 
+        # 02. Store the OTP in the database or cache for later verification (not shown here, but should be implemented in a real application)
+        await self.cache_service.set(
+                IamCacheKeyBuilder.build_signup_otp_key(email),
+                f'{otp}:{email}',
+                timedelta(seconds=IamConstants.OTP_SIGNUP_EMAIL_VALIDITY_SECONDS),
+            )
+
+
+        # 03. Send the email
         await self.email_service.send_message(
             message=message,
         )

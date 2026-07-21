@@ -3,12 +3,12 @@ import logging
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.coder import PickleCoder
-from http_fastapi.middewares.cache_key_builer import custom_cache_key_builder
-from http_fastapi.middewares.fastapi_cache_backend import FastapiCacheBackend
 from foundation.config import get_settings
 from foundation.exceptions.report_error import report_error
-from foundation.facade.cache import ICacheService
+from foundation.facade.cache import CacheServiceT
 from foundation.state.service_registry import register_service
+from http_fastapi.middewares.cache_key_builer import custom_cache_key_builder
+from http_fastapi.middewares.fastapi_cache_backend import FastapiCacheBackend
 
 
 async def initFastapiCache():
@@ -40,7 +40,7 @@ async def initFastapiCache():
 
             backend = register_service(FastapiCacheBackend, FastapiCacheBackend(_cache_config))
             # also register a cache service
-            register_service(ICacheService, backend.redis_store)
+            register_service(CacheServiceT, backend.redis_store)
             await backend.start()  # Start the Redis backend service
 
             # Redis cache with Redis backend

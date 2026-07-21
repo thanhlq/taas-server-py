@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
 from foundation.exceptions import ImproperlyConfiguredException
-from foundation.facade.cache import ICacheService
+from foundation.facade.cache import CacheServiceT
 from foundation.stores.base import NamespacedStore
 from foundation.types import Empty, EmptyType
 from foundation.utils.empty import value_or_default
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 __all__ = ("RedisStore",)
 
 
-class RedisStore(NamespacedStore, ICacheService):
+class RedisStore(NamespacedStore, CacheServiceT):
     """Redis based, thread and process safe asynchronous key/value store."""
 
     __slots__ = (
