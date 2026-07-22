@@ -59,7 +59,6 @@ class IamDataHelper:
             user_id=str(user.id),
             email=user.email,
             username=user.username,
-            tenant_id=str(tenant.id),
         )
         u_registered_event.set_payload_object(_payload)
 

@@ -27,10 +27,12 @@ Wire format produced by ``event.as_dict()``::
         "tenant": "{\\"id\\":\\"...\\",...}"   # JSON-serialised tenant dict
     }
 """
-from dataclasses import field
-
+# NOTE: ``BaseEvent`` is a ``msgspec.Struct`` (not a dataclass), so field
+# defaults must use ``msgspec.field`` — ``dataclasses.field`` would be stored
+# verbatim as the literal default (a ``Field`` object), breaking serialization.
 from foundation.messaging.types import BaseEvent
 from foundation.serialization import BaseEventPayload
+from msgspec import field
 
 from iam.auth.types import DirectoryTenant, DirectoryUser
 from iam.iam_constants import IamEvents
@@ -39,23 +41,14 @@ from iam.iam_constants import IamEvents
 # Tenant events
 # ---------------------------------------------------------------------------
 
-class TenantCreatedEvent(BaseEvent):
+class TenantCreatedEvent(BaseEvent, kw_only=True):
     """Fired when a new tenant is created."""
 
     event_type: str = field(default=IamEvents.TENANT_CREATED)
 
-    root_account_id: str = ''
-    # root_account: bytes | str | None = None
+    tenant_id: str | None = field(default='')
+    root_account_id: str | None = field(default='')
 
-    # def get_root_account_dict(self) -> dict[str, Any] | None:
-    #     return self.payload_as_dict(self.root_account)
-
-    # def get_root_account(self) -> User | None:
-    #     """Return the deserialised root-account as a User object, or ``None`` if not set."""
-    #     root_account_dict = self.get_root_account_dict()
-    #     if root_account_dict is None:
-    #         return None
-    #     return User(**root_account_dict)
 
 
 # ---------------------------------------------------------------------------

@@ -168,7 +168,7 @@ def schema_upgrades() -> None:
     sa.Column('retry_count', sa.Integer(), nullable=False),
     sa.Column('max_retries', sa.Integer(), nullable=False),
     sa.Column('last_error', sa.Text(), nullable=True),
-    sa.Column('processed_at', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('processed_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('source_service', sa.String(length=100), nullable=True),
     sa.Column('correlation_id', sa.String(length=64), nullable=True),
     sa.Column('user_id', sa.String(length=64), nullable=True),

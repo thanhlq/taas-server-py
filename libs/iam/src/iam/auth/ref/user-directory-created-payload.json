@@ -1,0 +1,31 @@
+{
+  "event_type": "user.directory_created",
+  "event_id": "0KSjjGdbMKq6aEtXx-uC4",
+  "timestamp": "2026-07-22T02:59:23.872402Z",
+  "retry_count": 0,
+  "m_serializer": "baseevent_serializer",
+  "handler_name": null,
+  "source": null,
+  "destination": null,
+  "user_id": "11291663-a6da-4ca7-ac42-bd9d821583e2",
+  "tenant_id": "8ad63d47-5fb7-48ef-a6d7-d1ecf806324c",
+  "payload": {
+    "user": {
+      "id": "11291663-a6da-4ca7-ac42-bd9d821583e2",
+      "email": "ngocle1401@gmail.com",
+      "username": "ngocle1401@gmail.com",
+      "first_name": "Ngoc",
+      "last_name": "Le",
+      "email_verified": true,
+      "is_root_account": true
+    },
+    "tenant": {
+      "id": "8ad63d47-5fb7-48ef-a6d7-d1ecf806324c",
+      "name": "Ngoc Test Org 875",
+      "alias_id": "ngoc-test-org-875"
+    }
+  },
+  "email": "ngocle1401@gmail.com",
+  "username": "ngocle1401@gmail.com",
+  "realm_name": "emtrack"
+}

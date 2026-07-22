@@ -32,6 +32,8 @@ from pathlib import Path
 
 # import msgpack
 import pytest
+from iam.auth.auth_events import UserDirectoryCreatedEvent
+from iam.iam_constants import IamEvents
 
 # ---------------------------------------------------------------------------
 # Path setup — make `core` and `messaging_faststream` importable when this
@@ -169,8 +171,6 @@ def _build_sample_dict() -> dict:
     sees a real nested dict either natively (json/msgpack) or after the
     production msgpack-pack pre-step (Avro).
     """
-    from core.iam.events.iam_constants import IamEvents
-    from core.iam.events.iam_events import UserDirectoryCreatedEvent
 
     event = UserDirectoryCreatedEvent(
         event_type=IamEvents.USER_DIRECTORY_CREATED.value,
@@ -392,8 +392,8 @@ async def test_benchmark_schema_registry_avro() -> None:
 
     from core.iam.events.iam_events import UserDirectoryCreatedEvent
     from core.messaging.sr.schema_registry_fast import (
-        SchemaRegistryEncoder,
         SchemaRegistryConfig,
+        SchemaRegistryEncoder,
     )
 
     schema = UserDirectoryCreatedEvent.avro_schema_to_python()

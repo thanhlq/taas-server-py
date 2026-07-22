@@ -337,7 +337,6 @@ class KeycloakIamService(
                 email=_directory_user.email,
                 username=_directory_user.username,
                 realm_name=self.keycloak_openid.realm_name,
-                tenant_id=tenant_directory_id,
                 # payload=parse_keycloak_registered_user(kc_user=created_kc_user).as_dict(),
                 # tenant=parse_keycloak_registered_organization(created_tenant).as_dict(),
                 # payload={

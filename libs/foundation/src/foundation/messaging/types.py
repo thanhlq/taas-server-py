@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -82,9 +82,9 @@ class DlqEvent(
 
     original_event: dict[str, Any]
     error: str
-    failed_at: datetime = field(default_factory=now_in_utc)
-    retry_count: int = field(default=0)
-    handler_name: Optional[str] = field(
+    failed_at: datetime = msgspec.field(default_factory=now_in_utc)
+    retry_count: int = msgspec.field(default=0)
+    handler_name: Optional[str] = msgspec.field(
         default=None,
     )
 
@@ -109,10 +109,10 @@ class EventMetadata(msgspec.Struct):
     event_type: str
     """Event type/topic"""
 
-    event_id: str = field(default_factory=generate_id)
+    event_id: str = msgspec.field(default_factory=generate_id)
     """Unique event identifier"""
 
-    timestamp: datetime = field(default_factory=now_in_utc)
+    timestamp: datetime = msgspec.field(default_factory=now_in_utc)
 
     retry_count: int = 0
 
@@ -134,7 +134,7 @@ class EventMetadata(msgspec.Struct):
         if self.retry_count < 0:
             raise ValueError('retry_count must be >= 0')
 
-class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright: ignore[reportUntypedBaseClass, reportGeneralTypeIssues]
+class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=True):  # pyright: ignore[reportUntypedBaseClass, reportGeneralTypeIssues]
     """
     Flat event structure with all metadata fields inline.
 
@@ -154,11 +154,10 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright
     # Metadata fields (common to all events)
     ########################################################################################################################
     event_type: str
-    event_id: str | None = None
-    timestamp: datetime = field(default_factory=now_in_utc)
+    event_id: str = msgspec.field(default_factory=generate_id)
+    timestamp: datetime = msgspec.field(default_factory=now_in_utc)
     retry_count: int = 0
     m_serializer: str = 'baseevent_serializer'
-    handler_name: Optional[str] = None
     """ Failure handler name for retry/dead-letter scenarios - populated by event processor at runtime, not set by event publishers """
     source: Optional[str] = None
     """
@@ -171,7 +170,6 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright
     """
 
     user_id: Optional[str] = None
-    tenant_id: Optional[str] = None
 
     ########################################################################################################################
     # Standard W3C Trace Context fields
@@ -191,10 +189,12 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase):  # pyright
 
     def __post_init__(self) -> None:
         self.m_serializer = type(self).m_serializer
-        if not self.event_id:
-            self.event_id = generate_id()
-        if not self.timestamp:
-            self.timestamp = now_in_utc()
+        # if not self.event_id:
+        #     self.event_id = generate_id()
+        # if not self.timestamp:
+        #     self.timestamp = now_in_utc()
+
+        print(f'BaseEvent __post_init__: event_type={self.event_type}, event_id={self.event_id}')
 
     def set_payload(self, payload: bytes | str | None):
         """Helper method to set the payload for good type hint."""
@@ -429,7 +429,7 @@ class MessageServiceStats(BaseModel):
     # Additional provider-specific metadata
     provider: str = 'unknown'
     cluster_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = msgspec.field(default_factory=dict)
 
     # ------------------------------------------------------------------
     # dict-style access — keeps EventProcessor and tests working as-is
