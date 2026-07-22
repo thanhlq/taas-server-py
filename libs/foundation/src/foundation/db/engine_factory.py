@@ -150,8 +150,8 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
         ) -> Any:
             """Emits a custom begin"""
             dbapi_connection.exec_driver_sql('BEGIN')
-    else:
-        
+    elif url.startswith('postgresql+psycopg_async'):
+
         cli_print_info('Creating SQLAlchemy engine for PostgreSQL, pooling settings: ' + ('disabled' if db_settings.POOL_DISABLED else f'enabled (pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT})'))
 
         engine_kwargs = {
@@ -187,6 +187,46 @@ def _create_sqlalchemy_engine(db_settings: 'DatabaseSettings') -> 'AsyncEngine':
         validate_engine_karg(engine_kwargs)
         engine = create_async_engine(**engine_kwargs)
         cli_print_info(f'Created engine with URL: {engine.url.render_as_string(hide_password=True)}')
+
+    elif url.startswith('postgresql+psycopg'):
+        # Sync mode
+        cli_print_info('Creating SQLAlchemy engine for PostgreSQL, pooling settings: ' + ('disabled' if db_settings.POOL_DISABLED else f'enabled (pool_size={db_settings.POOL_SIZE}, max_overflow={db_settings.POOL_MAX_OVERFLOW}, pool_timeout={db_settings.POOL_TIMEOUT})'))
+        engine_kwargs = {
+            'future': True,
+            'json_serializer': encode_json,
+            'json_deserializer': decode_json,
+            'echo': bool(db_settings.ECHO),
+            'echo_pool': db_settings.ECHO_POOL,
+            'pool_recycle': db_settings.POOL_RECYCLE,
+            'pool_pre_ping': db_settings.POOL_PRE_PING,
+            'connect_args': {
+                # default 5, 1 for testing
+                'prepare_threshold': 0,
+                # See https://docs.sqlalchemy.org/en/21/dialects/postgresql.html#prepared-statement-name-with-pgbouncer
+                # pgdog does not support this param
+                # 'prepared_statement_name_func': lambda: f'__asyncpg_{uuid4()}__',
+            },
+        }
+        if db_settings.POOL_DISABLED:
+            engine_kwargs['poolclass'] = NullPool # type: ignore
+        else:
+            engine_kwargs.update(
+                {
+                    'poolclass': AsyncAdaptedQueuePool,
+                    'max_overflow': db_settings.POOL_MAX_OVERFLOW,
+                    'pool_size': db_settings.POOL_SIZE,
+                    'pool_timeout': db_settings.POOL_TIMEOUT,
+                    'pool_use_lifo': True,
+                }
+            ) # type: ignore
+        cli.info_table('SQLAlchemy Engine Configuration', engine_kwargs)
+        engine_kwargs['url'] = url
+        validate_engine_karg(engine_kwargs)
+        engine = create_async_engine(**engine_kwargs)
+        cli_print_info(f'Created engine with URL: {engine.url.render_as_string(hide_password=True)}')
+    else:
+        raise ValueError(f'Unsupported database URL: {url}')
+
     return engine
 
 def validate_engine_karg(engine_kwargs: dict[str, Any]) -> None:

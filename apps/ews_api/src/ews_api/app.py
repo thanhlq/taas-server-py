@@ -12,6 +12,7 @@ from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
 
 import socketio
+from db.check_db import check_db_consistency
 from ews import get_ews_controllers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
@@ -51,6 +52,10 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         runtime_path: str,
     ) -> None:
         super().__init__(settings, runtime_path, None)
+
+        # 01. Check db consistency
+        check_db_consistency()
+
         self._init_services()  # Initialize services before building the app
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 

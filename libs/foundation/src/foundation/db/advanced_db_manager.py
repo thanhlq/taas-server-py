@@ -12,6 +12,7 @@ from typing import Optional, Union, get_args, get_type_hints
 
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
+    AsyncEngine,
     AsyncSession,
     async_scoped_session,
     async_sessionmaker,
@@ -78,6 +79,9 @@ class AdvancedDBManager:
         """
         # if self._debug:
         logger.info(f'🐬 AdvancedDBManager initialized with url: {self._engine.url}')
+
+    def get_engine(self) -> AsyncEngine:
+        return self._engine
 
     def session_factory(self) -> async_sessionmaker[AsyncSession]:
         return self._sessionmaker
