@@ -72,7 +72,7 @@ class UserProfile(ApiResponse):
     is_superuser: bool = False
     is_active: bool = False
     is_verified: bool = False
-    is_two_factor_enabled: bool = False
+    mfa_enabled: bool = False
     has_password: bool = False
     teams: list[UserTeam] = []
     roles: list[UserRole] = []

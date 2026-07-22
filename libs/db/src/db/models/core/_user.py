@@ -84,7 +84,7 @@ class User(UUIDv7AuditBase):
         # deferred_group="security_sensitive",
     )
     """Encrypted TOTP secret for authenticator apps."""
-    is_two_factor_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    mfa_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
     """Whether two-factor authentication is enabled for this user."""
     two_factor_confirmed_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     """When MFA was confirmed/enabled."""
@@ -143,4 +143,4 @@ class User(UUIDv7AuditBase):
 
     @hybrid_property
     def has_mfa(self) -> bool:
-        return self.is_two_factor_enabled
+        return self.mfa_enabled

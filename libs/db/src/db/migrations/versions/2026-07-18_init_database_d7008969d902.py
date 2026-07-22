@@ -654,7 +654,7 @@ def schema_upgrades() -> None:
     sa.Column('tenant_id', sa.Integer(), nullable=True),
     sa.Column('org_id', sa.String(length=36), nullable=True),
     sa.Column('totp_secret', sa.EncryptedString(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=True),
-    sa.Column('is_two_factor_enabled', sa.Boolean(), nullable=False),
+    sa.Column('mfa_enabled', sa.Boolean(), nullable=False),
     sa.Column('two_factor_confirmed_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.Column('backup_codes', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
