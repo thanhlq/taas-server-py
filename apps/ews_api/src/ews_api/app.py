@@ -12,7 +12,7 @@ from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
 
 import socketio
-from db.check_db import check_db_consistency
+from db.check_db import a_check_db_consistency
 from ews import get_ews_controllers
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
@@ -53,9 +53,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     ) -> None:
         super().__init__(settings, runtime_path, None)
 
-        # 01. Check db consistency
-        check_db_consistency()
-
         self._init_services()  # Initialize services before building the app
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 
@@ -91,6 +88,14 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         async def lifespan(application: FastAPI):
 
             RedisCacheServiceFactory.create(settings.app.get_cache_config())
+
+            # 01. Check db consistency
+            if settings.app.check_database_consistency():
+                cli_print_info('Checking database consistency...')
+                if not (await a_check_db_consistency()):
+                    raise RuntimeError(
+                        'Database consistency check failed. Please check the logs for details.'
+                    )
 
             _controllers = self.get_app_controllers()
             for controller in _controllers:

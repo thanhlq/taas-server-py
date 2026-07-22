@@ -1,77 +1,121 @@
+import asyncio
 import logging
 
 from sqlalchemy import inspect
-
-# from sqlalchemy.ext.declarative.clsregistry import _ModuleMarker
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.orm import RelationshipProperty
-from sqlalchemy.orm.clsregistry import _ModuleMarker
 
 logger = logging.getLogger(__name__)
 
 
-def is_sane_database(Base, engine) -> bool:
-    """Check whether the current database matches the models declared in model base.
+def _check_models_against_connection(connection: Connection, Base) -> bool:
+    """Consistency-check body, run against a *sync* :class:`Connection`.
 
-    Currently we check that all tables exist with all columns. What is not checked
-
-    * Column types are not verified
-
-    * Relationships are not verified at all (TODO)
-
-    :param Base: Declarative Base for SQLAlchemy models to check
-
-    :param session: SQLAlchemy session bound to an engine
-
-    :return: True if all declared models have corresponding tables and columns.
+    ``inspect()`` only accepts a sync ``Connection``/``Engine``; async callers
+    obtain one via :meth:`AsyncConnection.run_sync`.
     """
-
-    # engine = session.get_bind()
-    iengine = inspect(engine)
-
+    iengine = inspect(connection)
     errors = False
 
     tables = iengine.get_table_names()
 
-    # Go through all SQLAlchemy models
-    for name, klass in Base._decl_class_registry.items():
-        if isinstance(klass, _ModuleMarker):
-            # Not a model
+    # SQLAlchemy 2.0: iterate the mapped classes via the registry. The old
+    # ``Base._decl_class_registry`` (and its ``_ModuleMarker`` entries) was
+    # removed in 1.4+, so ``registry.mappers`` is the supported replacement.
+    for mapper in Base.registry.mappers:
+        klass = mapper.class_
+
+        # Keycloak models share advanced_alchemy's global registry, but their
+        # tables live in the separate Keycloak-managed database (not the main
+        # application DB), so they must not be validated here.
+        if klass.__module__.startswith('iam_keycloak.'):
+            logger.info(f'Skipping Keycloak model {klass} (external database)')
             continue
 
         table = klass.__tablename__
 
-        print(f'Checking model {klass} with table {table} against database {engine}')
+        logger.info(f'🐘 📁 Checking model {klass} with table {table} against the database')
 
-        if table in tables:
-            # Check all columns are found
-            # Looks like [{'default': "nextval('sanity_check_test_id_seq'::regclass)", 'autoincrement': True, 'nullable': False, 'type': INTEGER(), 'name': 'id'}]
-
-            columns = [c['name'] for c in iengine.get_columns(table)]
-            mapper = inspect(klass)
-
-            for column_prop in mapper.attrs:
-                if isinstance(column_prop, RelationshipProperty):
-                    # TODO: Add sanity checks for relations
-                    print(f'Ignoring relationship property {column_prop}')
-                    pass
-                else:
-                    for column in column_prop.columns:
-                        # Assume normal flat column
-                        if column.key not in columns:
-                            logger.error(
-                                'Model %s declares column %s which does not exist in database %s',
-                                klass,
-                                column.key,
-                                engine,
-                            )
-                            errors = True
-        else:
+        if table not in tables:
             logger.error(
-                'Model %s declares table %s which does not exist in database %s',
+                'Model %s declares table %s which does not exist in the database',
                 klass,
                 table,
-                engine,
             )
             errors = True
+            continue
+
+        # Check all declared columns exist in the database table.
+        # get_columns() looks like:
+        #   [{'name': 'id', 'type': INTEGER(), 'nullable': False, ...}]
+        columns = {c['name'] for c in iengine.get_columns(table)}
+
+        for column_prop in mapper.attrs:
+            if isinstance(column_prop, RelationshipProperty):
+                # TODO: Add sanity checks for relations
+                logger.info(f'🐘 📁 Ignoring relationship property {column_prop}')
+                continue
+
+            for column in column_prop.columns:
+                # Assume normal flat column
+                if column.key not in columns:
+                    logger.error(
+                        f'🐘 ❌ Model {klass} declares column {column.key} which does not exist in table {table}',
+                    )
+                    errors = True
+                else:
+                    logger.info(
+                        f'🐘 ✅ Model [{klass}] column [{column.key}] exists in table [{table}]'
+                    )
 
     return not errors
+
+
+async def is_sane_database_async(Base, engine: AsyncEngine | AsyncConnection) -> bool:
+    """Async variant: check the database against the declared models.
+
+    ``inspect()`` cannot run on an async engine/connection, so the inspection
+    runs inside :meth:`AsyncConnection.run_sync`.
+    """
+    if isinstance(engine, AsyncConnection):
+        return await engine.run_sync(_check_models_against_connection, Base)
+
+    async with engine.connect() as conn:
+        return await conn.run_sync(_check_models_against_connection, Base)
+
+
+def is_sane_database(Base, engine) -> bool:
+    """Check whether the current database matches the declared models.
+
+    Currently we check that every mapped model has a corresponding table with
+    all of its columns. What is *not* checked:
+
+    * Column types are not verified
+    * Relationships are not verified at all (TODO)
+
+    :param Base: Declarative base whose ``registry`` holds the models to check.
+    :param engine: A sync ``Engine``/``Connection`` or an ``AsyncEngine``.
+        ``inspect()`` cannot run on an ``AsyncEngine`` directly, so for the
+        async case the check runs via :func:`is_sane_database_async`.
+    :return: True if all declared models have matching tables and columns.
+    """
+    if isinstance(engine, AsyncEngine):
+        # Called from a synchronous startup path before the app's event loop
+        # exists, so drive the async check with ``asyncio.run`` and dispose the
+        # pool afterwards to avoid leaving a connection bound to this
+        # short-lived loop (which the app's real loop would later reject).
+        async def _run() -> bool:
+            try:
+                return await is_sane_database_async(Base, engine)
+            finally:
+                await engine.dispose()
+
+        return asyncio.run(_run())
+
+    if isinstance(engine, Connection):
+        return _check_models_against_connection(engine, Base)
+
+    # Plain sync Engine.
+    with engine.connect() as conn:
+        return _check_models_against_connection(conn, Base)

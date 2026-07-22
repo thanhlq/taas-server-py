@@ -141,6 +141,14 @@ class AppSettings:
     CACHE_LRU_SIZE: int = 10000  # Default max size for LRU cache (number of entries)
     CACHE_EXPIRES_AFTER: int = 300  # 5 minutes
 
+    def check_database_consistency(self) -> bool:
+        """Check if database consistency check is enabled.
+
+        Returns:
+            True if database consistency check is enabled, False otherwise.
+        """
+        return bool(get_env(f'{CONFIG_PREFIX}_CHECK_DB_CONSISTENCY', True, bool))
+
     @property
     def google_oauth_enabled(self) -> bool:
         """Check if Google OAuth is configured.
