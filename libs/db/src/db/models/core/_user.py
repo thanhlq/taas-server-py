@@ -58,6 +58,12 @@ class User(UUIDv7AuditBase):
     avatar_url: Mapped[str | None] = mapped_column(
         String(length=500), nullable=True, default=None
     )
+    color: Mapped[str | None] = mapped_column(
+        String(length=32), nullable=True, default=None
+    )
+    color2: Mapped[str | None] = mapped_column(
+        String(length=32), nullable=True, default=None
+    )
     email_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
     verified_at: Mapped[date] = mapped_column(nullable=True, default=None)
     joined_at: Mapped[date] = mapped_column(default=lambda: datetime.now(UTC).date())

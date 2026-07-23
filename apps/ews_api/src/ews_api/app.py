@@ -92,7 +92,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
             # 01. Check db consistency
             if settings.app.check_database_consistency():
                 cli_print_info('Checking database consistency...')
-                if not (await a_check_db_consistency()):
+                if len(await a_check_db_consistency()) > 0:
                     raise RuntimeError(
                         'Database consistency check failed. Please check the logs for details.'
                     )

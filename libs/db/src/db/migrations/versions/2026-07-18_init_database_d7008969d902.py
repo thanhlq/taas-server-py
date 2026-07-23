@@ -641,6 +641,8 @@ def schema_upgrades() -> None:
     sa.Column('phones', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
+    sa.Column('color', sa.String(length=32), nullable=True),
+    sa.Column('color2', sa.String(length=32), nullable=True),
     sa.Column('email_verified', sa.Boolean(), nullable=False),
     sa.Column('verified_at', sa.Date(), nullable=True),
     sa.Column('joined_at', sa.Date(), nullable=False),
