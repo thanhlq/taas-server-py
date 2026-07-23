@@ -47,6 +47,7 @@ class User(UUIDv7AuditBase):
     # phone: Mapped[str | None] = mapped_column(
     #     String(length=20), nullable=True, default=None
     # )
+    phone_number: Mapped[str | None] = mapped_column(String(length=20), nullable=True, default=None)
     phones: Mapped[list[dict]] = mapped_column(JSONB, nullable=True, default=[])
     hashed_password: Mapped[str | None] = mapped_column(
         String(length=255),
