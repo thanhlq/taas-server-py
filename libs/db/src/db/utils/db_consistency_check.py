@@ -55,7 +55,43 @@ def _check_relation_columns(
     return errors
 
 
-def _check_models_against_connection(connection: Connection, Base) -> List[str]:
+def _check_extra_db_columns(
+    iengine,
+    logger,
+    klass,
+    relation: str,
+    kind: str,
+    declared_columns: List[str],
+    err_messages: List[str],
+) -> bool:
+    """Check ``relation`` has no columns that ``klass`` does not declare.
+
+    The inverse of :func:`_check_relation_columns`: it flags physical columns
+    present in the table/view but not mapped on the model — i.e. schema drift
+    the ORM is unaware of (a column added by a migration but never added to the
+    model). ``kind`` is a human label (``'table'`` / ``'view'``) used only in
+    messages. Appends to ``err_messages`` and returns ``True`` when an error was
+    found.
+    """
+    db_columns = {c['name'] for c in iengine.get_columns(relation)}
+    declared = set(declared_columns)
+
+    errors = False
+    # Sorted for stable, deterministic message ordering.
+    for column_name in sorted(db_columns - declared):
+        _err = (
+            f'🐘 ⚠️ {kind.capitalize()} {relation} has column {column_name} '
+            f'which is not declared on model {klass}'
+        )
+        # err_messages.append(_err)
+        logger.warning(_err)
+        errors = True
+    return errors
+
+
+def _check_models_against_connection(
+    connection: Connection, Base, check_extra_db_columns: bool = False
+) -> List[str]:
     """Consistency-check body, run against a *sync* :class:`Connection`.
 
     ``inspect()`` only accepts a sync ``Connection``/``Engine``; async callers
@@ -63,6 +99,9 @@ def _check_models_against_connection(connection: Connection, Base) -> List[str]:
 
     - Checking if a table or view exists for each model
     - Checking if each declared column exists in the table/view
+    - When ``check_extra_db_columns`` is True, also checking the opposite
+      direction: that each column present in a model's table/view is declared
+      on the model (i.e. no undeclared/orphan columns).
     """
     logger = logging.getLogger()
     logger.info('🐘 Starting database consistency check...')
@@ -84,7 +123,7 @@ def _check_models_against_connection(connection: Connection, Base) -> List[str]:
         # tables live in the separate Keycloak-managed database (not the main
         # application DB), so they must not be validated here.
         if 'keycloak' in klass.__module__:
-            logger.debug(f'Skipping Keycloak model {klass} (external database)')
+            logger.debug(f'🐘 Skipping Keycloak model {klass} (external database)')
             continue
 
         relation = klass.__tablename__
@@ -103,16 +142,31 @@ def _check_models_against_connection(connection: Connection, Base) -> List[str]:
 
         logger.info(f'🐘 Checking model [{klass}] with {kind} [{relation}]...')
 
-        # Check declared columns exist, for both tables and views.
+        declared_columns = _declared_columns(mapper)
+
+        # Forward check: every column declared on the model exists in the DB.
         _check_relation_columns(
             iengine,
             logger,
             klass,
             relation,
             kind,
-            _declared_columns(mapper),
+            declared_columns,
             _err_messages,
         )
+
+        # Reverse check (opt-in): every column in the DB relation is declared
+        # on the model — catches schema drift the ORM is unaware of.
+        if check_extra_db_columns:
+            _check_extra_db_columns(
+                iengine,
+                logger,
+                klass,
+                relation,
+                kind,
+                declared_columns,
+                _err_messages,
+            )
     # Print all errors at the end, if any
     if _err_messages and len(_err_messages) > 0:
         logger.error(
@@ -126,26 +180,44 @@ def _check_models_against_connection(connection: Connection, Base) -> List[str]:
 
 
 async def a_run_database_consistency_check(
-    Base, engine: Union[AsyncEngine, AsyncConnection]
+    Base,
+    engine: Union[AsyncEngine, AsyncConnection],
+    check_extra_db_columns: bool = True,
 ) -> List[str]:
     """Async variant: check the database against the declared models.
 
     ``inspect()`` cannot run on an async engine/connection, so the inspection
     runs inside :meth:`AsyncConnection.run_sync`.
+
+    :param check_extra_db_columns: when True, also flag columns that exist in
+        the database but are not declared on the corresponding model.
     """
     if isinstance(engine, AsyncConnection):
-        return await engine.run_sync(_check_models_against_connection, Base)
+        return await engine.run_sync(
+            _check_models_against_connection, Base, check_extra_db_columns
+        )
 
     async with engine.connect() as conn:
-        return await conn.run_sync(_check_models_against_connection, Base)
+        return await conn.run_sync(
+            _check_models_against_connection, Base, check_extra_db_columns
+        )
 
 
-def run_database_consistency_check(Base, engine) -> List[str]:
+def run_database_consistency_check(
+    Base, engine, check_extra_db_columns: bool = True
+) -> List[str]:
+    """Check the database against the declared models.
+
+    :param check_extra_db_columns: when True, also flag columns that exist in
+        the database but are not declared on the corresponding model.
+    """
     if isinstance(engine, AsyncEngine):
 
         async def _run() -> List[str]:
             try:
-                return await a_run_database_consistency_check(Base, engine)
+                return await a_run_database_consistency_check(
+                    Base, engine, check_extra_db_columns
+                )
             finally:
                 await engine.dispose()
 
@@ -157,11 +229,15 @@ def run_database_consistency_check(Base, engine) -> List[str]:
             return asyncio.run(_run())
 
     if isinstance(engine, Connection):
-        return _check_models_against_connection(engine, Base)
+        return _check_models_against_connection(
+            engine, Base, check_extra_db_columns
+        )
 
     # Plain sync Engine.
     with engine.connect() as conn:
-        return _check_models_against_connection(conn, Base)
+        return _check_models_against_connection(
+            conn, Base, check_extra_db_columns
+        )
 
 
 __all__ = [

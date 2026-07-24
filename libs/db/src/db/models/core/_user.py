@@ -11,6 +11,8 @@ from sqlalchemy import Integer, String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from db.models.config import PHONE_LENGTH
+
 from ..base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE
 from .constants import USER_ACCOUNT_TABLE
 
@@ -47,7 +49,8 @@ class User(UUIDv7AuditBase):
     # phone: Mapped[str | None] = mapped_column(
     #     String(length=20), nullable=True, default=None
     # )
-    phone_number: Mapped[str | None] = mapped_column(String(length=20), nullable=True, default=None)
+    # Default phone number which is checked as is_default in phones list
+    phone_number: Mapped[str | None] = mapped_column(String(length=PHONE_LENGTH), nullable=True, default=None)
     phones: Mapped[list[dict]] = mapped_column(JSONB, nullable=True, default=[])
     hashed_password: Mapped[str | None] = mapped_column(
         String(length=255),

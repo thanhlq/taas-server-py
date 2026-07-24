@@ -638,6 +638,7 @@ def schema_upgrades() -> None:
     sa.Column('first_name', sa.String(), nullable=True),
     sa.Column('last_name', sa.String(), nullable=True),
     sa.Column('username', sa.String(length=30), nullable=False),
+    sa.Column('phone_number', sa.String(length=64), nullable=False),
     sa.Column('phones', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
