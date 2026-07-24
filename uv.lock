@@ -22,6 +22,7 @@ members = [
     "iam-keycloak",
     "messaging-faststream",
     "messaging-kafka",
+    "outbox-worker",
     "resiliant",
     "slowapi-advanced",
     "store-memcached",
@@ -2079,6 +2080,45 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6c/d8/7bf5e4cec0578ac3c28c18eb7b88f34279139cbc8c568d6aa02b9c5ae53e/opentelemetry_util_http-0.63b1.tar.gz", hash = "sha256:ba1268f00922ee522dba2ae38458060f99486e7385a8056985901ca9685adfff", size = 11102, upload-time = "2026-05-21T16:36:56.675Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/f1/34e047e8f6a3c67e5220acf1af7b9f62868c25d77791bca74457bd2180a6/opentelemetry_util_http-0.63b1-py3-none-any.whl", hash = "sha256:6284194028c59cd439f8acfe388145069a6127f11dc077e1344a2094adacc3f8", size = 8205, upload-time = "2026-05-21T16:36:09.736Z" },
+]
+
+[[package]]
+name = "outbox-worker"
+version = "0.1.0"
+source = { editable = "apps/outbox_worker" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "db" },
+    { name = "foundation" },
+    { name = "messaging-faststream" },
+    { name = "redis" },
+    { name = "resiliant" },
+    { name = "store-redis" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "python-dotenv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9.0" },
+    { name = "db", editable = "libs/db" },
+    { name = "foundation", editable = "libs/foundation" },
+    { name = "messaging-faststream", editable = "libs/messaging_faststream" },
+    { name = "redis", specifier = "==7.4.0" },
+    { name = "resiliant", editable = "libs/resiliant" },
+    { name = "store-redis", editable = "libs/store_redis" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "python-dotenv" },
 ]
 
 [[package]]

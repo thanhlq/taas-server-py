@@ -16,6 +16,7 @@ configured, database-backed resilience services. It hides construction details
 from __future__ import annotations
 
 from logging import Logger
+from typing import TYPE_CHECKING, Callable
 
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.dlq import DeadLetterConfig
@@ -24,8 +25,12 @@ from foundation.resiliant.outbox import OutboxConfig
 
 from resiliant.dlq import DLQRepository, DLQService
 from resiliant.idempotency import IdempotencyRepository, IdempotencyService
-from resiliant.outbox import OutboxRepository, OutboxService
+from resiliant.outbox import OutboxPoller, OutboxRepository, OutboxService
 from resiliant.outbox.outbox_settings import get_outbox_config
+
+if TYPE_CHECKING:
+    from foundation.messaging.types import IMessagingService
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 # --------------------------------------------------------------------------- #
 # Resiliant Factory
@@ -65,6 +70,29 @@ class ResiliantServiceBuilder:
             config = get_outbox_config()
         return OutboxService(
             config=config,
+            repository=ResiliantServiceBuilder.build_outbox_repository(config),
+        )
+
+    @staticmethod
+    def build_outbox_poller(
+        session_factory: 'Callable[[], AsyncSession]',
+        config: OutboxConfig | None = None,
+        publisher: 'IMessagingService | None' = None,
+    ) -> 'OutboxPoller':
+        """Return an :class:`OutboxPoller` wired to a fresh repository.
+
+        The poller is a pure poller: it owns the polling / publishing loop
+        only. A separate worker application drives it via ``run()`` / ``stop()``.
+        """
+        if config is None:
+            ResiliantServiceBuilder.logger().debug(
+                'No OutboxConfig provided; using defaults.'
+            )
+            config = get_outbox_config()
+        return OutboxPoller(
+            config=config,
+            session_factory=session_factory,
+            publisher=publisher,
             repository=ResiliantServiceBuilder.build_outbox_repository(config),
         )
 

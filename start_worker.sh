@@ -14,4 +14,5 @@ fi
 # Start the worker
 echo "🏃 Starting worker..."
 
-EXTRA_CONFIG=ews-worker uv run python -m ews_worker.main --reload
+uv run python -m ews_worker.main --reload
+# uv run --package ews_worker python -m ews_worker

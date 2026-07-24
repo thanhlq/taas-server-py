@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from foundation.resiliant.outbox import OutboxConfig
+from typing import Callable, Optional
 
-from resiliant.outbox import OutboxRepository, OutboxService
+from foundation.messaging.types import IMessagingService
+from foundation.resiliant.outbox import OutboxConfig
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from resiliant.outbox import OutboxPoller, OutboxRepository, OutboxService
 from resiliant.outbox.outbox_settings import get_outbox_config
 
 
@@ -19,5 +23,28 @@ def build_outbox_service(config: OutboxConfig | None = None) -> OutboxService:
         config = get_outbox_config()
     return OutboxService(
         config=config,
+        repository=build_outbox_repository(config),
+    )
+
+
+def build_outbox_poller(
+    session_factory: Callable[[], AsyncSession],
+    config: OutboxConfig | None = None,
+    publisher: Optional[IMessagingService] = None,
+) -> OutboxPoller:
+    """Return an :class:`OutboxPoller` wired to a fresh repository.
+
+    Args:
+        session_factory: Factory that yields a new :class:`AsyncSession`.
+        config: Outbox configuration. Loaded from the environment when omitted.
+        publisher: Broker publisher. Resolved from the service locator lazily
+            when omitted.
+    """
+    if config is None:
+        config = get_outbox_config()
+    return OutboxPoller(
+        config=config,
+        session_factory=session_factory,
+        publisher=publisher,
         repository=build_outbox_repository(config),
     )

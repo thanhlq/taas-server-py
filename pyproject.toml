@@ -43,7 +43,7 @@ members = [
     "apps/ews_api",
     "apps/ews_api_litestar",
     "apps/ews_worker",
-    "packages/outbox_worker",
+    "apps/outbox_worker",
 ]
 
 # exclude = ["services/nodejs-worker"]
