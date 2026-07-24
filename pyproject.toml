@@ -43,6 +43,7 @@ members = [
     "apps/ews_api",
     "apps/ews_api_litestar",
     "apps/ews_worker",
+    "packages/outbox_worker",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -66,6 +67,7 @@ iam_keycloak = { workspace = true }
 banking_core = { workspace = true }
 block_kaspa = { workspace = true }
 resiliant = { workspace = true }
+outbox_worker = { workspace = true }
 
 
 [dependency-groups]

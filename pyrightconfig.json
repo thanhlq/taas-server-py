@@ -34,7 +34,8 @@
     "libs/messaging_faststream/src",
     "apps/ews_api/src",
     "apps/ews_api_litestar/src",
-    "apps/ews_worker/src"
+    "apps/ews_worker/src",
+    "packages/outbox_worker/src"
   ],
   "executionEnvironments": [
     {
@@ -124,6 +125,11 @@
     },
     {
       "root": "apps/ews_api_litestar",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "packages/outbox_worker",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     }

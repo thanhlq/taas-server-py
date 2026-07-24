@@ -15,5 +15,5 @@ uv sync --all-packages
 uv init --lib libs/db
 
 # To add an application
-uv init --package packages/ews_api
+uv init --package apps/ews_api
 ```
