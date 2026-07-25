@@ -12,16 +12,19 @@ import signal
 import sys
 import traceback
 from asyncio.events import AbstractEventLoop
-from typing import Optional
+from typing import Any, Optional
 
 from aiohttp import web
 from messaging_faststream import initialize_messaging_service
 
+from foundation.cli import cli
 from foundation.config import get_settings
 from foundation.exceptions.report_error import report_error
 from foundation.messaging.types import IMessagingService
 from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
+from foundation.utils import now_in_utc
+from foundation.worker.worker_settings import WorkerConfig, WorkerSettings
 
 
 def handle_asyncio_exception(loop, context):
@@ -56,10 +59,6 @@ def _install_global_exception_handler() -> None:
     sys.excepthook = handle_exception
 
 
-def get_current_datetime_utc() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC)
-
-
 class BaseWorker:
     """
     A base worker for worker applications.
@@ -67,7 +66,11 @@ class BaseWorker:
     Manages the lifecycle of the Kafka consumer,... and handles graceful shutdown.
     """
 
-    def __init__(self, name: Optional[str] = 'BaseWorker'):
+    _config: WorkerConfig
+
+    """ This is the port for the health check server. It is read from the environment variable WORKER_LISTEN_PORT, with a default of 7000. """
+
+    def __init__(self, name: Optional[str] = 'BaseWorker', config: Optional[WorkerConfig] = None):
         self.running = False
         settings = get_settings()
         self.name = (
@@ -79,18 +82,23 @@ class BaseWorker:
         self.health_runner: Optional[web.AppRunner] = None
         self.messaging_service: Optional[IMessagingService] = None
         self.worker_tasks: list[tuple[str, asyncio.Task]] = []
-        self.health_check_enabled: bool = getattr(settings, 'HEALTH_CHECK_ENABLE', True)
-        self.health_check_server_port: int = getattr(
-            settings, 'WORKER_LISTEN_PORT', 7000
-        )
-        self.outbox_poller_enabled: bool = getattr(
-            settings, 'OUTBOX_POLLER_ENABLE', True
-        )
-        self.health_check_interval_seconds: int = getattr(
-            settings, 'HEALTH_CHECK_INTERVAL', 10
-        )
+
+        self._config: WorkerConfig = config or WorkerSettings().get_config()
+        # self.health_check_enabled: bool = self._config.health_check_enabled
+        # self.health_check_server_port: int = self._config.health_check_server_port
+        # self.outbox_poller_enabled: bool = self._config.outbox_poller_enabled
+        # self.health_check_interval_seconds: int = (
+        #     self._config.health_check_interval_seconds
+        # )
 
         self._health_check_task: Optional[asyncio.Task] = None
+
+        cli.info_table('Worker Info', self.info())
+
+    @property
+    def config(self) -> WorkerConfig:
+        """Return the worker configuration."""
+        return self._config
 
     def _owned_pending_tasks(self) -> list[asyncio.Task]:
         """Tasks owned by this worker (worker tasks + health check loop) still pending.
@@ -114,7 +122,7 @@ class BaseWorker:
 
         uptime = None
         if self.start_time:
-            uptime = (get_current_datetime_utc() - self.start_time).total_seconds()
+            uptime = (now_in_utc() - self.start_time).total_seconds()
 
         # Report the actual state of each worker task; a task that finished
         # while the worker is still "running" means it died unexpectedly.
@@ -145,7 +153,7 @@ class BaseWorker:
 
     async def start_health_server(self) -> None:
         """Start health check HTTP server."""
-        if not self.health_check_enabled:
+        if not self.config.health_check_enabled:
             self.logger.info('Health check server is disabled by configuration')
             return
 
@@ -155,10 +163,10 @@ class BaseWorker:
         self.health_runner = web.AppRunner(self.health_server)
         await self.health_runner.setup()
 
-        site = web.TCPSite(self.health_runner, '0.0.0.0', self.health_check_server_port)
+        site = web.TCPSite(self.health_runner, '0.0.0.0', self.config.health_check_server_port)
         await site.start()
         self.logger.info(
-            f'⚙️ Health check server started on port {self.health_check_server_port}'
+            f'⚙️ Health check server started on port {self.config.health_check_server_port}'
         )
 
     async def stop_health_server(self) -> None:
@@ -205,6 +213,26 @@ class BaseWorker:
             loop.add_signal_handler(sig, handle_shutdown)
 
         self.logger.debug('Signal handlers registered for SIGINT and SIGTERM')
+
+    def get_worker_task_names(self) -> list[str]:
+        """Return the names of all worker tasks."""
+        return [task_name for task_name, _ in self.worker_tasks]
+
+    def info(self) -> dict[str, Any]:
+        """Return a dictionary of worker information for logging or monitoring."""
+        uptime = None
+        if self.start_time:
+            uptime = (now_in_utc() - self.start_time).total_seconds()
+
+        return {
+            'name': self.name,
+            'running': self.running,
+            'uptime_seconds': uptime,
+            'worker_tasks': self.get_worker_task_names(),
+            'health_check_enabled': self.config.health_check_enabled,
+            'health_check_port': self.config.health_check_server_port,
+            'outbox_poller_enabled': self.config.outbox_poller_enabled,
+        }
 
     async def main(self):
         """Main entry point for the worker application."""
@@ -296,14 +324,13 @@ class BaseWorker:
     async def start(self) -> None:
         """Start the worker."""
         self.running = True
-        self.start_time = get_current_datetime_utc()
+        self.start_time = now_in_utc()
 
         # Start health check server first
         await self.start_health_server()
 
-        task_names = ', '.join(task_name for task_name, _ in self.worker_tasks)
         self.logger.info(
-            f'🚀 Worker started with {len(self.worker_tasks)} background task(s): {task_names}'
+            f'🚀 Worker started with {len(self.worker_tasks)} background task(s): {self.get_worker_task_names()}'
         )
 
         # Wait for all tasks - if any fails, all should stop (fail-fast)
@@ -363,7 +390,7 @@ class BaseWorker:
 
         # Calculate uptime
         if self.start_time:
-            uptime = (get_current_datetime_utc() - self.start_time).total_seconds()
+            uptime = (now_in_utc() - self.start_time).total_seconds()
             self.logger.info(
                 f'Worker application stopped, uptime_seconds {uptime}',
             )
@@ -376,11 +403,11 @@ class BaseWorker:
         """
         while self.running:
             try:
-                await asyncio.sleep(delay=self.health_check_interval_seconds)
+                await asyncio.sleep(delay=self.config.health_check_interval_seconds)
                 uptime = None
                 if self.start_time:
                     uptime = (
-                        get_current_datetime_utc() - self.start_time
+                        now_in_utc() - self.start_time
                     ).total_seconds()
                 self.logger.info(
                     f'Worker [{self.name}] health check - uptime_seconds: {uptime} '

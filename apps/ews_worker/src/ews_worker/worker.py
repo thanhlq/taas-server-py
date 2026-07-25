@@ -18,9 +18,7 @@ Start command::
 from __future__ import annotations
 
 import asyncio
-import os
 
-from foundation.db.advanced_db_manager import AdvancedDBManager
 from foundation.factory import FoundationFactory
 from foundation.utils.icons import Icons
 from foundation.worker.base_worker import BaseWorker
@@ -38,13 +36,14 @@ DEMO_TOPIC = 'ews.demo.ping'
 class EwsWorker(BaseWorker):
     """EWS background worker (Kafka consumer + outbox relay)."""
 
+
+
     def __init__(self) -> None:
         super().__init__(name='ews_worker')
         self._subscription_ids: list[str] = []
         # The base class derives the health port from a settings attribute that
         # isn't defined in this repo's Settings; read it from the environment
         # instead. Default 7100 avoids macOS AirPlay's use of port 7000.
-        self.health_check_server_port = int(os.getenv('WORKER_LISTEN_PORT', '7100'))
 
     def _init_internal_services(self) -> None:
         resiliant_factory = ResiliantServiceFactory()
@@ -117,38 +116,38 @@ class EwsWorker(BaseWorker):
         return self
 
     # ----------------------------------------------------------- outbox relay
-    async def _outbox_relay_loop(self) -> None:
-        """Periodically publish pending outbox events to the broker.
+    # async def _outbox_relay_loop(self) -> None:
+    #     """Periodically publish pending outbox events to the broker.
 
-        A lightweight relay built on the ``resiliant`` transactional outbox:
-        claim a batch of PENDING rows, publish each to its channel, then mark
-        it PUBLISHED. Runs until the task is cancelled during shutdown.
-        """
-        from foundation.db.advanced_db_manager import MainDatabase
-        from resiliant import ResiliantServiceBuilder
+    #     A lightweight relay built on the ``resiliant`` transactional outbox:
+    #     claim a batch of PENDING rows, publish each to its channel, then mark
+    #     it PUBLISHED. Runs until the task is cancelled during shutdown.
+    #     """
+    #     from foundation.db.advanced_db_manager import MainDatabase
+    #     from resiliant import ResiliantServiceBuilder
 
-        outbox = ResiliantServiceBuilder.build_outbox_service()
-        repo = outbox.repository
-        db: AdvancedDBManager = MainDatabase.get_instance()
-        interval_seconds = 3.0
+    #     outbox = ResiliantServiceBuilder.build_outbox_service()
+    #     repo = outbox.repository
+    #     db: AdvancedDBManager = MainDatabase.get_instance()
+    #     interval_seconds = 3.0
 
-        while True:
-            try:
-                async with db.new_session() as session:
-                    pending = await repo.fetch_pending_batch(session, batch_size=50)
-                    for event in pending:
-                        assert self.messaging_service is not None
-                        await self.messaging_service.publish(
-                            event.channel,
-                            event.payload,
-                            headers=event.headers or {},
-                        )
-                        await repo.mark_published(session, event.id)
-                    if pending:
-                        self.logger.info('📤 relayed %d outbox event(s)', len(pending))
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.logger.exception('Outbox relay iteration failed')
+    #     while True:
+    #         try:
+    #             async with db.new_session() as session:
+    #                 pending = await repo.fetch_pending_batch(session, batch_size=50)
+    #                 for event in pending:
+    #                     assert self.messaging_service is not None
+    #                     await self.messaging_service.publish(
+    #                         event.channel,
+    #                         event.payload,
+    #                         headers=event.headers or {},
+    #                     )
+    #                     await repo.mark_published(session, event.id)
+    #                 if pending:
+    #                     self.logger.info('📤 relayed %d outbox event(s)', len(pending))
+    #         except asyncio.CancelledError:
+    #             raise
+    #         except Exception:
+    #             self.logger.exception('Outbox relay iteration failed')
 
-            await asyncio.sleep(interval_seconds)
+    #         await asyncio.sleep(interval_seconds)

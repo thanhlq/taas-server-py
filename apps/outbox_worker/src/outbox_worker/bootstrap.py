@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 settings: Settings
 root_path: str
 
+# os.environ.setdefault('TAAS_SERVICE_NAME', 'outbox_worker')
+# os.environ.setdefault('WORKER_LISTEN_PORT', '7001')
+
 
 def setup_environment(env_file: str = '.env') -> tuple[Settings, str]:
     """Configure environment variables / import path and load settings."""

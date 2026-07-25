@@ -13,4 +13,7 @@
 
 set -euo pipefail
 
+export TAAS_SERVICE_NAME=outbox_worker
+export WORKER_LISTEN_PORT=7001
+export OUTBOX_INITIAL_POLL_INTERVAL_MS=15000
 uv run --package outbox_worker python -m outbox_worker

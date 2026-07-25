@@ -715,6 +715,11 @@ class IMessagingService[M](ABC):
         e = cls(**event_data)
     """
 
+    @abstractmethod
+    async def stop(self):
+        """Stop the messaging service (producer and consumer)."""
+        pass
+
 
 @dataclass(slots=True)
 class ChannelInfo:
