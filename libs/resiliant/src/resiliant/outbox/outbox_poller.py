@@ -20,9 +20,10 @@ import asyncio
 import random
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from db.models.resiliant import OutboxEventTable
+from foundation.cli import cli
 from foundation.messaging.types import IMessagingService
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.outbox import OutboxConfig
@@ -88,7 +89,7 @@ class OutboxPoller:
         self._publisher = publisher
         self.repository = repository or OutboxRepository(config)
         self.logger = LogFactory().get_logger(
-            f'{Icons.OUTBOX_SERVICE} {self.__class__.__name__}'
+            f'{self.__class__.__name__}'
         )
 
         # Runtime state
@@ -105,6 +106,23 @@ class OutboxPoller:
         # Wake-up signal for early polling (set by wake() or NOTIFY listener)
         self._wake_event: asyncio.Event = asyncio.Event()
         self._notify_task: Optional[asyncio.Task] = None
+
+        startup_info: dict[str | Any] = {
+            'concurrent_workers': config.concurrent_workers,
+            'batch_size': config.batch_size,
+            'poll_strategy': config.poll_strategy,
+            'initial_poll_interval_ms': config.initial_poll_interval_ms,
+            'min_poll_interval_ms': config.min_poll_interval_ms,
+            'max_poll_interval_ms': config.max_poll_interval_ms,
+            'backoff_growth_factor': config.backoff_growth_factor,
+            'drain_threshold_ratio': config.drain_threshold_ratio,
+            'notify_channel': config.notify_channel,
+            'notify_dsn': config.notify_dsn,
+            'enable_metrics': config.enable_metrics,
+            'metrics_log_interval_seconds': config.metrics_log_interval_seconds,
+        }
+        cli.info_table('OutboxPoller startup info', startup_info)
+        # self.logger.info(f'Outbox poller initialized: {startup_info}')
 
     @property
     def publisher(self) -> IMessagingService:
@@ -393,7 +411,7 @@ class OutboxPoller:
                 fetched_count = len(events)
 
                 self.logger.debug(
-                    f'{worker_id} Polling for outbox events, found {fetched_count}'
+                    f'{worker_id} Polling for outbox events, found {Icons.MESSAGE if fetched_count > 0 else ''} {fetched_count}'
                 )
 
                 poll_duration_ms = (datetime.now() - start_time).total_seconds() * 1000

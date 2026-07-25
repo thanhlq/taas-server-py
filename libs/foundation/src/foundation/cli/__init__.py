@@ -1,4 +1,4 @@
-from ._utils import (
+from ._cli import (
     get_console,
     cli_print_info,
     cli_print_debug,

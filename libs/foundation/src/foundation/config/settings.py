@@ -16,7 +16,7 @@ from advanced_alchemy.utils.text import slugify
 from dotenv import load_dotenv
 
 from foundation.__metadata__ import __version__ as current_version
-from foundation.cli._utils import console
+from foundation.cli._cli import console
 from foundation.config.cache import CacheConfig
 from foundation.config.compression import CompressionConfig
 from foundation.config.cors import CORSConfig

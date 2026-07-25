@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import List, Union
 
+from foundation.utils.icons import Icons
 from sqlalchemy import inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
@@ -46,7 +47,7 @@ def _check_relation_columns(
     for column_key in declared_columns:
         if column_key not in columns:
             _err = (
-                f'🐘 ❌ Model {klass} declares column {column_key} '
+                f'{Icons.DATABASE} {Icons.ERROR} Model {klass} declares column {column_key} '
                 f'which does not exist in {kind} {relation}'
             )
             err_messages.append(_err)
@@ -80,7 +81,7 @@ def _check_extra_db_columns(
     # Sorted for stable, deterministic message ordering.
     for column_name in sorted(db_columns - declared):
         _err = (
-            f'🐘 ⚠️ {kind.capitalize()} {relation} has column {column_name} '
+            f'{Icons.DATABASE} {Icons.WARNING} {kind.capitalize()} {relation} has column {column_name} '
             f'which is not declared on model {klass}'
         )
         # err_messages.append(_err)
@@ -104,7 +105,7 @@ def _check_models_against_connection(
       on the model (i.e. no undeclared/orphan columns).
     """
     logger = logging.getLogger()
-    logger.info('🐘 Starting database consistency check...')
+    logger.info(f'{Icons.DATABASE} Starting database consistency check...')
     # The purpose is to collect and print errors at the end, but we also log them as they occur.
     _err_messages: List[str] = []
 
@@ -123,7 +124,7 @@ def _check_models_against_connection(
         # tables live in the separate Keycloak-managed database (not the main
         # application DB), so they must not be validated here.
         if 'keycloak' in klass.__module__:
-            logger.debug(f'🐘 Skipping Keycloak model {klass} (external database)')
+            # logger.debug(f'🐘 Skipping Keycloak model {klass} (external database)')
             continue
 
         relation = klass.__tablename__
@@ -134,13 +135,13 @@ def _check_models_against_connection(
         elif relation in views:
             kind = 'view'
         else:
-            _m = f'🐘 ❌ Model {klass} declares table/view {relation} which does not exist in the database'
+            _m = f'{Icons.DATABASE} {Icons.ERROR} Model {klass} declares table/view {relation} which does not exist in the database'
 
             _err_messages.append(_m)
             logger.error(_m)
             continue
 
-        logger.info(f'🐘 Checking model [{klass}] with {kind} [{relation}]...')
+        # logger.info(f'🐘 Checking model [{klass}] with {kind} [{relation}]...')
 
         declared_columns = _declared_columns(mapper)
 

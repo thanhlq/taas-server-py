@@ -116,11 +116,22 @@ CONTEXT_DATA_PARAM = 'context_data'
 class Icons:
     """Common emoji icons for logging and user-facing messages."""
 
+    ON = '🟢'
+    OFF = '⚫'  # GRAY
+
+    START = '▶️'
+    STOP = '⏹️'
+
     SUCCESS = '✅'
     ERROR = '❌'
     WARNING = '⚠️'
     INFO = 'ℹ️'
     DEBUG = '🐞'
+
+    MESSAGE = '✉️'
+
+    MESSAGE_PUBLISHED = '📤'
+    MESSAGE_RECEIVED = '📩'
 
     KAFKA = '📨'
     RABBIT_MQ = '🐇'
@@ -137,10 +148,11 @@ class Icons:
     AUTHORIZATION = '🛡️'
 
     FASTSTREAM = '🌊'
-    MESSAGE = '📩'
     WEBSOCKET = '🔌'
-    DATABASE = '🗄️'
+    DATABASE = '🐘'
     CACHE = '🧠'
 
     FORCED_STOP = '🛑'
     STOPPED = '👋'
+
+    DELETED = '🗑️'

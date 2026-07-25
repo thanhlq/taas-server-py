@@ -5,6 +5,7 @@ import logging
 from typing import Any, Optional, Union, get_args
 
 import msgspec
+from foundation.cli import cli
 from foundation.messaging.config.messaging_config import MessagingConfig
 from foundation.messaging.sr import SchemaRegistryEncoder
 from foundation.messaging.types import (
@@ -80,6 +81,18 @@ class MsgEncoder(IMessageEncoder):
             self._field_encoding = (
                 MessageFieldEncodingType.NA
             )  # Not applicable for non-Avro encodings
+
+        startup_info: dict[str, Any] = self.info()
+        cli.info_table('MsgEncoder startup info', startup_info)
+
+    def info(self) -> dict[str, Any]:
+        return {
+            'msg_encoding': self._msg_encoding,
+            'field_encoding': self._field_encoding,
+            'event_type_registry': {
+                k: v.__name__ for k, v in self._event_type_registry.items()
+            },
+        }
 
 
     def msgpack_pack(self, data: Any) -> bytes:

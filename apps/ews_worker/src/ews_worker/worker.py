@@ -22,6 +22,7 @@ import os
 
 from foundation.db.advanced_db_manager import AdvancedDBManager
 from foundation.factory import FoundationFactory
+from foundation.utils.icons import Icons
 from foundation.worker.base_worker import BaseWorker
 from messaging_faststream import initialize_messaging_service
 from resiliant import ResiliantServiceFactory
@@ -56,9 +57,9 @@ class EwsWorker(BaseWorker):
         cache_config = settings.app.get_cache_config()
         if cache_config.enabled:
             RedisCacheServiceFactory.create(cache_config)
-            self.logger.info('🧠 Redis cache service initialised')
+            self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
         else:
-            self.logger.info('🧠 ⚫ Cache disabled by configuration')
+            self.logger.info(f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration')
 
     # -------------------------------------------------------------- handlers
     async def _handle_demo_event(self, event: object) -> None:
@@ -106,12 +107,12 @@ class EwsWorker(BaseWorker):
         self.worker_tasks.append(('kafka_consumer', consumer_task))
 
         # 5. Outbox relay (optional — enable via OUTBOX_POLLER_ENABLE).
-        if self.outbox_poller_enabled:
-            relay_task = asyncio.create_task(self._outbox_relay_loop())
-            self.worker_tasks.append(('outbox_relay', relay_task))
-            self.logger.info('📤 Outbox relay enabled')
-        else:
-            self.logger.info('📤 ⚫ Outbox relay disabled by configuration')
+        # if self.outbox_poller_enabled:
+        #     relay_task = asyncio.create_task(self._outbox_relay_loop())
+        #     self.worker_tasks.append(('outbox_relay', relay_task))
+        #     self.logger.info('📤 Outbox relay enabled')
+        # else:
+        #     self.logger.info('📤 ⚫ Outbox relay disabled by configuration')
 
         return self
 
