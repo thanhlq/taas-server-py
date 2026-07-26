@@ -5,6 +5,7 @@ from iam.auth.auth_events import (
     IamEvents,
     UserDirectoryCreatedEvent,
 )
+from iam.auth.types import DirectoryTenant, DirectoryUser
 from iam.common.base import BaseIamEventHandler
 
 
@@ -18,7 +19,7 @@ class InternalUserSetupHandler(BaseIamEventHandler[UserDirectoryCreatedEvent]):
 
     async def handle_event(
         self,
-        event: BaseEvent,
+        event: UserDirectoryCreatedEvent,
         meta: EventMetadata,
         **kwargs,
     ) -> ProcessingResult:
@@ -26,19 +27,16 @@ class InternalUserSetupHandler(BaseIamEventHandler[UserDirectoryCreatedEvent]):
 
     # @db_context_session(auto_commit=True)
     async def _handle_event(
-        self, event: BaseEvent, meta: EventMetadata, **kwargs
+        self, event: UserDirectoryCreatedEvent, meta: EventMetadata, **kwargs
     ) -> ProcessingResult:
-        result = self.validate_event(event, meta)
-        if result is not None:
-            return result
 
-        _directory_user = event.get_payload().user
-        _directory_tenant = event.get_payload().tenant
+        user_dict: DirectoryUser = event.user
+        tenant_dict: DirectoryTenant = event.tenant
 
         admin_service = get_admin_service()
         await admin_service.create_root_account_from_directory(
-            _directory_user,
-            _directory_tenant,
+            user_dict,
+            tenant_dict,
         )
 
         return ProcessingResult(
@@ -49,29 +47,31 @@ class InternalUserSetupHandler(BaseIamEventHandler[UserDirectoryCreatedEvent]):
         )
 
     def validate_event(
-        self, event: BaseEvent, meta: EventMetadata, **kwargs
+        self, event: UserDirectoryCreatedEvent, meta: EventMetadata, **kwargs
     ) -> ProcessingResult | None:
-        user_dict = event.get_payload().user
-        tenant_dict = event.get_payload().tenant
+        user_dict: DirectoryUser = event.user
+        tenant_dict: DirectoryTenant = event.tenant
 
         if not user_dict:
-            self.logger.error(f'Invalid user data in payload: event_id={meta.event_id}')
+            self.logger.error(
+                f'Invalid user data in payload: event_id={event.event_id}'
+            )
             return ProcessingResult(
                 success=False,
                 message='Invalid user data in payload',
-                event_id=meta.event_id,
+                event_id=event.event_id,
                 retry_count=meta.retry_count,
                 error='Invalid user data in payload',
             )
 
         if not tenant_dict:
             self.logger.error(
-                f'Invalid tenant data in payload: event_id={meta.event_id}'
+                f'Invalid tenant data in payload: event_id={event.event_id}'
             )
             return ProcessingResult(
                 success=False,
                 message='Invalid tenant data in payload',
-                event_id=meta.event_id,
+                event_id=event.event_id,
                 retry_count=meta.retry_count,
                 error='Invalid tenant data in payload',
             )

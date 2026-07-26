@@ -2,7 +2,6 @@ import logging
 from logging import Logger
 from typing import TYPE_CHECKING, Any, Optional
 
-from foundation.http import AppConfig
 from foundation.utils.singleton import singleton
 
 from .config import (
@@ -34,28 +33,27 @@ class TracingFactory:
             self._tracing_manager = TracingManager(self.logger)
         return self._tracing_manager
 
-    def init_instrumentation(self, app_settings: AppConfig) -> None:
-        _config: 'InstrumentSettings' = app_settings.get_instrumentation_settings()
-        if _config.logger:
-            self._logger = _config.logger
+    def init_instrumentation(self, ins_settings: InstrumentSettings) -> None:
+        if ins_settings.logger:
+            self._logger = ins_settings.logger
 
         if not is_tracing_enabled():
             self.logger.info('⚫ Tracing is not enabled.')
             return
 
-        if _config.database_instrument:
+        if ins_settings.database_instrument:
             self.trace_database()
 
-        if _config.fastapi_app:
-            self.trace_fastapi_app(_config.fastapi_app)
+        if ins_settings.fastapi_app:
+            self.trace_fastapi_app(ins_settings.fastapi_app)
 
-        if _config.aiokafka_instrument:
+        if ins_settings.aiokafka_instrument:
             self.trace_aiokafka(
-                a_producer_hook=_config.aiokafka_producer_hook,
-                a_consumer_hook=_config.aiokafka_consumer_hook,
+                a_producer_hook=ins_settings.aiokafka_producer_hook,
+                a_consumer_hook=ins_settings.aiokafka_consumer_hook,
             )
 
-        self._tracing_manager = _config.tracing_manager_class(self.logger)  if _config.tracing_manager_class else self.get_tracing_manager()
+        self._tracing_manager = ins_settings.tracing_manager_class(self.logger)  if ins_settings.tracing_manager_class else self.get_tracing_manager()
         self.__initialized = True
         self.logger.info('TracingFactory initialized with manager: %s', type(self._tracing_manager).__name__)
 

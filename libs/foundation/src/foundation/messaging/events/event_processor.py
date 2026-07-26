@@ -4,11 +4,12 @@
 Centralized event processing with retry logic, error handling, and observability.
 Can be used by any pubsub implementation (Kafka, RabbitMQ, Redis, etc.)
 """
+
 import time
 from typing import Optional
 
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.types import BaseEvent, ProcessingResult
+from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResult
 from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.resiliant.retry import Retry
@@ -67,11 +68,21 @@ class EventProcessor:
         # Initialize retry policy with config
         self.retry_policy = Retry(name=self._config.retry_policy_name)
 
-
     @property
     def config(self) -> EventProcessorConfig:
         """Get the current event processor configuration."""
         return self._config
+
+    def new_event_metadata(
+        self,
+        event: BaseEvent,
+        handler: BaseEventHandler,
+        traceparent: str | None = None,
+    ) -> EventMetadata:
+        return EventMetadata(
+            handler_name=handler.handler_name,
+            traceparent=traceparent,
+        )
 
     async def process_event(
         self,
@@ -106,9 +117,11 @@ class EventProcessor:
                 message='Handler not found',
             )
 
+        meta = self.new_event_metadata(event, handler, traceparent)
+
         start_time = time.time()
-        handler_name = handler.__class__.__name__
-        event.handler_name = handler_name
+        handler_name = meta.handler_name
+        # event.handler_name = handler_name
 
         # Define the processing function
         async def process_event_with_handler():
@@ -142,7 +155,7 @@ class EventProcessor:
                     span.set_attribute('retry_count', event.retry_count)
 
                 try:
-                    result = await handler.handle(event)
+                    result = await handler.handle_event(event, meta)
                     result.processing_time_ms = (time.time() - start_time) * 1000
                     result.handler_name = handler_name
 

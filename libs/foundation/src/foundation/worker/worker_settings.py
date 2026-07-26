@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from foundation.observability.types import InstrumentSettings
 from foundation.utils.env_utils import get_env
 
 
@@ -31,6 +32,19 @@ class WorkerConfig:
     # Should take from settings.messaging.CONSUMER_ENABLE
     messaging_consumer_enabled: bool = True
 
+    instrumentation: InstrumentSettings | None = field(default=None)
+
+    instrumentation: InstrumentSettings | None = field(default=None)
+
+    def get_instrumentation_settings(self) -> InstrumentSettings:
+        """Return the instrumentation settings for the application.
+
+        Returns:
+            The instrumentation settings.
+        """
+        if self.instrumentation is None:
+            self.instrumentation = InstrumentSettings()
+        return self.instrumentation
 
 @dataclass
 class WorkerSettings:

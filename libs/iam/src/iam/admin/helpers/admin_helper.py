@@ -17,7 +17,6 @@ class IamDataHelper:
     def build_root_account(
         directory_user: DirectoryUser, directory_tenant: DirectoryTenant
     ) -> tuple[User, Tenant]:
-
         # Build tenant
         tenant: Tenant = Tenant()
         tenant.name = directory_tenant.name

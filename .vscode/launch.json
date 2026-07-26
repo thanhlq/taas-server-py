@@ -69,12 +69,14 @@
       "args": [
         "--reload",
         "--env-file",
-        ".env.worker"
+        ".env"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
       "env": {
-        "EXTRA_CONFIG": "ews-worker",
+        "TAAS_SERVICE_NAME": "ews_worker",
+        "MESSAGING_CONSUMER_ENABLE": "true",
+        "WORKER_LISTEN_PORT": "7002",
         "PYTHON_ENV": "development"
         // Add more environment variables here as needed
       }

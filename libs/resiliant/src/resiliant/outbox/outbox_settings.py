@@ -18,7 +18,7 @@ class OutboxSettings:
     and mapped onto an :class:`OutboxConfig` via :meth:`get_config`.
     """
 
-    ENABLED: bool = field(default_factory=get_env('OUTBOX_ENABLED', True))
+    ENABLED: bool = field(default_factory=get_env('OUTBOX_ENABLED', False))
     """Whether outbox polling is enabled."""
 
     # Poll strategy: 'fixed', 'adaptive', or 'notify'.

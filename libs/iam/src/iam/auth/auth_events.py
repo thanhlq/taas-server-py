@@ -27,9 +27,12 @@ Wire format produced by ``event.as_dict()``::
         "tenant": "{\\"id\\":\\"...\\",...}"   # JSON-serialised tenant dict
     }
 """
+
 # NOTE: ``BaseEvent`` is a ``msgspec.Struct`` (not a dataclass), so field
 # defaults must use ``msgspec.field`` — ``dataclasses.field`` would be stored
 # verbatim as the literal default (a ``Field`` object), breaking serialization.
+from typing import Any
+
 from foundation.messaging.types import BaseEvent
 from foundation.serialization import BaseEventPayload
 from msgspec import field
@@ -41,6 +44,7 @@ from iam.iam_constants import IamEvents
 # Tenant events
 # ---------------------------------------------------------------------------
 
+
 class TenantCreatedEvent(BaseEvent, kw_only=True):
     """Fired when a new tenant is created."""
 
@@ -48,7 +52,6 @@ class TenantCreatedEvent(BaseEvent, kw_only=True):
 
     tenant_id: str | None = field(default='')
     root_account_id: str | None = field(default='')
-
 
 
 # ---------------------------------------------------------------------------
@@ -87,31 +90,27 @@ class UserDirectoryCreatedEvent(BaseEvent[UserDirectoryEventPayload]):
     None: Not set
     """
 
-    # def get_user_dict(self) -> dict[str, Any]:
-    #     user: dict[str, Any] = self.payload_as_dict().get('user')  # type: ignore
-    #     return user
+    @property
+    def user(self) -> DirectoryUser:
+        """Get the directory user as a deserialised dict."""
+        _payload: Any = self.payload
+        if isinstance(_payload, UserDirectoryEventPayload):
+            return _payload.user
+        elif isinstance(_payload, dict):
+            return DirectoryUser(**_payload.get('user', {}))
+        else:
+            raise ValueError('Invalid payload type for user')
 
-    # def get_tenant_dict(self) -> dict[str, Any]:
-    #     tenant: dict[str, Any] = self.payload_as_dict().get('tenant')  # type: ignore
-    #     return tenant
-
-    # def get_user(self) -> UserEntity:
-    #     # """Return the deserialised user as a User object, or ``None`` if not set."""
-    #     # user_dict = self.get_user_dict()
-    #     # if user_dict is None:
-    #     #     return None
-    #     # return User(**user_dict)
-    #     user: dict[str, Any] = self.payload_as_dict().get('user')  # type: ignore
-    #     return UserEntity(**user)
-
-    # def get_tenant(self) -> Tenant:
-    #     # """Return the deserialised tenant as a Tenant object, or ``None`` if not set."""
-    #     # tenant_dict = self.get_tenant_dict()
-    #     # if tenant_dict is None:
-    #     #     return None
-    #     # return Tenant(**tenant_dict)
-    #     tenant: dict[str, Any] = self.payload_as_dict().get('tenant')  # type: ignore
-    #     return Tenant(**tenant)
+    @property
+    def tenant(self) -> DirectoryTenant:
+        """Get the directory tenant as a deserialised dict."""
+        _payload: Any = self.payload
+        if isinstance(_payload, UserDirectoryEventPayload):
+            return _payload.tenant
+        elif isinstance(_payload, dict):
+            return DirectoryTenant(**_payload.get('tenant', {}))
+        else:
+            raise ValueError('Invalid payload type for tenant')
 
 
 class UserRegisteredEvent(UserDirectoryCreatedEvent):

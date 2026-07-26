@@ -39,6 +39,10 @@ class AdminService(BaseIamService):
             directory_user, directory_tenant
         )
 
+        self.logger.debug('Building root account from directory user and tenant')
+        self.logger.debug(f'user: {_user}')
+        self.logger.debug(f'tenant: {_tenant}')
+
         # Create the tenant first
         new_tenant = await tenant_repo.add(_tenant)
 

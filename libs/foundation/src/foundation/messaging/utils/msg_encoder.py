@@ -3,7 +3,7 @@ import datetime
 import json
 import logging
 from logging import Logger
-from typing import Any, Optional, Union, get_args
+from typing import Any, Optional, Union, get_args, get_type_hints
 
 import msgspec
 from foundation.cli import cli
@@ -28,7 +28,7 @@ class MsgDecoderError(Exception):
     _debug: bool = False
 
     def __init__(self, message: str | None = None, error_code: str | None = None):
-        super().__init__(message or 'An error occurred while decoding the message.')
+        super().__init__(f'💥 {message if message is not None else "An error occurred while decoding the message."}')
         self.error_code = error_code
 
 
@@ -218,7 +218,9 @@ class MsgEncoder(IMessageEncoder):
         Encode a BaseEvent into the configured message format.
 
         Args:
-            - msg: The event that normally inherits from BaseEvent or DlqEvent to encode.
+            - msg:
+                + The event that normally inherits from BaseEvent or DlqEvent to encode.
+                + When msg is went thro the outbox service, it can be a dict that contains the event data.
             - channel: The channel to which the event will be sent (required for Avro encoding).
             - sr_encoder: An instance of AsyncSchemaRegistryEncoder (required for Avro encoding).
         """

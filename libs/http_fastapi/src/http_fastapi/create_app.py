@@ -32,8 +32,10 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
 
     # 3. Tracing
     from foundation.observability.tracing_factory import TracingFactory
-    config.instrumentation.fastapi_app = app  # type: ignore
-    TracingFactory().init_instrumentation(config)
+
+    ins_settings = config.get_instrumentation_settings()
+    ins_settings.fastapi_app = app
+    TracingFactory().init_instrumentation(ins_settings)
 
     # 4. Configure the app with our custom settings and middlewares
     from .configuration import configure_app

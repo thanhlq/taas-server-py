@@ -106,23 +106,26 @@ class DlqEvent(
 class EventMetadata(msgspec.Struct):
     """Event metadata for tracking and tracing."""
 
-    event_type: str
-    """Event type/topic"""
+    # event_type: str
+    # """Event type/topic"""
 
-    event_id: str = msgspec.field(default_factory=generate_id)
-    """Unique event identifier"""
+    # event_id: str = msgspec.field(default_factory=generate_id)
+    # """Unique event identifier"""
 
-    timestamp: datetime = msgspec.field(default_factory=now_in_utc)
+    # timestamp: datetime = msgspec.field(default_factory=now_in_utc)
 
+    handler_name: str
     retry_count: int = 0
 
     source: Optional[str] = None
     """Event source service"""
 
+    traceparent: Optional[str] = None
+
     correlation_id: Optional[str] = None
     """Correlation ID for distributed tracing"""
 
-    handler_name: Optional[str] = None
+
     """Name of the handler that processed the event - useful for retry/dead-letter scenarios"""
 
     def as_dict(self) -> dict[str, Any]:
@@ -148,18 +151,21 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls.m_serializer = f'{cls.__name__.lower()}_serializer'
-        print(f'BaseEvent __init_subclass__: {cls.__name__} m_serializer={cls.m_serializer}')
+        # 🟨
+        # This is wrong since assigning m_serializer at the class level would shadow the field descriptor in the instance.
+        # When as_dict() is called, it would return the default value '' instead of the correct serializer name.
+        #
+        # cls.m_serializer = f'{cls.__name__.lower()}_serializer'
 
     def __post_init__(self) -> None:
-        # self.m_serializer = type(self).m_serializer
+        # Set the per-instance serializer name. This MUST be assigned on the
+        # instance (not the class) so it is written to the msgspec Struct field
+        # storage and therefore included by ``as_dict()`` /
+        # ``msgspec.structs.asdict()``. Assigning it as a class attribute in
+        # ``__init_subclass__`` would shadow the field descriptor, leaving the
+        # serialised value at its default ('') — which reconstructs as a plain
+        # ``BaseEvent`` on the consumer side.
         self.m_serializer = f'{type(self).__name__.lower()}_serializer'
-        # if not self.event_id:
-        #     self.event_id = generate_id()
-        # if not self.timestamp:
-        #     self.timestamp = now_in_utc()
-
-        print(f'BaseEvent __post_init__: event_type={self.event_type}, event_id={self.event_id}, m_serializer={self.m_serializer}, timestamp={self.timestamp}')
 
     ########################################################################################################################
     # Metadata fields (common to all events)
@@ -168,7 +174,7 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
     event_id: str = msgspec.field(default_factory=generate_id)
     timestamp: datetime = msgspec.field(default_factory=now_in_utc)
     retry_count: int = 0
-    m_serializer: str = 'baseevent_serializer'
+    m_serializer: str = ''
     """
     This field is used to register the event class with the message encoder for serialization/deserialization.
     Especially when restructuring the event class
@@ -201,6 +207,14 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
     # as a dict, which the publisher/``_serialize`` later encodes to bytes|str
     # (Avro/JSON). Matches the ``EventPayloadType`` alias above.
     payload: bytes | str | dict | None = None
+    """
+    msgpack:
+        - bytes: msgpack-encoded bytes
+        - str: JSON-encoded string (not recommended for msgpack)
+        - dict: Already deserialized dict (if accessed programmatically after deserialization)
+        - msgspec.Struct
+        - None: Not set
+    """
 
     def set_payload(self, payload: bytes | str | None):
         """Helper method to set the payload for good type hint."""
@@ -212,7 +226,8 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
         Helper method to convert a payload object to dict
         Then in the event publisher, the payload can be set as bytes or str depending on the serialization method used.
         """
-        self.payload = payload.as_dict()
+        # self.payload = payload.as_dict()
+        self.payload = payload
 
     def get_payload(self) -> E:
         """ Convenience method to get the payload as the expected type E (subclass of BaseEventPayload). """
