@@ -226,7 +226,7 @@ def schema_upgrades() -> None:
     sa.Column('color', sa.TEXT(), nullable=True),
     sa.Column('last_used_time', sa.TIMESTAMP(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['taas_categories.id'], name=op.f('fk_taas_categories_parent_id_taas_categories')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_categories'))
     )
@@ -385,7 +385,7 @@ def schema_upgrades() -> None:
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_organizations'))
     )
     with op.batch_alter_table('taas_organizations', schema=None) as batch_op:
@@ -403,7 +403,7 @@ def schema_upgrades() -> None:
     sa.Column('work_activity_id', sa.TEXT(), nullable=True),
     sa.Column('description', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_payrates'))
     )
     op.create_table('taas_payrates_adjustments',
@@ -417,7 +417,7 @@ def schema_upgrades() -> None:
     sa.Column('work_activity_id', sa.TEXT(), nullable=True),
     sa.Column('description', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_payrates_adjustments'))
     )
     op.create_table('taas_projects',
@@ -479,7 +479,7 @@ def schema_upgrades() -> None:
     sa.Column('sms_template_id', sa.TEXT(), nullable=True),
     sa.Column('mail_template_id', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_parent_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects'))
     )
@@ -508,7 +508,7 @@ def schema_upgrades() -> None:
     sa.Column('object_type', sa.TEXT(), server_default=sa.text("'project'::character"), nullable=True),
     sa.Column('privacy', sa.TEXT(), server_default=sa.text("'object'::character"), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_comments'))
     )
     with op.batch_alter_table('taas_projects_comments', schema=None) as batch_op:
@@ -623,7 +623,7 @@ def schema_upgrades() -> None:
     sa.Column('tenant_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('avatar_url', sa.TEXT(), nullable=True),
     sa.Column('color', sa.TEXT(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_tenants'))
     )
     with op.batch_alter_table('taas_tenants', schema=None) as batch_op:
@@ -707,7 +707,7 @@ def schema_upgrades() -> None:
     sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_checklist_templates_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_checklist_templates'))
     )
@@ -785,7 +785,7 @@ def schema_upgrades() -> None:
     sa.Column('action_type', sa.TEXT(), nullable=True),
     sa.Column('action_value', sa.Integer(), server_default=sa.text('0'), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_actions_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_actions'))
     )
@@ -828,7 +828,7 @@ def schema_upgrades() -> None:
     sa.Column('impact_performance', sa.Integer(), nullable=True),
     sa.Column('risk_result', sa.Integer(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_risks_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_risks'))
     )
@@ -843,7 +843,7 @@ def schema_upgrades() -> None:
     sa.Column('permissions', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('display_order', sa.Integer(), server_default=sa.text('0'), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_teams_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_teams'))
     )
@@ -864,7 +864,7 @@ def schema_upgrades() -> None:
     sa.Column('email_cc', sa.TEXT(), nullable=True),
     sa.Column('status', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_updates_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_updates'))
     )
@@ -880,7 +880,7 @@ def schema_upgrades() -> None:
     sa.Column('last_activity_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('permissions', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_users_project_id_taas_projects')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_users'))
     )
@@ -951,7 +951,7 @@ def schema_upgrades() -> None:
     sa.Column('entity_id', sa.String(length=36), nullable=True),
     sa.Column('assigned_by', sa.String(length=36), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['tag_id'], ['taas_tags.id'], name=op.f('fk_taas_tag_mapping_tag_id_taas_tags')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_tag_mapping'))
     )
@@ -1051,7 +1051,7 @@ def schema_upgrades() -> None:
     sa.Column('is_mandatory', sa.Boolean(), server_default=sa.text('false'), nullable=True),
     sa.Column('display_order', sa.Integer(), server_default=sa.text("'-1'::integer"), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['template_id'], ['taas_checklist_templates.id'], name=op.f('fk_taas_checklist_items_template_id_taas_checklist_templates')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_checklist_items'))
     )
@@ -1067,7 +1067,7 @@ def schema_upgrades() -> None:
     sa.Column('effective_from', sa.TIMESTAMP(), nullable=True),
     sa.Column('effective_until', sa.TIMESTAMP(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_workflows_assignments_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['workflow_id'], ['taas_projects_workflows.id'], name=op.f('fk_taas_projects_workflows_assignments_workflow_id_taas_projects_workflows')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_workflows_assignments'))
@@ -1108,7 +1108,7 @@ def schema_upgrades() -> None:
     sa.Column('sms_template_id', sa.TEXT(), nullable=True),
     sa.Column('mail_template_id', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_workflows_stages_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['workflow_id'], ['taas_projects_workflows.id'], name=op.f('fk_taas_projects_workflows_stages_workflow_id_taas_projects_workflows')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_workflows_stages'))
@@ -1168,7 +1168,7 @@ def schema_upgrades() -> None:
     sa.Column('sms_template_id', sa.TEXT(), nullable=True),
     sa.Column('mail_template_id', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['taas_tasks.id'], name=op.f('fk_taas_tasks_parent_id_taas_tasks')),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_tasks_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['stage_id'], ['taas_projects_workflows_stages.id'], name=op.f('fk_taas_tasks_stage_id_taas_projects_workflows_stages')),
@@ -1205,7 +1205,7 @@ def schema_upgrades() -> None:
     sa.Column('archived_by', sa.TEXT(), nullable=True),
     sa.Column('archived_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_workflows_stages_items_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['stage_id'], ['taas_projects_workflows_stages.id'], name=op.f('fk_taas_projects_workflows_stages_items_stage_id_taas_projects_workflows_stages')),
     sa.ForeignKeyConstraint(['task_id'], ['taas_tasks.id'], name=op.f('fk_taas_projects_workflows_stages_items_task_id_taas_tasks')),
@@ -1233,7 +1233,7 @@ def schema_upgrades() -> None:
     sa.Column('task_id', sa.GUID(length=16), nullable=True),
     sa.Column('user_id', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['task_id'], ['taas_tasks.id'], name=op.f('fk_taas_tasks_users_task_id_taas_tasks')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_tasks_users'))
     )
@@ -1264,7 +1264,7 @@ def schema_upgrades() -> None:
     sa.Column('location_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('location', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_timelogs_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['task_id'], ['taas_tasks.id'], name=op.f('fk_taas_timelogs_task_id_taas_tasks')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_timelogs'))
@@ -1287,7 +1287,7 @@ def schema_upgrades() -> None:
     sa.Column('currency_id', sa.TEXT(), nullable=True),
     sa.Column('description', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['timelog_id'], ['taas_timelogs.id'], name=op.f('fk_taas_payrolls_timelog_id_taas_timelogs')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_payrolls'))
     )
@@ -1310,7 +1310,7 @@ def schema_upgrades() -> None:
     sa.Column('currency_id', sa.TEXT(), nullable=True),
     sa.Column('description', sa.TEXT(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
-    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['payroll_id'], ['taas_payrolls.id'], name=op.f('fk_taas_payruns_payroll_id_taas_payrolls')),
     sa.ForeignKeyConstraint(['timelog_id'], ['taas_timelogs.id'], name=op.f('fk_taas_payruns_timelog_id_taas_timelogs')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_payruns'))

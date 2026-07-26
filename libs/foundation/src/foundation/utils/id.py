@@ -13,8 +13,19 @@ MAX_ID_LENGTH = 36
 TENANT_ID_LENGTH = 8
 
 
-def generate_uuid() -> str:
-    return str(v7_uuid())
+def generate_uuid() -> uuid.UUID:
+    return v7_uuid()
+
+
+def generate_db_id() -> uuid.UUID:
+    """Generate a UUIDv7 primary key value.
+
+    Matches the ``UUIDv7`` column type used by ``User.id`` (and other
+    ``UUIDv7AuditBase`` models). Assign this to ``model.id`` before flush when
+    the id is needed early (e.g. to set a foreign key such as
+    ``Tenant.root_account_id``) instead of waiting for the DB-side default.
+    """
+    return v7_uuid()
 
 
 def generate_tenant_id_str(size: int = TENANT_ID_LENGTH) -> str:

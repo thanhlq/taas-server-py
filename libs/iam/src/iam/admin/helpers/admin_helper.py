@@ -1,7 +1,7 @@
 from db.models import User
 from db.models.core import Tenant
 from foundation.iam.types import UserStatus
-from foundation.utils.id import generate_tenant_id
+from foundation.utils.id import generate_tenant_id, generate_uuid
 from iam.auth.auth_events import (
     TenantCreatedEvent,
     UserDirectoryEventPayload,
@@ -28,6 +28,10 @@ class IamDataHelper:
 
         # Build user
         user: User = User()
+        # Assign the id up-front (UUIDv7) so it can be referenced before flush,
+        # e.g. as the tenant's root_account_id below. The DB-side default would
+        # otherwise only populate user.id at INSERT time, leaving it None here.
+        user.id = generate_uuid()
         user.username = directory_user.username
         user.email = directory_user.email
         user.first_name = directory_user.first_name
@@ -35,6 +39,8 @@ class IamDataHelper:
         user.status = (
             UserStatus.ACTIVE if directory_user.enabled else UserStatus.INACTIVE
         )
+        user.name = f'{directory_user.first_name} {directory_user.last_name}'.strip()
+        user.email_verified = directory_user.email_verified
         user.tenant_id = tenant.id
         tenant.root_account_id = user.id
 

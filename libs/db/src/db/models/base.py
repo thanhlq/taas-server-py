@@ -29,14 +29,15 @@ __all__ = [
 class SoftDeleteColumns:
     """Created/Updated At Fields Mixin."""
 
-    deleted_at: Mapped[datetime.datetime] = mapped_column(
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTimeUTC(timezone=True),
+        nullable=True,
         sort_order=3004,
     )
 
     @validates('deleted_at')
-    def validate_tz_info(self, _: str, value: datetime.datetime) -> datetime.datetime:
-        if value.tzinfo is None:
+    def validate_tz_info(self, _: str, value: datetime.datetime | None) -> datetime.datetime | None:
+        if value is not None and value.tzinfo is None:
             value = value.replace(tzinfo=datetime.UTC)
         return value
 
