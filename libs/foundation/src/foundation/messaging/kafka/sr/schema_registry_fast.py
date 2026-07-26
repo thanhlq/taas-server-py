@@ -40,7 +40,7 @@ import fastavro
 import httpx
 from foundation.observability.log_factory import LogFactory
 
-from ..types import BaseSendableMessage
+from ...types import BaseSendableMessage
 from .confluent import ConfluentWireFormat
 from .sr_config import SchemaRegistryConfig
 from .types import (

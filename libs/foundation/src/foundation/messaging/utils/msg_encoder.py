@@ -7,7 +7,7 @@ from typing import Any, Optional, Union, get_args
 import msgspec
 from foundation.cli import cli
 from foundation.messaging.config.messaging_config import MessagingConfig
-from foundation.messaging.sr import SchemaRegistryEncoder
+from foundation.messaging.kafka.sr import SchemaRegistryEncoder
 from foundation.messaging.types import (
     EVENT_META_SERIALIZER_FIELD,
     EVENT_PAYLOAD_FIELD,

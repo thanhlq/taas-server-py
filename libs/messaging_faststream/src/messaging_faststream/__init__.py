@@ -35,7 +35,7 @@ Public API
 from typing import Optional
 
 from foundation.config import Settings, get_settings
-from foundation.messaging.sr.schema_registry_fast import (
+from foundation.messaging.kafka.sr.schema_registry_fast import (
     ConfluentWireFormat,
     SchemaNotFoundError,
     SchemaRegistryClient,

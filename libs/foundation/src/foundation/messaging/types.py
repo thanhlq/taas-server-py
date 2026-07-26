@@ -31,7 +31,7 @@ from foundation.utils.id import generate_id
 from foundation.utils.serialization import from_json
 
 if TYPE_CHECKING:
-    from ..messaging.sr import SchemaRegistryEncoder
+    from .kafka.sr import SchemaRegistryEncoder
 
 try:
     from dataclasses_avroschema import AvroModel as _AvroModelBase

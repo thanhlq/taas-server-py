@@ -3,7 +3,7 @@ from typing import Literal, cast
 
 from foundation.utils.env_utils import get_env
 
-from .messaging_config import MessagingConfig
+from ..config.messaging_config import MessagingConfig
 
 
 @dataclass
@@ -45,7 +45,7 @@ class KafkaSettings:
         default_factory=get_env('KAFKA_TOPICS', [], list[str])
     )
     KAFKA_CONSUMER_ENABLE: bool = field(
-        default_factory=get_env('KAFKA_CONSUMER_ENABLE', False, bool)
+        default_factory=get_env('KAFKA_CONSUMER_ENABLE', True, bool)
     )
     KAFKA_CONSUMER_GROUP_ID: str = field(
         default_factory=get_env('KAFKA_CONSUMER_GROUP_ID', 'eworksuite-worker-group')

@@ -60,7 +60,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from aiokafka.structs import RecordMetadata
-from foundation.messaging.base_messaging import BaseMessagingService
+from foundation.messaging.kafka.base_messaging import BaseMessagingService
 from foundation.messaging.types import IMessagingService, MessageHandler
 from foundation.utils.singleton import singleton
 

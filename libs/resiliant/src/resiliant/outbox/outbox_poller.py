@@ -411,7 +411,7 @@ class OutboxPoller:
                 fetched_count = len(events)
 
                 self.logger.debug(
-                    f'{worker_id} Polling for outbox events, found {Icons.MESSAGE if fetched_count > 0 else ''} {fetched_count}'
+                    f'{worker_id} Polling for outbox events, found {Icons.MESSAGE_PUBLISHED if fetched_count > 0 else ''} {fetched_count}'
                 )
 
                 poll_duration_ms = (datetime.now() - start_time).total_seconds() * 1000

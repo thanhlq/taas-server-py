@@ -89,7 +89,7 @@ from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from faststream.kafka import KafkaBroker, KafkaMessage
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.base_messaging import BaseMessagingService
+from foundation.messaging.kafka.base_messaging import BaseMessagingService
 from foundation.messaging.events.event_processor import EventProcessor
 from foundation.messaging.types import (
     BaseEvent,

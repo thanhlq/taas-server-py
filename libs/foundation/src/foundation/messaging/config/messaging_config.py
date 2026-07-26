@@ -8,7 +8,7 @@ from foundation.messaging.types import MessageEncodingType
 # ---------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from ..sr import SchemaRegistryConfig
+    from ..kafka.sr import SchemaRegistryConfig
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -127,7 +127,7 @@ class MessagingConfig:
         """Materialise a :class:`SchemaRegistryConfig` if SR encoding is active."""
         if not self.schema_registry_enabled or not self.schema_registry_url:
             return None
-        from ..sr import SchemaRegistryConfig
+        from ..kafka.sr import SchemaRegistryConfig
 
         return SchemaRegistryConfig(
             url=self.schema_registry_url,

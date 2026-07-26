@@ -2,7 +2,7 @@ from foundation import BaseService
 from typing import Literal, Optional
 
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.config.kafka_settings import (
+from foundation.messaging.kafka.kafka_settings import (
     KafkaSettings,
     build_messaging_config,
 )
@@ -13,7 +13,7 @@ from foundation.observability.tracing_factory import TracingFactory
 from foundation.utils import now_in_utc
 
 from .sr import SchemaRegistryConfig, SchemaRegistryEncoder
-from .types import BaseEvent, DlqEvent, IMessageEncoder, MessageServiceStats
+from ..types import BaseEvent, DlqEvent, IMessageEncoder, MessageServiceStats
 
 
 class BaseMessagingService(BaseService, IMessagingService):

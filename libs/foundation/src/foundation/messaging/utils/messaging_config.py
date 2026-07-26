@@ -1,10 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
-from core.messaging.types import MessageEncodingType
-from core.conf import AppSetting, get_app_settings
 from core.messaging.sr import SchemaRegistryConfig
-
+from core.messaging.types import MessageEncodingType
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -143,53 +141,3 @@ class MessagingConfig:
             raise ValueError('max_concurrent_tasks must be >= 1')
         if self.graceful_shutdown_timeout < 0:
             raise ValueError('graceful_shutdown_timeout must be >= 0')
-
-
-def build_messaging_config(
-    settings: Optional[AppSetting] = None,
-) -> MessagingConfig:
-    """
-    Materialise :class:`BaseMessagingConfig` from :class:`AppSetting`.
-
-    Centralises the env→config mapping so subclasses don't reach into
-    ``AppSetting`` directly. Pass an explicit ``settings`` instance for
-    testing; otherwise the cached app settings singleton is used.
-    """
-    s = settings or get_app_settings()
-    return MessagingConfig(
-        # encoding
-        message_encoding=s.MESSAGE_ENCODING,
-        message_field_encoding=s.MESSAGE_FIELD_ENCODING,
-        # provider
-        pubsub_provider=s.PUBSUB_SERVICE_PROVIDER,
-        # concurrency
-        max_concurrent_tasks=s.MAX_CONCURRENT_TASKS,
-        graceful_shutdown_timeout=s.GRACEFUL_SHUTDOWN_TIMEOUT,
-        # retry / DLQ
-        max_retries=s.MAX_RETRIES,
-        retry_backoff_ms=s.RETRY_BACKOFF_MS,
-        dlq_enabled=s.DLQ_ENABLE,
-        dlq_topic=s.DLQ_TOPIC,
-        # kafka connection
-        kafka_bootstrap_servers=s.KAFKA_BOOTSTRAP_SERVERS,
-        kafka_topics=list(s.KAFKA_TOPICS),
-        kafka_consumer_enable=s.KAFKA_CONSUMER_ENABLE,
-        consumer_group_id=s.KAFKA_CONSUMER_GROUP_ID,
-        kafka_auto_offset_reset=s.KAFKA_AUTO_OFFSET_RESET,
-        kafka_enable_auto_commit=s.KAFKA_ENABLE_AUTO_COMMIT,
-        kafka_max_poll_records=s.KAFKA_MAX_POLL_RECORDS,
-        kafka_session_timeout_ms=s.KAFKA_SESSION_TIMEOUT_MS,
-        kafka_heartbeat_interval_ms=s.KAFKA_HEARTBEAT_INTERVAL_MS,
-        # kafka security
-        kafka_security_protocol=s.KAFKA_SECURITY_PROTOCOL,
-        kafka_sasl_mechanism=s.KAFKA_SASL_MECHANISM,
-        kafka_sasl_username=s.KAFKA_SASL_USERNAME,
-        kafka_sasl_password=s.KAFKA_SASL_PASSWORD,
-        # schema registry
-        schema_registry_url=s.KAFKA_SCHEMA_REGISTRY_URL,
-        schema_registry_username=s.KAFKA_SCHEMA_REGISTRY_USERNAME,
-        schema_registry_password=s.KAFKA_SCHEMA_REGISTRY_PASSWORD,
-        # outbox
-        outbox_enabled=s.OUTBOX_ENABLE,
-        outbox_poller_enabled=s.OUTBOX_POLLER_ENABLE,
-    )
