@@ -7,7 +7,7 @@ from rich.table import Table
 from foundation.utils.version import get_version
 
 if TYPE_CHECKING:
-    from foundation.http.base_app import BaseApiApplication
+    from foundation.app.base_app import BaseApiApplication
 
 console = get_console()
 

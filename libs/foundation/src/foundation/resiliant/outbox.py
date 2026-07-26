@@ -240,7 +240,7 @@ class IOutboxService(Protocol):
         event: Any,
         channel: str,
         *,
-        partition_key: str | None = None,
+        ordering_key: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int | None = None,
     ) -> Any:
@@ -254,7 +254,7 @@ class IOutboxService(Protocol):
         channel: str,
         payload: dict[str, Any],
         event_type: str,
-        partition_key: str | None = None,
+        ordering_key: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int | None = None,
     ) -> Any:

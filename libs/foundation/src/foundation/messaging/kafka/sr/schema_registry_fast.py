@@ -503,7 +503,7 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         """
         return await self._serializer.deserialize(data)
 
-    def register_topic_schema(self, topic: str, schema: dict) -> str:
+    def register_topic_schema(self, topic: str, schema: dict) -> bool:
         """Register an Avro schema for *topic* at runtime.
 
         Useful when schemas are loaded dynamically from files or a config store.
@@ -517,7 +517,7 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         self.logger.info(f'📚 Registered schema for channel "{topic}"')
 
         # Later should also register with the registry and cache the schema ID, but for now
-        return ''
+        return True
         # return self._serializer.register_schema(topic, schema)
 
     @property

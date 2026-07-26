@@ -13,7 +13,9 @@ class TenantSetupEventHandler(BaseEventHandler[TenantCreatedEvent]):
     def __init__(self, **kwargs):
         super().__init__(TenantCreatedEvent, **kwargs)
 
-    async def handle(self, event: BaseEvent, meta: EventMetadata,  **kwargs) -> ProcessingResult:
+    async def handle_event(
+        self, event: TenantCreatedEvent, meta: EventMetadata, **kwargs
+    ) -> ProcessingResult:
         # TODO: Implement tenant created email sending logic
         self.logger.warning(
             f'🧪 TenantSetupEventHandler not implemented yet: event_id={meta.event_id}'

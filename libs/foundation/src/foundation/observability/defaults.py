@@ -1,4 +1,5 @@
 """The default implementatios when no specific observability implementation is enabled. It provides a noop instrument decorator and a default log adapter that does nothing. The noop instrument decorator simply returns the original function or class without any instrumentation, while the default log adapter can be used to log messages without any integration with OpenTelemetry or other tracing systems. This allows the application to run without any observability features when they are not needed or when the configuration is not set up for it."""
+import logging
 from logging import Logger
 from typing import Any, Optional
 
@@ -64,13 +65,13 @@ class NoopTracingManager(ITracingManager):
     _logger: Logger | None = None
 
     def __init__(self, logger: Optional[Logger] = None):
-        super().__init__()
+        # super().__init__()
         self._logger = logger
 
     @property
     def logger(self) -> Logger:
         if self._logger is None:
-            self._logger = Logger('NoopTracingManager')
+            self._logger = logging.getLogger('NoopTracingManager')
         return self._logger
 
     def get_context_tracer(self) -> type[IContextTracer]:

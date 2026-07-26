@@ -715,7 +715,7 @@ class KafkaPubSubService(AbstractService, IPubSubService):
         """Start with health monitoring."""
         await self.start_producer()
 
-        if self.config.KAFKA_CONSUMER_ENABLE:
+        if self.config.CONSUMER_ENABLE:
             await self.start_consumer()
 
         # ✅ ADD: Start health check loop
@@ -829,7 +829,7 @@ class KafkaPubSubService(AbstractService, IPubSubService):
 
             # Restart clients
             await self.start_producer()
-            if self.config.KAFKA_CONSUMER_ENABLE:
+            if self.config.CONSUMER_ENABLE:
                 await self.start_consumer()
 
             self.logger.info('Kafka reconnection successful')

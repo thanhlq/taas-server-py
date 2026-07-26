@@ -400,7 +400,7 @@ class OutboxPoller:
         start_time = datetime.now()
         fetched_count = 0
 
-        self.logger.debug(f'{worker_id} Polling for outbox events...')
+        # self.logger.debug(f'{worker_id} Polling for outbox events...')
         try:
             # Create database session
             async with self.session_factory() as session:
@@ -469,7 +469,11 @@ class OutboxPoller:
             event: Outbox event to publish
         """
         start_time = datetime.now()
-        msg_data = event.payload
+        msg_data: dict[str, Any] = event.payload # type: ignore
+
+        self.logger.debug(
+            f'[OutboxPoller] Publishing event {event.event_type} (id={event.id}) to {event.channel}, msg type {type(msg_data)}'
+        )
 
         try:
             # Publish to messaging system
@@ -477,7 +481,7 @@ class OutboxPoller:
                 channel=event.channel,
                 message=msg_data,
                 headers=event.headers,
-                key=event.partition_key,
+                ordering_key=event.ordering_key,
             )
 
             # Mark as published

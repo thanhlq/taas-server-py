@@ -60,7 +60,7 @@ class MessagingConfig:
     kafka_bootstrap_servers: str = 'localhost:9092'
     """Comma-separated broker addresses (``host1:9092,host2:9092``)."""
 
-    kafka_topics: list[str] = field(default_factory=list)
+    consumer_topics: list[str] = field(default_factory=list)
     """Topics statically subscribed in worker (consumer) mode."""
 
     kafka_consumer_enable: bool = False

@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import json
 import logging
+from logging import Logger
 from typing import Any, Optional, Union, get_args
 
 import msgspec
@@ -41,7 +42,7 @@ class MsgEncoder(IMessageEncoder):
     _instance: 'MsgEncoder | None' = None
     _msg_encoding: str
     _field_encoding: str
-    logger = logging.getLogger(__name__)
+    _logger: Logger | None = None
     _event_type_registry: dict[str, type[BaseEvent]] = {}
 
     _json_encoder: Optional[msgspec.json.Encoder] = None
@@ -85,6 +86,12 @@ class MsgEncoder(IMessageEncoder):
         startup_info: dict[str, Any] = self.info()
         cli.info_table('MsgEncoder startup info', startup_info)
 
+    @property
+    def logger(self) -> logging.Logger:
+        if self._logger is None:
+            self._logger = logging.getLogger(__name__)
+        return self._logger
+
     def info(self) -> dict[str, Any]:
         return {
             'msg_encoding': self._msg_encoding,
@@ -93,7 +100,6 @@ class MsgEncoder(IMessageEncoder):
                 k: v.__name__ for k, v in self._event_type_registry.items()
             },
         }
-
 
     def msgpack_pack(self, data: Any) -> bytes:
         return msgspec.msgpack.encode(data)
@@ -251,7 +257,6 @@ class MsgEncoder(IMessageEncoder):
                 # Supported serialization formats
                 pass
 
-
             return await sr_encoder.encode_event(channel, _msg_data)
         elif self._msg_encoding == MessageEncodingType.JSON:
             # JSON: return bytes for parity with msgpack/Avro and so brokers
@@ -291,16 +296,24 @@ class MsgEncoder(IMessageEncoder):
                 ) and self._field_encoding == MessageEncodingType.MSGPACK:
                     # If the payload is bytes and field encoding is msgpack, deserialize it back to dict after Avro decoding
                     if isinstance(_payload, bytes):
-                        _decoded_dict[EVENT_PAYLOAD_FIELD] = self.msgpack_unpack(_payload)
+                        _decoded_dict[EVENT_PAYLOAD_FIELD] = self.msgpack_unpack(
+                            _payload
+                        )
                     elif isinstance(_payload, str):
                         self.logger.warning(
                             'Expected payload to be bytes for MsgPack field encoding, got str. Attempting to decode string payload as MsgPack bytes.'
                         )
                         try:
-                            self.logger.debug(f'Attempting to decode string payload as MsgPack bytes: {_payload}')
-                            _decoded_dict[EVENT_PAYLOAD_FIELD] = self.msgpack_unpack(_payload.encode('utf-8'))
+                            self.logger.debug(
+                                f'Attempting to decode string payload as MsgPack bytes: {_payload}'
+                            )
+                            _decoded_dict[EVENT_PAYLOAD_FIELD] = self.msgpack_unpack(
+                                _payload.encode('utf-8')
+                            )
                         except Exception as e:
-                            self.logger.error(f'Failed to decode string payload as MsgPack bytes: {e}. Leaving payload as original string.')
+                            self.logger.error(
+                                f'Failed to decode string payload as MsgPack bytes: {e}. Leaving payload as original string.'
+                            )
                             _decoded_dict[EVENT_PAYLOAD_FIELD] = _payload
                 elif (
                     _payload is not None
@@ -309,7 +322,9 @@ class MsgEncoder(IMessageEncoder):
                     if isinstance(_payload, str):
                         _decoded_dict[EVENT_PAYLOAD_FIELD] = json.loads(_payload)
                     elif isinstance(_payload, bytes):
-                        _decoded_dict[EVENT_PAYLOAD_FIELD] = json.loads(_payload.decode('utf-8'))
+                        _decoded_dict[EVENT_PAYLOAD_FIELD] = json.loads(
+                            _payload.decode('utf-8')
+                        )
                     else:
                         self.logger.warning(
                             f'Expected payload to be str or bytes for JSON field encoding, got {type(_payload)}. Leaving payload as is.'
@@ -358,7 +373,7 @@ class MsgEncoder(IMessageEncoder):
         _field_data = payload
 
         if dataclasses.is_dataclass(payload):
-            if getattr(payload, 'as_dict', None) and callable(payload.as_dict): # type: ignore
+            if getattr(payload, 'as_dict', None) and callable(payload.as_dict):  # type: ignore
                 _field_data = payload.as_dict()  # type: ignore
             else:
                 _field_data = dataclasses.asdict(payload)  # type: ignore

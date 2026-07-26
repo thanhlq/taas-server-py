@@ -21,7 +21,7 @@ from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
 from foundation.factory import FoundationFactory
 from foundation.http._websocket_redis_manager import build_websocket_redis_manager
-from foundation.http.base_app import AppConfig, BaseApiApplication
+from foundation.app.base_app import AppConfig, BaseApiApplication
 from foundation.messaging.factory import MessagingFactory
 from foundation.utils.icons import Icons
 from http_fastapi import create_app

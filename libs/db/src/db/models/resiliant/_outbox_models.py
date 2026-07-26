@@ -58,7 +58,7 @@ class OutboxEventTable(UUIDv7AuditBase):
 
     # Kafka/messaging details
     channel = Column(String(255), nullable=False)
-    partition_key = Column(String(255), nullable=True)
+    ordering_key = Column(String(255), nullable=True)
     """Optional key for Kafka partitioning (e.g., user_id, tenant_id)"""
 
     # Event payload
@@ -137,7 +137,7 @@ class OutboxEventTable(UUIDv7AuditBase):
             'event_id': self.event_id,
             'event_type': self.event_type,
             'channel': self.channel,
-            'partition_key': self.partition_key,
+            'ordering_key': self.ordering_key,
             'payload': self.payload,
             'headers': self.headers,
             'status': self.status,
@@ -176,7 +176,7 @@ class OutboxEventArchiveTable(AuditColumns):
     event_id = Column(String(64), nullable=False)
     event_type = Column(String(255), nullable=False, index=True)
     channel = Column(String(255), nullable=False)
-    partition_key = Column(String(255), nullable=True)
+    ordering_key = Column(String(255), nullable=True)
     payload = Column(JSON, nullable=False)
     headers = Column(JSON, nullable=True)
     status = Column(String(20), nullable=False, index=True)

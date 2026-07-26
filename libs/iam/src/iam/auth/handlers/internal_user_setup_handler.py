@@ -1,5 +1,6 @@
 from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResult
 
+from iam.admin.services import get_admin_service
 from iam.auth.auth_events import (
     IamEvents,
     UserDirectoryCreatedEvent,
@@ -34,7 +35,7 @@ class InternalUserSetupHandler(BaseIamEventHandler[UserDirectoryCreatedEvent]):
         _directory_user = event.get_payload().user
         _directory_tenant = event.get_payload().tenant
 
-        admin_service = self.get_admin_service()
+        admin_service = get_admin_service()
         await admin_service.create_root_account_from_directory(
             _directory_user,
             _directory_tenant,

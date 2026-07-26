@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 from foundation.cli._cli import console
 from foundation.config import AppSettings
-from foundation.config.app_settings import BASE_DIR, CONFIG_PREFIX
+from foundation.app.app_settings import BASE_DIR, CONFIG_PREFIX
 from foundation.config.log import LogSettings
 from foundation.config.messaging_settings import MessagingSettings
 from foundation.config.otel import OtelSettings

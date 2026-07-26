@@ -70,6 +70,3 @@ class AdminService(BaseIamService):
         )
 
         return new_user
-
-
-    async def create_user(user) -> User

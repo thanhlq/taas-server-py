@@ -41,11 +41,11 @@ class KafkaSettings:
     KAFKA_BOOTSTRAP_SERVERS: str = field(
         default_factory=get_env('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
     )
-    KAFKA_TOPICS: list[str] = field(
-        default_factory=get_env('KAFKA_TOPICS', [], list[str])
+    CONSUMER_TOPICS: list[str] = field(
+        default_factory=get_env('CONSUMER_TOPICS', [], list[str])
     )
-    KAFKA_CONSUMER_ENABLE: bool = field(
-        default_factory=get_env('KAFKA_CONSUMER_ENABLE', True, bool)
+    CONSUMER_ENABLE: bool = field(
+        default_factory=get_env('CONSUMER_ENABLE', True, bool)
     )
     KAFKA_CONSUMER_GROUP_ID: str = field(
         default_factory=get_env('KAFKA_CONSUMER_GROUP_ID', 'eworksuite-worker-group')
@@ -124,8 +124,8 @@ def build_messaging_config(
         dlq_topic=settings.DLQ_TOPIC,
         # kafka connection
         kafka_bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-        kafka_topics=list(settings.KAFKA_TOPICS),
-        kafka_consumer_enable=settings.KAFKA_CONSUMER_ENABLE,
+        consumer_topics=list(settings.CONSUMER_TOPICS),
+        kafka_consumer_enable=settings.CONSUMER_ENABLE,
         consumer_group_id=settings.KAFKA_CONSUMER_GROUP_ID,
         kafka_auto_offset_reset=cast(
             Literal['latest', 'earliest', 'none'],

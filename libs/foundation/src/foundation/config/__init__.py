@@ -1,4 +1,4 @@
-from .app_settings import AppSettings
+from ..app.app_settings import AppSettings
 from .settings import (
     CONFIG_PREFIX,
     DatabaseSettings,

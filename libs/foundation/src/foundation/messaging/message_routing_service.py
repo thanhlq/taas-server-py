@@ -5,12 +5,12 @@ from foundation import BaseService
 from foundation.cli import cli
 from foundation.db.advanced_db_manager import MainDatabase
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
+from foundation.messaging.kafka.base_messaging import BaseEvent
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig
-from foundation.serialization import BaseEvent
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
-from .types import IMessageRoutingService, IMessagingService
+from .types import BaseSendableMessage, IMessageRoutingService, IMessagingService
 
 
 @singleton
@@ -79,11 +79,11 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
 
     async def publish_event(
         self,
-        event: BaseEvent,
+        event: BaseSendableMessage,
         channel: str,
         *,
         session: DBAsyncSession | DBAsyncScopedSession | None = None,
-        partition_key: str | None = None,
+        ordering_key: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int | None = None,
     ) -> Any:
@@ -97,19 +97,24 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
             session: Database session (used only when outbox is enabled)
             event: Domain event to publish
             channel: Channel name (topic/stream/queue)
-            partition_key: Optional partition key for Kafka
+            ordering_key: Optional ordering key for Kafka
             headers: Optional message headers
             max_retries: Override default max retries (outbox only)
 
         Returns:
             OutboxEvent if outbox enabled, None if direct publish
         """
+
+        if isinstance(event, BaseEvent):
+            print(f'MessageRoutingService.publish_event: event_type={event.event_type}, event_id={event.event_id}, m_serializer={event.m_serializer}, timestamp={event.timestamp}')
+            # event.validate_event()  # ensure required fields are present
+
         if self.get_routing_for_channel(channel) == "outbox":
             _new_session = None
             if session is None:
                 # in event / user directory creation case, we don't have a db session, but we still want to use outbox to ensure reliable delivery
                 self.logger.warning(
-                    'Outbox is enabled but no database session provided. '
+                    '🐬 ⚠️ Outbox is enabled but no database session provided. '
                     'This may lead to issues with transactional guarantees.'
                 )
                 _new_session = MainDatabase.get_instance().new_session()
@@ -117,7 +122,7 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
                 session=_new_session or session,
                 event=event,
                 channel=channel,
-                partition_key=partition_key,
+                ordering_key=ordering_key,
                 headers=headers,
                 max_retries=max_retries,
             )
@@ -134,7 +139,7 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
                 channel=channel,
                 message=event,
                 headers=headers,
-                key=partition_key,
+                ordering_key=ordering_key,
             )
             return None
 

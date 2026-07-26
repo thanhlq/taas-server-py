@@ -1,25 +1,31 @@
-from foundation import BaseService
 from typing import Literal, Optional
 
+from foundation import BaseService
 from foundation.exceptions.report_error import report_error
+from foundation.messaging.config.messaging_config import MessagingConfig
 from foundation.messaging.kafka.kafka_settings import (
     KafkaSettings,
     build_messaging_config,
 )
-from foundation.messaging.config.messaging_config import MessagingConfig
 from foundation.messaging.types import IMessagingService
 from foundation.messaging.utils.msg_encoder import MsgEncoder
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.utils import now_in_utc
 
+from ..types import (
+    BaseEvent,
+    DlqEvent,
+    IMessageEncoder,
+    MessageEncodingType,
+    MessageServiceStats,
+)
 from .sr import SchemaRegistryConfig, SchemaRegistryEncoder
-from ..types import BaseEvent, DlqEvent, IMessageEncoder, MessageServiceStats
 
 
 class BaseMessagingService(BaseService, IMessagingService):
     """Base kafka messaging service that provides common functionality for all messaging services."""
 
-    messaging_config: MessagingConfig
+    _config: MessagingConfig
     """Provider-agnostic, frozen configuration snapshot. Built once in
     ``__init__`` from :class:`AppSetting`; subclasses should read from this
     instead of touching ``self._config`` for messaging knobs."""
@@ -27,6 +33,7 @@ class BaseMessagingService(BaseService, IMessagingService):
     subs_auto_offset_reset: Literal['latest', 'earliest', 'none'] = 'latest'
     subs_auto_commit: bool = False
     subs_max_workers: int = 1
+    _subscribed_channels: set[str] = set()
     """ Number of workers to process messages concurrently """
 
     msg_encoding: str
@@ -52,9 +59,12 @@ class BaseMessagingService(BaseService, IMessagingService):
     def __init__(self, *, avro_schemas: Optional[dict[str, dict]] = None):
         super().__init__()
 
-        self.messaging_config = build_messaging_config(KafkaSettings())
+        self._config = build_messaging_config(KafkaSettings())
+        if self._config.consumer_topics and len(self._config.consumer_topics) > 0:
+            self.logger.info(f'Kafka topics configured: {self._config.consumer_topics}')
+            self._subscribed_channels.update(self._config.consumer_topics)
 
-        cfg = self.messaging_config
+        cfg = self._config
         self.subs_auto_offset_reset = cfg.kafka_auto_offset_reset
         self.subs_auto_commit = cfg.kafka_enable_auto_commit
         self.subs_max_workers = cfg.max_concurrent_tasks
@@ -97,6 +107,11 @@ class BaseMessagingService(BaseService, IMessagingService):
             messages_published=0,
         )
 
+    @property
+    def config(self) -> MessagingConfig:
+        """Return the provider-agnostic, frozen configuration snapshot."""
+        return self._config
+
     def _validate_config(self):
         # Validation now lives in BaseMessagingConfig.__post_init__.
         # Kept for backward-compat with subclasses that still call it.
@@ -105,7 +120,7 @@ class BaseMessagingService(BaseService, IMessagingService):
     @property
     def msg_encoder(self) -> MsgEncoder:
         if self._msg_encoder is None:
-            self._msg_encoder = MsgEncoder(config=self.messaging_config)
+            self._msg_encoder = MsgEncoder(config=self._config)
         return self._msg_encoder
 
     def get_msg_encoder(self) -> IMessageEncoder:
@@ -113,7 +128,7 @@ class BaseMessagingService(BaseService, IMessagingService):
 
     def get_messaging_encoding_type(self) -> str:
         """Return the configured message encoding type (e.g., json, msgpack, avro)."""
-        return self.messaging_config.message_encoding
+        return self._config.message_encoding
 
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
@@ -217,7 +232,7 @@ class BaseMessagingService(BaseService, IMessagingService):
                 )
                 raise e
 
-    def register_schema(self, channel: str, schema: dict) -> str:
+    def register_schema(self, channel: str, schema: type[BaseEvent]) -> bool:
         """Register an Avro schema for *channel* at runtime.
 
         Requires ``schema_registry_config`` to have been provided at
@@ -225,17 +240,39 @@ class BaseMessagingService(BaseService, IMessagingService):
 
         Args:
             channel: Kafka channel name.
-            schema: Avro schema dict.
+            schema: Event class (subclass of BaseEvent).
 
         Raises:
             RuntimeError: When the service was not initialised with a
                 Schema Registry configuration.
         """
-        if self._schema_registry_encoder is None:
-            raise RuntimeError(
-                'Cannot register Avro schema: service was initialised without '
-                'a SchemaRegistryConfig. Pass schema_registry_config= to the '
-                'constructor.'
+
+        if self.is_consumer_enabled() is False:
+            return False
+
+        self.logger.info(f'registering channel={channel}, schema_cls={schema.__name__}')
+
+        if (
+            self.get_messaging_encoding_type()
+            != MessageEncodingType.SCHEMA_REGISTRY_AVRO
+        ):
+            # Do nothing
+            self.logger.debug(
+                f'Ignoring register_schema for channel={channel}: '
+                f'messaging encoding is {self.get_messaging_encoding_type()}'
             )
-        self._schema_registry_encoder.register_topic_schema(channel, schema)
-        return ''
+        else:
+            if self._schema_registry_encoder is None:
+                raise RuntimeError(
+                    'Cannot register Avro schema: service was initialised without '
+                    'a SchemaRegistryConfig. Pass schema_registry_config= to the '
+                    'constructor.'
+                )
+            from .sr.serializer import schema_cls_to_avro_schema
+
+            self._schema_registry_encoder.register_topic_schema(
+                channel, schema_cls_to_avro_schema(schema)
+            )
+
+        self._subscribed_channels.add(channel)
+        return True

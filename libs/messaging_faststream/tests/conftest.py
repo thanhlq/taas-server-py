@@ -13,10 +13,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
-import pytest_asyncio
 
 # ---------------------------------------------------------------------------
 # Path setup — ensure core and messaging_faststream src are importable
@@ -86,13 +85,13 @@ def make_mock_config(
     production. Pass ``encoding='json'`` for JSON-only tests.
     """
     config = MagicMock()
-    config.KAFKA_TOPICS = topics or ['test.events']
+    config.CONSUMER_TOPICS = topics or ['test.events']
     config.KAFKA_BOOTSTRAP_SERVERS = bootstrap_servers
     config.kafka_bootstrap_servers_list = [bootstrap_servers]
     config.KAFKA_CONSUMER_GROUP_ID = 'test-group'
     config.KAFKA_AUTO_OFFSET_RESET = 'earliest'
     config.KAFKA_ENABLE_AUTO_COMMIT = False
-    config.KAFKA_CONSUMER_ENABLE = consumer_enable
+    config.CONSUMER_ENABLE = consumer_enable
     config.MAX_CONCURRENT_TASKS = 5
     config.GRACEFUL_SHUTDOWN_TIMEOUT = 5
     config.MAX_RETRIES = 3

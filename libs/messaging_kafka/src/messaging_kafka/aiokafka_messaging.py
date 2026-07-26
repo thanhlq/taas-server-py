@@ -23,7 +23,7 @@ Architecture
     │  └───────────────┘  └─────────────────────────────────┘ │
     │                                                         │
     │  Main loop (start_consuming):                           │
-    │      AIOKafkaConsumer(*KAFKA_TOPICS)                    │
+    │      AIOKafkaConsumer(*CONSUMER_TOPICS)                    │
     │        → _process_message() → EventProcessorFast        │
     │            → handler / retry / DLQ                      │
     │                                                         │
@@ -117,7 +117,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         self.logger.info(
             f'📨 🔌  AiokafkaMessagingService initialised [{self.get_provider()}], '
             f'encoder={self.msg_encoder}, '
-            f'bootstrap={self.messaging_config.kafka_bootstrap_servers}'
+            f'bootstrap={self._config.kafka_bootstrap_servers}'
         )
 
     # -----------------------------------------------------------------------
@@ -141,7 +141,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     async def start(self) -> None:
         """Start producer and, when enabled, consumer."""
         await self.start_producer()
-        if self.messaging_config.kafka_consumer_enable:
+        if self._config.kafka_consumer_enable:
             await self.start_consumer()
             self.logger.info('Kafka service started with PRODUCER and CONSUMER ➡️ ⬅️')
         else:
@@ -150,7 +150,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     @retry.decorator(name='start_kafka_producer')
     async def start_producer(self) -> None:
         """Create and start the producer, DLQ producer, and admin client."""
-        cfg = self.messaging_config
+        cfg = self._config
         try:
             self.logger.info(
                 f'📨 ➡️  Starting Kafka producer/admin: '
@@ -190,10 +190,10 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         if not self.producer:
             raise RuntimeError('Call start_producer() before start_consumer().')
 
-        cfg = self.messaging_config
+        cfg = self._config
         try:
             self.consumer = AIOKafkaConsumer(
-                *cfg.kafka_topics,
+                *cfg.consumer_topics,
                 bootstrap_servers=cfg.kafka_bootstrap_servers_list,
                 group_id=cfg.consumer_group_id,
                 auto_offset_reset=cfg.kafka_auto_offset_reset,
@@ -205,7 +205,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             )
             await self.consumer.start()
             self.logger.info(
-                f'⬅️  Kafka consumer started: topics={cfg.kafka_topics} '
+                f'⬅️  Kafka consumer started: topics={cfg.consumer_topics} '
                 f'group_id={cfg.consumer_group_id}'
             )
         except Exception as exc:
@@ -240,7 +240,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*self.processing_tasks, return_exceptions=True),
-                    timeout=self.messaging_config.graceful_shutdown_timeout,
+                    timeout=self._config.graceful_shutdown_timeout,
                 )
             except TimeoutError:
                 self.logger.warning('Graceful shutdown timeout exceeded')
@@ -250,7 +250,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             try:
                 await asyncio.wait_for(
                     self.event_processor.cleanup(),
-                    timeout=self.messaging_config.graceful_shutdown_timeout,
+                    timeout=self._config.graceful_shutdown_timeout,
                 )
             except TimeoutError:
                 self.logger.warning('EventProcessor cleanup timeout exceeded')
@@ -288,7 +288,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def start_consuming(self) -> None:
         """Blocking concurrent consumption loop bounded by ``max_concurrent_tasks``."""
-        await self._run_consuming(max_workers=self.messaging_config.max_concurrent_tasks)
+        await self._run_consuming(max_workers=self._config.max_concurrent_tasks)
 
     async def start_consuming_sequential(self) -> None:
         """Blocking sequential consumption loop (preserves ordering)."""
@@ -311,7 +311,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
         self.logger.info(
             f'🔄 Starting Kafka consumption loop | max_workers={max_workers} '
-            f'topics={self.messaging_config.kafka_topics}'
+            f'topics={self._config.consumer_topics}'
         )
 
         try:
@@ -405,14 +405,14 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         # Failure path.
         self.stats.messages_failed += 1
         if (
-            self.messaging_config.dlq_enabled
-            and event.retry_count >= self.messaging_config.max_retries
+            self._config.dlq_enabled
+            and event.retry_count >= self._config.max_retries
         ):
             event.handler_name = result.handler_name
             await self.send_to_dlq(event, result.error, traceparent)
             self.stats.messages_dlq += 1
             await self._maybe_commit()
-        elif self.messaging_config.dlq_enabled:
+        elif self._config.dlq_enabled:
             self.stats.messages_retried += 1
         else:
             self.logger.warning(
@@ -422,7 +422,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def _maybe_commit(self) -> None:
         """Commit consumer offset when auto-commit is disabled."""
-        if self.consumer and not self.messaging_config.kafka_enable_auto_commit:
+        if self.consumer and not self._config.kafka_enable_auto_commit:
             try:
                 await self.consumer.commit()
             except Exception as exc:
@@ -562,7 +562,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             raise RuntimeError('Service not running. Call start_producer() first.')
 
         sub_id = str(uuid.uuid4())
-        cfg = self.messaging_config
+        cfg = self._config
 
         if consumer_group is None:
             group_id = f'{cfg.consumer_group_id}_pubsub_{sub_id}'
@@ -754,7 +754,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         correlation_id: Optional[str] = None,
         headers: Optional[dict[str, str]] = None,
     ) -> Any:
-        if not self.messaging_config.dlq_enabled:
+        if not self._config.dlq_enabled:
             self.logger.warning('DLQ is disabled. Skipping publish.')
             return None
         if not self.dlq_producer:
@@ -763,7 +763,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
                 'start_producer() was called.'
             )
 
-        dlq_topic = self.messaging_config.dlq_topic
+        dlq_topic = self._config.dlq_topic
         encoded = await self._encode_message(dlq_topic, dlq_event)
 
         merged: dict[str, str] = {}
@@ -798,7 +798,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
     def _sasl_kwargs(self) -> dict[str, Any]:
         """Build security/SASL kwargs for aiokafka clients."""
-        cfg = self.messaging_config
+        cfg = self._config
         kw: dict[str, Any] = {}
         if cfg.kafka_security_protocol:
             kw['security_protocol'] = cfg.kafka_security_protocol

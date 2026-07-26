@@ -41,7 +41,7 @@ from iam.auth.auth_events import (
     UserDirectoryCreatedEvent,
     UserRegisteredEvent,
 )
-from iam.auth.handlers.init_handlers import (
+from iam.init_handlers import (
     IamWelcomeAccountNotificationHandler,
     InternalUserSetupHandler,
     TenantSetupEventHandler,
@@ -96,12 +96,3 @@ USER_ONBOARDING: Final[tuple[EventStep, ...]] = (
         ),
     ),
 )
-
-
-# ---------------------------------------------------------------------------
-# Registry of all IAM flows
-# ---------------------------------------------------------------------------
-
-IAM_ALL_FLOWS: Final[dict[str, tuple[EventStep, ...]]] = {
-    'user_onboarding': USER_ONBOARDING,
-}

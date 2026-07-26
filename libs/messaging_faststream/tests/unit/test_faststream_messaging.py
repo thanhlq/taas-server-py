@@ -167,7 +167,7 @@ class TestLifecycle:
     async def test_start_consumer_configures_topics(self, started_service, mock_config):
         """start_consumer() records configured topics."""
         await started_service.start_consumer()
-        for topic in mock_config.KAFKA_TOPICS:
+        for topic in mock_config.CONSUMER_TOPICS:
             assert topic in started_service.configured_topics
 
     @pytest.mark.asyncio

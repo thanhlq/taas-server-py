@@ -16,18 +16,19 @@ class BaseModel(msgspec.Struct, omit_defaults=True):
     def as_json_bytes(self) -> bytes:
         return msgspec.json.encode(self)
 
-class BaseEvent(msgspec.Struct, omit_defaults=True):
-    """Base class for event payloads."""
+# class BaseEvent(msgspec.Struct, omit_defaults=True):
+#     """Base class for event payloads."""
 
-    def as_dict(self) -> dict[str, Any]:
-        # Round-trip through msgspec: fast C path, drops UNSET via omit_defaults.
-        return msgspec.to_builtins(self)
+#     def as_dict(self) -> dict[str, Any]:
+#         # Round-trip through msgspec: fast C path, drops UNSET via omit_defaults.
+#         return msgspec.to_builtins(self)
 
-    def as_json(self) -> str:
-        return msgspec.json.encode(self).decode()
+#     def as_json(self) -> str:
+#         return msgspec.json.encode(self).decode()
 
-    def as_json_bytes(self) -> bytes:
-        return msgspec.json.encode(self)
+#     def as_json_bytes(self) -> bytes:
+#         return msgspec.json.encode(self)
+
 
 class BaseEventPayload(msgspec.Struct, omit_defaults=True):
     """Base class for event payloads."""

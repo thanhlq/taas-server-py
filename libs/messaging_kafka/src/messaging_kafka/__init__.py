@@ -8,11 +8,12 @@ from core.services.service_registry import get_service_locator
 from .aiokafka_messaging import AiokafkaMessagingService as KafkaMessagingService
 from .decorator import messaging
 
+
 async def create_pubsub_service(settings: AppSetting) -> IMessagingService:
     """Create pub/sub service based on configuration."""
 
     kafka = KafkaMessagingService()
-    if settings.KAFKA_CONSUMER_ENABLE:
+    if settings.CONSUMER_ENABLE:
         await kafka.start_producer()
         await kafka.start_consumer()
     else:

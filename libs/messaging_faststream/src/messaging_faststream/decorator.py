@@ -149,7 +149,7 @@ class _MessagingDecorators(IMessagingDecorators):
                     )
 
             # resolved_group_id= group_id or f'{service.messaging_config.consumer_group_id}_agent_{agent_name}'
-            resolved_group_id= group_id or service.messaging_config.consumer_group_id
+            resolved_group_id= group_id or service.config.consumer_group_id
             LogFactory().get_logger().debug(
                 f'📨 RESOLVED group_id for agent={agent_name} on topic={topic}: {resolved_group_id}'
             )

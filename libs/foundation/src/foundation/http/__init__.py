@@ -10,7 +10,7 @@ and other business libraries stay framework-free.
 from __future__ import annotations
 
 from foundation.http._websocket import WebSocketSession
-from foundation.http.base_app import AppConfig, BaseApiApplication
+from foundation.app.base_app import AppConfig, BaseApiApplication
 from foundation.http.controller import BaseController
 from foundation.http.decorator import (
     delete,

@@ -46,10 +46,9 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Literal, Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional, cast
 
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
-
 from core.messaging.types import IMessagingDecorators, MessageHandler
 from core.messaging.utils.msg_encoder import MsgDecoderError
 from core.observability.error_reporter import report_error
@@ -156,7 +155,7 @@ class _MessagingDecorators(IMessagingDecorators):
         service: 'AiokafkaMessagingService',
         pending: _PendingSubscription,
     ) -> None:
-        cfg = service.messaging_config
+        cfg = service._config
         group_id = (
             pending.group_id
             or f'{cfg.consumer_group_id}_agent_{pending.agent_name}'
@@ -176,7 +175,9 @@ class _MessagingDecorators(IMessagingDecorators):
         # both the decoded event AND the raw ConsumerRecord — matching
         # the FastStream decorator's ``handler(event, message)`` shape.
         # Lazy import avoids a circular import with the service module.
-        from .aiokafka_messaging import _SubscriptionInfo  # noqa: PLC0415  # type: ignore[reportPrivateUsage]
+        from .aiokafka_messaging import (
+            _SubscriptionInfo,  # noqa: PLC0415  # type: ignore[reportPrivateUsage]
+        )
 
         consumer = AIOKafkaConsumer(
             pending.topic,

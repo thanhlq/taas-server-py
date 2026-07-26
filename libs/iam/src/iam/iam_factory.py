@@ -1,11 +1,11 @@
+from foundation.messaging.events.flow_registration import (
+    register_event_handlers_for_app_module,
+)
 from foundation.messaging.types import IMessagingService
 from foundation.state import get_service, register_service
 from foundation.utils.singleton import singleton
 
-from iam.auth.handlers.init_handlers import (
-    register_iam_handlers,
-    register_iam_schema_registry_schemas,
-)
+from iam import IamApplicationModule
 from iam.auth.types import IamDirectoryServiceT
 from iam.types import IIamServiceFactory
 
@@ -27,9 +27,11 @@ class IamFactory:
             - ...
         """
         IamFactory._set_iam_service_factory(factory)
+
         _messaging = IamFactory.get_messaging_service()
-        register_iam_handlers(msg_service=_messaging)
-        register_iam_schema_registry_schemas(_messaging)
+        register_event_handlers_for_app_module(app=IamApplicationModule(), msg_service=_messaging)
+        # register_iam_handlers(msg_service=_messaging)
+        # register_iam_schema_registry_schemas(_messaging)
 
     @staticmethod
     def get_messaging_service() -> IMessagingService:

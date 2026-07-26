@@ -1,5 +1,5 @@
 """core service types"""
-
+import logging
 from logging import Logger
 
 from foundation.facade.cache import CacheServiceT
@@ -18,7 +18,7 @@ class BaseService:
     @property
     def logger(self) -> Logger:
         if self._logger is None:
-            self._logger = Logger(self.__class__.__name__)
+            self._logger = logging.getLogger(self.__class__.__name__)
         return self._logger
 
     async def start(self) -> 'BaseService':

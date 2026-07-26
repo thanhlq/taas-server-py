@@ -159,7 +159,7 @@ EVENT_TOPIC_MAPPING = {
 }
 
 
-def get_topic_for_event(event_type: IamEvents) -> str:
+def get_iam_topic_for_event(event_type: IamEvents) -> str:
     """
     Get the appropriate Kafka topic for an IAM event.
 

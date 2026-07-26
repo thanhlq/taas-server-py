@@ -9,7 +9,7 @@ from rich.console import Console
 
 from foundation.cli import get_console
 from foundation.config import DatabaseSettings, Settings
-from foundation.config.app import AppConfig
+from foundation.app.app_config import AppConfig
 from foundation.config.openapi import build_openapi_config
 from foundation.messaging.types import IMessagingService
 from foundation.observability.types import InstrumentSettings

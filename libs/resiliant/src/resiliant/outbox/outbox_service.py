@@ -16,7 +16,7 @@ from db.models.resiliant import OutboxEventTable, OutboxStatus
 from foundation import BaseService
 from foundation.messaging.types import BaseEvent
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig
-from foundation.utils.id import generate_uuid
+from foundation.utils.id import generate_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .outbox_repository import OutboxRepository
@@ -48,7 +48,7 @@ class OutboxService(IOutboxService, BaseService):
         event: BaseEvent,
         channel: str,
         *,
-        partition_key: Optional[str] = None,
+        ordering_key: Optional[str] = None,
         headers: Optional[Dict[str, Any]] = None,
         max_retries: Optional[int] = None,
     ) -> OutboxEventTable:
@@ -63,7 +63,7 @@ class OutboxService(IOutboxService, BaseService):
             session: Business-transaction session (the event commits with it).
             event: Domain event object to publish.
             channel: Destination channel/topic/queue name.
-            partition_key: Optional partition key (e.g. Kafka).
+            ordering_key: Optional ordering key (e.g. Kafka).
             headers: Optional message headers; correlation/event metadata is
                 merged in automatically when present on the event.
             max_retries: Override the configured retry cap for this event.
@@ -74,12 +74,6 @@ class OutboxService(IOutboxService, BaseService):
         payload = self._extract_payload(event)
         # event_id: str | None = str(getattr(event, "event_id", None))
 
-        if event.event_id is None:
-            event_id = generate_uuid()
-        else:
-            # TODO: idempotency check: if event_id already exists in outbox, skip saving
-            event_id = event.event_id
-
 
         merged_headers: Dict[str, Any] = dict(headers or {})
         # for attr in ("correlation_id", "event_id", "source"):
@@ -87,13 +81,15 @@ class OutboxService(IOutboxService, BaseService):
         #     if value is not None:
         #         merged_headers.setdefault(attr, value)
 
+        # event.m_serializer =
+
         outbox_event = OutboxEventTable(
-            event_id=event_id,
+            event_id=event.event_id,
             # event_type=getattr(event, "event_type", None)
             event_type=event.event_type
             or type(event).__name__,
             channel=channel,
-            partition_key=partition_key,
+            ordering_key=ordering_key,
             payload=payload,
             headers=merged_headers,
             status=OutboxStatus.PENDING,
@@ -119,7 +115,7 @@ class OutboxService(IOutboxService, BaseService):
         channel: str,
         payload: Dict[str, Any],
         event_type: str,
-        partition_key: Optional[str] = None,
+        ordering_key: Optional[str] = None,
         headers: Optional[Dict[str, Any]] = None,
         max_retries: Optional[int] = None,
     ) -> OutboxEventTable:
@@ -128,10 +124,10 @@ class OutboxService(IOutboxService, BaseService):
         Use this when there is no domain-event object, only a raw JSON payload.
         """
         outbox_event = OutboxEventTable(
-            event_id=str(uuid.uuid4()),
+            event_id=generate_id(),
             event_type=event_type,
             channel=channel,
-            partition_key=partition_key,
+            ordering_key=ordering_key,
             payload=payload,
             headers=headers or {},
             status=OutboxStatus.PENDING,

@@ -79,7 +79,7 @@ Only if you need:
        self,
        destination: str,
        message: BaseEvent,
-       partition_key: Optional[str] = None,
+       ordering_key: Optional[str] = None,
        delay_seconds: Optional[int] = None,
    ) -> None:
    ```
@@ -131,7 +131,7 @@ async def publish(
     self,
     destination: str,
     message: BaseEvent,
-    partition_key: Optional[str] = None,
+    ordering_key: Optional[str] = None,
     delay_seconds: Optional[int] = None,
 ) -> None:
     """
@@ -140,7 +140,7 @@ async def publish(
     Args:
         destination: Topic/stream/queue name
         message: Event to publish
-        partition_key: For ordering within partition (streams/pub-sub)
+        ordering_key: For ordering within partition (streams/pub-sub)
         delay_seconds: Ignored for Kafka (use external delay queue pattern)
     """
     if not self.producer:
@@ -152,8 +152,8 @@ async def publish(
             f'delay_seconds not supported by Kafka, ignored: {delay_seconds}s'
         )
 
-    # Use partition_key if provided
-    key = partition_key.encode('utf-8') if partition_key else None
+    # Use ordering_key if provided
+    key = ordering_key.encode('utf-8') if ordering_key else None
 
     message_dict = message.model_dump(mode='json')
     headers = self._get_trace_headers()
@@ -306,7 +306,7 @@ async def list_queues(self) -> List[str]:
 ## Migration Checklist
 
 - [ ] Update class declaration to implement all three interfaces
-- [ ] Fix `publish()` signature with `destination`, `partition_key`, `delay_seconds`
+- [ ] Fix `publish()` signature with `destination`, `ordering_key`, `delay_seconds`
 - [ ] Update `subscribe()` to support `consumer_group` and `from_beginning`
 - [ ] Change `get_stats()` return type to `MessageServiceStats`
 - [ ] Add `create_stream()`, `delete_stream()`, `list_streams()`

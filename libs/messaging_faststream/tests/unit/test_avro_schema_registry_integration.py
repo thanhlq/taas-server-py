@@ -24,7 +24,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -92,7 +91,9 @@ def _build_service_with_sr(avro_schemas: dict[str, dict]):
     All external dependencies (app config, tracing, EventProcessor) are mocked
     so the service can be instantiated without a running Kafka broker.
     """
-    from messaging_faststream.faststream_aiokafka_impl import FastStreamKafkaMessagingService
+    from messaging_faststream.faststream_aiokafka_impl import (
+        FastStreamKafkaMessagingService,
+    )
 
     mock_logger = MagicMock()
     mock_config = _make_sr_mock_config()
@@ -136,7 +137,10 @@ def sr_encoder(user_dir_schema):
     ``AsyncSchemaRegistryEncoder`` pointed at the real local Schema Registry
     with ``UserDirectoryCreatedEvent`` schema pre-loaded.
     """
-    from core.messaging.sr.schema_registry_fast import SchemaRegistryEncoder, SchemaRegistryConfig
+    from core.messaging.sr.schema_registry_fast import (
+        SchemaRegistryConfig,
+        SchemaRegistryEncoder,
+    )
 
     config = SchemaRegistryConfig(url=SCHEMA_REGISTRY_URL)
     return SchemaRegistryEncoder(
@@ -148,8 +152,8 @@ def sr_encoder(user_dir_schema):
 @pytest.fixture
 def sample_event():
     """A ``UserDirectoryCreatedEvent`` with representative field values."""
-    from core.iam.events.iam_events import UserDirectoryCreatedEvent
     from core.iam.events.iam_constants import IamEvents
+    from core.iam.events.iam_events import UserDirectoryCreatedEvent
 
     return UserDirectoryCreatedEvent(
         event_type=IamEvents.USER_DIRECTORY_CREATED.value,
@@ -228,10 +232,10 @@ class TestEncoderIntegration:
         if not await _schema_registry_available():
             pytest.skip('Confluent Schema Registry not reachable at http://localhost:8081')
 
-        from core.iam.events.iam_events import UserDirectoryCreatedEvent
         from core.iam.events.iam_constants import IamEvents
-        from core.messaging.utils.msg_encoder import MsgEncoder
+        from core.iam.events.iam_events import UserDirectoryCreatedEvent
         from core.messaging.utils.messaging_config import MessagingConfig
+        from core.messaging.utils.msg_encoder import MsgEncoder
 
         msg_encoder = MsgEncoder(
             config=MessagingConfig(
@@ -296,8 +300,8 @@ class TestServicePipelineIntegration:
         if not await _schema_registry_available():
             pytest.skip('Confluent Schema Registry not reachable at http://localhost:8081')
 
-        from core.iam.events.iam_events import UserDirectoryCreatedEvent
         from core.iam.events.iam_constants import IamEvents
+        from core.iam.events.iam_events import UserDirectoryCreatedEvent
 
         svc, _ = _build_service_with_sr({TEST_TOPIC: user_dir_schema})
         svc.register_event_serializer(UserDirectoryCreatedEvent)
@@ -324,7 +328,6 @@ class TestServicePipelineIntegration:
         if not await _schema_registry_available():
             pytest.skip('Confluent Schema Registry not reachable at http://localhost:8081')
 
-        from core.events.types import BaseEvent
 
         svc, _ = _build_service_with_sr({TEST_TOPIC: user_dir_schema})
         # Intentionally NOT registering the event type
@@ -352,7 +355,7 @@ class TestServicePipelineIntegration:
         from core.iam.events.iam_constants import IamTopics
 
         svc, mock_config = _build_service_with_sr({TEST_TOPIC: user_dir_schema})
-        mock_config.KAFKA_CONSUMER_ENABLE = True
+        mock_config.CONSUMER_ENABLE = True
 
         mock_registry = MagicMock()
         mock_logger = MagicMock()

@@ -149,6 +149,17 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.m_serializer = f'{cls.__name__.lower()}_serializer'
+        print(f'BaseEvent __init_subclass__: {cls.__name__} m_serializer={cls.m_serializer}')
+
+    def __post_init__(self) -> None:
+        # self.m_serializer = type(self).m_serializer
+        self.m_serializer = f'{type(self).__name__.lower()}_serializer'
+        # if not self.event_id:
+        #     self.event_id = generate_id()
+        # if not self.timestamp:
+        #     self.timestamp = now_in_utc()
+
+        print(f'BaseEvent __post_init__: event_type={self.event_type}, event_id={self.event_id}, m_serializer={self.m_serializer}, timestamp={self.timestamp}')
 
     ########################################################################################################################
     # Metadata fields (common to all events)
@@ -158,7 +169,11 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
     timestamp: datetime = msgspec.field(default_factory=now_in_utc)
     retry_count: int = 0
     m_serializer: str = 'baseevent_serializer'
-    """ Failure handler name for retry/dead-letter scenarios - populated by event processor at runtime, not set by event publishers """
+    """
+    This field is used to register the event class with the message encoder for serialization/deserialization.
+    Especially when restructuring the event class
+    """
+
     source: Optional[str] = None
     """
         Event source service - optional field that can be set by publishers for additional context, not used by event processor logic but may be useful for monitoring and debugging
@@ -186,15 +201,6 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
     # as a dict, which the publisher/``_serialize`` later encodes to bytes|str
     # (Avro/JSON). Matches the ``EventPayloadType`` alias above.
     payload: bytes | str | dict | None = None
-
-    def __post_init__(self) -> None:
-        self.m_serializer = type(self).m_serializer
-        # if not self.event_id:
-        #     self.event_id = generate_id()
-        # if not self.timestamp:
-        #     self.timestamp = now_in_utc()
-
-        print(f'BaseEvent __post_init__: event_type={self.event_type}, event_id={self.event_id}')
 
     def set_payload(self, payload: bytes | str | None):
         """Helper method to set the payload for good type hint."""
@@ -268,6 +274,19 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
 
     class Meta:
         namespace = 'com.eworksuite'
+
+    def validate_event(self):
+        """Validate the event fields and payload."""
+        if not self.event_type:
+            raise ValueError('event_type is required')
+        if not self.event_id:
+            raise ValueError('event_id is required')
+        if not isinstance(self.timestamp, datetime): # type: ignore[reportUnnecessaryIsInstance]
+            raise ValueError('timestamp must be a datetime object')
+        if self.retry_count < 0:
+            raise ValueError('retry_count must be >= 0')
+
+        # self.__post_init__()
 
 
 class StandardDataclass(Protocol):
@@ -634,9 +653,9 @@ class IMessagingService[M](ABC):
     async def publish(
         self,
         channel: str,
-        message: BaseEvent,
+        message: BaseSendableMessage,
         *,
-        key: bytes | str | Any | None = None,
+        ordering_key: bytes | str | Any | None = None,
         timestamp_ms: int | None = None,
         headers: dict[str, str] | None = None,
         partition: Optional[int] = None,
@@ -651,7 +670,7 @@ class IMessagingService[M](ABC):
         Args:
             channel: Target channel name (for pub/sub)
             message: Message to publish
-            key: Optional key for message routing and ordering
+            ordering_key: Optional key for message routing and ordering
             headers: Optional headers for the message
             partition: Optional partition for ordering (streams/channels)
             timestamp_ms:
@@ -670,7 +689,8 @@ class IMessagingService[M](ABC):
 
     async def publish_batch(  # type: ignore[override]
         self,
-        *messages: list[BaseEvent | dict],
+        *,
+        messages: list[BaseEvent | dict],
         channel: str,
         partition: int | None = None,
         timestamp_ms: int | None = None,
@@ -682,7 +702,7 @@ class IMessagingService[M](ABC):
         pass
 
     @abstractmethod
-    def register_schema(self, channel: str, schema: dict) -> str:
+    def register_schema(self, channel: str, schema: type[BaseEvent]) -> bool:
         """
         Register a schema for a channel/stream/queue. Returns schema ID.
 
@@ -692,7 +712,7 @@ class IMessagingService[M](ABC):
         Returns:
             Schema ID assigned by the registry
         """
-        pass
+        ...
 
     @abstractmethod
     def register_event_serializer(
@@ -849,7 +869,7 @@ class IMessageRoutingService(ABC):
         channel: str,
         *,
         session: DBAsyncSession | DBAsyncScopedSession | None = None,
-        partition_key: str | None = None,
+        ordering_key: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int | None = None,
     ) -> Any:
@@ -861,7 +881,7 @@ class IMessageRoutingService(ABC):
             channel: The name of the channel to which the event should be routed.
             session: Optional database session for transactional routing.
                 Required if routing to the outbox service, as it may involve database operations.
-            partition_key: Optional key for partitioning messages in streams.
+            ordering_key: Optional key for ordering messages in streams.
             headers: Optional headers to include with the message.
             max_retries: Optional maximum number of retries for routing failures.
         """
