@@ -1,6 +1,6 @@
+from .app_settings import AppSettings
 from .settings import (
     CONFIG_PREFIX,
-    AppSettings,
     DatabaseSettings,
     ServerSettings,
     Settings,

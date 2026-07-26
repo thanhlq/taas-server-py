@@ -20,9 +20,12 @@ from __future__ import annotations
 import asyncio
 
 from foundation.factory import FoundationFactory
+from foundation.messaging.factory import MessagingFactory
 from foundation.utils.icons import Icons
 from foundation.worker.base_worker import BaseWorker
-from messaging_faststream import initialize_messaging_service
+from iam.iam_factory import IamFactory
+from iam_keycloak import IamServiceFactory
+from messaging_faststream import initialize_messaging_service, messaging
 from resiliant import ResiliantServiceFactory
 from store_redis import RedisCacheServiceFactory
 
@@ -36,8 +39,6 @@ DEMO_TOPIC = 'ews.demo.ping'
 class EwsWorker(BaseWorker):
     """EWS background worker (Kafka consumer + outbox relay)."""
 
-
-
     def __init__(self) -> None:
         super().__init__(name='ews_worker')
         self._subscription_ids: list[str] = []
@@ -45,41 +46,48 @@ class EwsWorker(BaseWorker):
         # isn't defined in this repo's Settings; read it from the environment
         # instead. Default 7100 avoids macOS AirPlay's use of port 7000.
 
-    def _init_internal_services(self) -> None:
-        resiliant_factory = ResiliantServiceFactory()
-        FoundationFactory.init_default_services()
-        FoundationFactory.use_resiliant(resiliant_factory)
-
-    # ------------------------------------------------------------------ cache
-    def _init_cache(self) -> None:
+    def _init_cache_service(self) -> None:
         """Register the shared Redis cache service (mirrors the API lifespan)."""
         cache_config = settings.app.get_cache_config()
         if cache_config.enabled:
             RedisCacheServiceFactory.create(cache_config)
             self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
         else:
-            self.logger.info(f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration')
+            self.logger.info(
+                f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration'
+            )
+
+    async def _init_services(self) -> None:
+        FoundationFactory.init_default_services()
+        self._init_cache_service()
+        FoundationFactory.use_resiliant(ResiliantServiceFactory())
+        MessagingFactory.init_factory(
+            messaging_service=await initialize_messaging_service(),
+            decorator=messaging,
+        )
+        IamFactory.initialize_iam(IamServiceFactory())
+
+    # ------------------------------------------------------------------ cache
 
     # -------------------------------------------------------------- handlers
     async def _handle_demo_event(self, event: object) -> None:
         """Demo subscriber: log every event received on :data:`DEMO_TOPIC`."""
         self.logger.info('📥 [demo] received event on %s: %r', DEMO_TOPIC, event)
 
-    async def _register_subscribers(self) -> None:
-        """Register topic subscribers before the consumer loop starts.
+    # async def _register_subscribers(self) -> None:
+    #     """Register topic subscribers before the consumer loop starts.
 
-        Uses the dynamic ``subscribe()`` API (independent consumer group per
-        subscription). Domain (IAM/EWS) handlers can be registered here once
-        migrated off the legacy ``core.*`` package.
-        """
-        assert self.messaging_service is not None
-        sub_id = await self.messaging_service.subscribe(
-            DEMO_TOPIC, self._handle_demo_event, from_beginning=True
-        )
-        self._subscription_ids.append(sub_id)
-        self.logger.info(
-            '⬅️  Subscribed to demo topic %s (sub_id=%s)', DEMO_TOPIC, sub_id
-        )
+    #     Uses the dynamic ``subscribe()`` API (independent consumer group per
+    #     subscription). Domain (IAM/EWS) handlers can be registered here once
+    #     migrated off the legacy ``core.*`` package.
+    #     """
+    #     sub_id = await self.messaging_service.subscribe(
+    #         DEMO_TOPIC, self._handle_demo_event, from_beginning=True
+    #     )
+    #     self._subscription_ids.append(sub_id)
+    #     self.logger.info(
+    #         '⬅️  Subscribed to demo topic %s (sub_id=%s)', DEMO_TOPIC, sub_id
+    #     )
 
     # ----------------------------------------------------------- task wiring
     async def initialize_worker_tasks(self) -> 'BaseWorker':
@@ -88,66 +96,15 @@ class EwsWorker(BaseWorker):
         Overrides the base implementation to take full control of ordering:
         subscribers must be registered *before* the consumer loop starts.
         """
-        # 1. Cache (same as the API lifespan).
-        self._init_cache()
 
-        self._init_internal_services()
+        await self._init_services()
 
-        # 2. Messaging service — also registers ``IMessagingService`` in the
-        #    service locator so publishers elsewhere can resolve it.
-        self.messaging_service = await initialize_messaging_service()
-
-        # 3. Register subscribers before consumption begins.
-        await self._register_subscribers()
-
-        # 4. Kafka consumer loop (blocks until the service is stopped).
         self.worker_tasks = []
-        consumer_task = asyncio.create_task(self.messaging_service.start_consuming())
-        self.worker_tasks.append(('kafka_consumer', consumer_task))
 
-        # 5. Outbox relay (optional — enable via OUTBOX_POLLER_ENABLE).
-        # if self.outbox_poller_enabled:
-        #     relay_task = asyncio.create_task(self._outbox_relay_loop())
-        #     self.worker_tasks.append(('outbox_relay', relay_task))
-        #     self.logger.info('📤 Outbox relay enabled')
-        # else:
-        #     self.logger.info('📤 ⚫ Outbox relay disabled by configuration')
+        if self.config.messaging_consumer_enabled:
+            consumer_task = asyncio.create_task(
+                self.messaging_service.start_consuming()
+            )
+            self.worker_tasks.append(('messaging_consumer', consumer_task))
 
         return self
-
-    # ----------------------------------------------------------- outbox relay
-    # async def _outbox_relay_loop(self) -> None:
-    #     """Periodically publish pending outbox events to the broker.
-
-    #     A lightweight relay built on the ``resiliant`` transactional outbox:
-    #     claim a batch of PENDING rows, publish each to its channel, then mark
-    #     it PUBLISHED. Runs until the task is cancelled during shutdown.
-    #     """
-    #     from foundation.db.advanced_db_manager import MainDatabase
-    #     from resiliant import ResiliantServiceBuilder
-
-    #     outbox = ResiliantServiceBuilder.build_outbox_service()
-    #     repo = outbox.repository
-    #     db: AdvancedDBManager = MainDatabase.get_instance()
-    #     interval_seconds = 3.0
-
-    #     while True:
-    #         try:
-    #             async with db.new_session() as session:
-    #                 pending = await repo.fetch_pending_batch(session, batch_size=50)
-    #                 for event in pending:
-    #                     assert self.messaging_service is not None
-    #                     await self.messaging_service.publish(
-    #                         event.channel,
-    #                         event.payload,
-    #                         headers=event.headers or {},
-    #                     )
-    #                     await repo.mark_published(session, event.id)
-    #                 if pending:
-    #                     self.logger.info('📤 relayed %d outbox event(s)', len(pending))
-    #         except asyncio.CancelledError:
-    #             raise
-    #         except Exception:
-    #             self.logger.exception('Outbox relay iteration failed')
-
-    #         await asyncio.sleep(interval_seconds)

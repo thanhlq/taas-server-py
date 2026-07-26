@@ -8,10 +8,10 @@ The module is responsible for setting up the FastAPI app, including:
 IMPORTANT:
 - This app can be started directly with uvicorn, or it can be imported and used as a module in another FastAPI app.
 """
-from logging import Logger
-from typing import TYPE_CHECKING, Any, Optional
 
-import socketio
+from logging import Logger
+from typing import TYPE_CHECKING, Any
+
 from db.check_db import a_check_db_consistency
 from ews import get_ews_controllers
 from fastapi import FastAPI
@@ -23,7 +23,7 @@ from foundation.factory import FoundationFactory
 from foundation.http._websocket_redis_manager import build_websocket_redis_manager
 from foundation.http.base_app import AppConfig, BaseApiApplication
 from foundation.messaging.factory import MessagingFactory
-from foundation.messaging.types import IMessagingService
+from foundation.utils.icons import Icons
 from http_fastapi import create_app
 from http_fastapi.adapters import create_socketio_asgi_app, include_controller
 from http_fastapi.setup_fastapi_app import setup_fastapi_app
@@ -32,7 +32,7 @@ from iam.iam_factory import IamFactory
 from iam_keycloak import IamServiceFactory
 
 # from messaging_kafka import initialize_messaging_service
-from messaging_faststream import initialize_messaging_service
+from messaging_faststream import initialize_messaging_service, messaging
 from resiliant import ResiliantServiceFactory
 from store_redis import RedisCacheServiceFactory
 
@@ -43,8 +43,6 @@ if TYPE_CHECKING:
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):
-    _socketio_app: Optional[socketio.ASGIApp] = None
-
     def __init__(
         self,
         *,
@@ -53,7 +51,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     ) -> None:
         super().__init__(settings, runtime_path, None)
 
-        self._init_services()  # Initialize services before building the app
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 
     def instrument_settings(self) -> 'InstrumentSettings':
@@ -66,90 +63,71 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     def get_app_id(self) -> str:
         return 'ews_api'
 
-    def get_websocket_app(self) -> socketio.ASGIApp:
-        if self._socketio_app is None:
-            raise RuntimeError(
-                'WebSocket app has not been built yet. Call get_app() first to build the app.'
-            )
-        return self._socketio_app
-
-    def is_websocket_enabled(self) -> bool:
-        return True
-
-    def enable_ws_logging(self) -> bool:
-        return (
-            self.config.websocket_config is not None
-            and self.config.websocket_config.debug
-        )
-
     def build_application(self) -> 'FastAPI':
 
         @asynccontextmanager
-        async def lifespan(application: FastAPI):
-
-            RedisCacheServiceFactory.create(settings.app.get_cache_config())
-
-            # 01. Check db consistency
-            if settings.app.check_database_consistency():
-                cli_print_info('Checking database consistency...')
-                if len(await a_check_db_consistency()) > 0:
-                    raise RuntimeError(
-                        'Database consistency check failed. Please check the logs for details.'
-                    )
-
-            _controllers = self.get_app_controllers()
-            for controller in _controllers:
-                include_controller(_fastapi_app, controller)
-
-            # Validate the manager is what we configured. Blocks startup if not.
-            if self.config.websocket_config and self.config.websocket_config.debug:
-                pass
-
-                # await verify_socketio_manager(
-                #     server,  # the AsyncServer instance
-                #     expect_redis=True,  # only require Redis when we asked for it
-                #     roundtrip=True,  # set False to skip the pub/sub probe
-                #     timeout=2.0,
-                # )
-
-            _ms: IMessagingService = await initialize_messaging_service(settings)
-            MessagingFactory.init_factory(messaging_service=_ms, decorator=None)
-
-            # FIXME: TO BE MIGRATED
-            from iam.auth.handlers.init_handlers import (
-                register_iam_schema_registry_schemas,
-            )
-            register_iam_schema_registry_schemas(_ms)
-
+        async def lifespan(app: FastAPI):
+            await self._init_services()
             yield  # Startup complete, now run the app
-
             cli_print_info('Shutting down application...')
 
         _fastapi_app: FastAPI = _setup_fastapi_app(
             logger=self.logger, app_config=self.config, lifespan=lifespan
         )
 
-        _controllers = self.get_app_controllers()
+        _controllers = self._get_enabled_app_controllers()
+        for controller in _controllers:
+                include_controller(_fastapi_app, controller)
+
         if self.is_websocket_enabled():
             websocket_config: WebSocketConfig = self.config.websocket_config  # type: ignore
             self._socketio_app, server = create_socketio_asgi_app(
                 _fastapi_app,
                 *_controllers,
                 client_manager=build_websocket_redis_manager(websocket_config),
-                logging_enabled=self.enable_ws_logging(),
+                logging_enabled=self.is_wss_logging_enable(),
             )
 
         return _fastapi_app
 
-    def _init_services(self) -> None:
-        # Initialize the ResiliantServiceFactory and register it with the FoundationFactory
+    def _init_cache_service(self) -> None:
+        """Register the shared Redis cache service (mirrors the API lifespan)."""
+        cache_config = settings.app.get_cache_config()
+        if cache_config.enabled:
+            RedisCacheServiceFactory.create(cache_config)
+            self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
+        else:
+            self.logger.info(
+                f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration'
+            )
+
+    async def _init_database_service(self) -> None:
+        if settings.app.check_database_consistency():
+            cli_print_info('Checking database consistency...')
+            if len(await a_check_db_consistency()) > 0:
+                raise RuntimeError(
+                    'Database consistency check failed. Please check the logs for details.'
+                )
+
+    async def _init_services(self) -> None:
+        await self._init_database_service()
+
         FoundationFactory.init_default_services()
+        self._init_cache_service()
         FoundationFactory.use_resiliant(ResiliantServiceFactory())
+        MessagingFactory.init_factory(
+            messaging_service=await initialize_messaging_service(),
+            decorator=messaging,
+        )
+        IamFactory.initialize_iam(IamServiceFactory())
 
-        IamFactory.set_iam_service_factory(IamServiceFactory())
-
-    def get_app_controllers(self) -> list[Any]:
+    def _get_enabled_app_controllers(self) -> list[Any]:
         return [*get_iam_controllers(), *get_ews_controllers()]
+
+    def _init_api_routes(self, app: FastAPI) -> None:
+        """Add API routes to the FastAPI app."""
+        for controller in self._get_enabled_app_controllers():
+            include_controller(app, controller)
 
 
 def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastAPI:
@@ -174,10 +152,6 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastA
 
 _ews_app = EwsApplication(settings=settings, runtime_path=root_path)
 
-app = (
-    _ews_app.get_websocket_app()
-    if _ews_app.is_websocket_enabled()
-    else _ews_app.get_app()
-)
+app = _ews_app.websocket_app if _ews_app.is_websocket_enabled() else _ews_app.get_app()
 
 __all__ = ('app',)

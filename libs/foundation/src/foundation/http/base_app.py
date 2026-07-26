@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from logging import Logger
 from typing import Optional
 
+import socketio
 from litestar.utils import join_paths
 from rich.console import Console
 
@@ -10,7 +11,9 @@ from foundation.cli import get_console
 from foundation.config import DatabaseSettings, Settings
 from foundation.config.app import AppConfig
 from foundation.config.openapi import build_openapi_config
+from foundation.messaging.types import IMessagingService
 from foundation.observability.types import InstrumentSettings
+from foundation.state import get_service
 
 __all__ = ('BaseApiApplication', 'AppConfig')
 
@@ -19,15 +22,16 @@ class BaseApiApplication[A](ABC):
     _app: A
     _config: AppConfig
     _db_config: DatabaseSettings
-    _all_settings: Settings
+    _settings: Settings
     _console: Console
     _logger: Logger
     _runtime_path: str
+    _socketio_app: Optional[socketio.ASGIApp] = None
 
     def __init__(self, settings: Settings, runtime_path: str, instrumentation: InstrumentSettings | None = None) -> None:
-        self._all_settings = settings
+        self._settings = settings
         self._config = AppConfig(
-            app_name=settings.app.NAME,
+            name=settings.app.NAME,
             debug=settings.app.DEBUG,
             compression_config=settings.app.get_compression_config(),
             ratelimit_config=settings.app.get_ratelimit_config(),
@@ -54,8 +58,12 @@ class BaseApiApplication[A](ABC):
         return self._config.instrumentation # type: ignore
 
     @property
-    def all_settings(self) -> Settings:
-        return self._all_settings
+    def messaging_service(self) -> IMessagingService:
+        return get_service(IMessagingService)
+
+    @property
+    def settings(self) -> Settings:
+        return self._settings
 
     def get_app_runtime_path(self, *subpaths: Optional[str]) -> str:
         """Construct a path relative to the app's runtime path."""
@@ -79,6 +87,24 @@ class BaseApiApplication[A](ABC):
         if not hasattr(self, '_console'):
             self._console = get_console()
         return self._console
+
+    def is_websocket_enabled(self) -> bool:
+        return True
+
+    def is_wss_logging_enable(self) -> bool:
+        """ Check if websocket logging is enabled based on the configuration. """
+        return (
+            self.config.websocket_config is not None
+            and self.config.websocket_config.debug
+        )
+
+    @property
+    def websocket_app(self) -> socketio.ASGIApp:
+        if self._socketio_app is None:
+            raise RuntimeError(
+                'WebSocket app has not been built yet. Call get_app() first to build the app.'
+            )
+        return self._socketio_app
 
     @abstractmethod
     def get_app_id(self) -> str:
@@ -107,6 +133,6 @@ class BaseApiApplication[A](ABC):
         #     show_all_environment_variables()
 
     @abstractmethod
-    def get_app_controllers(self) -> list:
+    def _get_enabled_app_controllers(self) -> list:
         """Return a list of controller instances to register on the app."""
         ...

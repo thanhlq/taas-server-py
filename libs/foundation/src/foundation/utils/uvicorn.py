@@ -35,7 +35,19 @@ def run_uvicorn(
         - port: The port number to bind the Uvicorn server to.
     """
     from foundation.cli import cli
-    cli.info(f"Starting Uvicorn server on {host}:{port} with reload={reload}, workers={workers}, mode={'direct' if isinstance(app, Callable) else 'import string'}")
+
+    server_info: dict[str, Any] = {
+        "host": host,
+        "port": port,
+        "reload": reload,
+        "workers": workers,
+        "log_config": log_config,
+        "log_level": log_level,
+    }
+    cli.success_table(
+        title="Starting Uvicorn Server",
+        data=server_info,
+    )
 
     uvicorn.run(
         app,
@@ -48,3 +60,5 @@ def run_uvicorn(
         access_log=False,  # Disable Uvicorn's default access log to reduce noise; use custom logging in the app instead
         # loop='auto',
     )
+
+

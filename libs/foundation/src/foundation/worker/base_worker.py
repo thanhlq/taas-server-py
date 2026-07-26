@@ -15,7 +15,6 @@ from asyncio.events import AbstractEventLoop
 from typing import Any, Optional
 
 from aiohttp import web
-from messaging_faststream import initialize_messaging_service
 
 from foundation.cli import cli
 from foundation.config import get_settings
@@ -23,6 +22,7 @@ from foundation.exceptions.report_error import report_error
 from foundation.messaging.types import IMessagingService
 from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
+from foundation.state import get_service
 from foundation.utils import now_in_utc
 from foundation.worker.worker_settings import WorkerConfig, WorkerSettings
 
@@ -80,17 +80,10 @@ class BaseWorker:
         self.start_time: Optional[datetime.datetime] = None
         self.health_server: Optional[web.Application] = None
         self.health_runner: Optional[web.AppRunner] = None
-        self.messaging_service: Optional[IMessagingService] = None
         self.worker_tasks: list[tuple[str, asyncio.Task]] = []
 
         self._config: WorkerConfig = config or WorkerSettings().get_config()
-        # self.health_check_enabled: bool = self._config.health_check_enabled
-        # self.health_check_server_port: int = self._config.health_check_server_port
-        # self.outbox_poller_enabled: bool = self._config.outbox_poller_enabled
-        # self.health_check_interval_seconds: int = (
-        #     self._config.health_check_interval_seconds
-        # )
-
+        self._config.messaging_consumer_enabled = settings.messaging.CONSUMER_ENABLE
         self._health_check_task: Optional[asyncio.Task] = None
 
         cli.info_table('Worker Info', self.info())
@@ -99,6 +92,10 @@ class BaseWorker:
     def config(self) -> WorkerConfig:
         """Return the worker configuration."""
         return self._config
+
+    @property
+    def messaging_service(self) -> IMessagingService:
+        return get_service(IMessagingService)
 
     def _owned_pending_tasks(self) -> list[asyncio.Task]:
         """Tasks owned by this worker (worker tasks + health check loop) still pending.
@@ -228,10 +225,11 @@ class BaseWorker:
             'name': self.name,
             'running': self.running,
             'uptime_seconds': uptime,
+            'outbox_poller_enabled': self.config.outbox_poller_enabled,
+            'messaging_consumer_enabled': self.config.messaging_consumer_enabled,
             'worker_tasks': self.get_worker_task_names(),
             'health_check_enabled': self.config.health_check_enabled,
             'health_check_port': self.config.health_check_server_port,
-            'outbox_poller_enabled': self.config.outbox_poller_enabled,
         }
 
     async def main(self):
@@ -295,9 +293,6 @@ class BaseWorker:
 
     async def initialize_worker_tasks(self) -> 'BaseWorker':
         """Initialize worker tasks based on configuration."""
-
-        # Initialize messaging service
-        self.messaging_service = await initialize_messaging_service()
 
         # Register topics/handlers before the consumer task exists — avoids
         # relying on the consumer task not being scheduled until the next await.

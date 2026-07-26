@@ -870,27 +870,6 @@ class IMessageRoutingService(ABC):
 # ============================================================================
 
 
-class IMessagingPubSubService(IMessagingService, ABC):
-    """
-    Abstract pub/sub service interface:
-
-    Delivery:
-    - Publish messages to channels (1 -> N)
-    - Subscribe to channels with handlers (N -> 1)
-    - At-least-once delivery (normally deleted after successful processing)
-    - Ordering not guaranteed unless using partitions/keys
-
-    Providers:
-    - Kafka, AWS SQS, Redis Pub/Sub, NATS (with JetStream for persistence), RabbitMQ, etc.
-    - Small usages: In-memory or redis-based pub/sub for lightweight messaging
-
-    Use cases:
-    - Real-time notifications, event broadcasting
-
-    For example: User registered → notify multiple services (email, analytics, CRM)
-    """
-
-
 class IMessagingStreamService(IMessagingService):
     """
     Abstract message stream service interface for log-based streaming.

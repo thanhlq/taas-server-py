@@ -28,6 +28,9 @@ class WorkerConfig:
     outbox_poller_enabled: bool = True
     """Whether the outbox poller/relay is enabled."""
 
+    # Should take from settings.messaging.CONSUMER_ENABLE
+    messaging_consumer_enabled: bool = True
+
 
 @dataclass
 class WorkerSettings:

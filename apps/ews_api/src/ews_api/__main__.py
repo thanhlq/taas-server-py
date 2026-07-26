@@ -26,13 +26,21 @@ def main():
             ASGI_APP_PACKAGE,
             reload=settings.server.RELOAD,
             workers=settings.server.WORKERS,
+            host=settings.server.HOST,
+            port=settings.server.PORT,
         )
 
     else:
         # Single-process mode: build/import the app object and run it directly.
         from .app import app
 
-        run_uvicorn(app, reload=settings.server.RELOAD, workers=settings.server.WORKERS)
+        run_uvicorn(
+            app,
+            reload=settings.server.RELOAD,
+            workers=settings.server.WORKERS,
+            host=settings.server.HOST,
+            port=settings.server.PORT,
+        )
 
 
 if __name__ == '__main__':

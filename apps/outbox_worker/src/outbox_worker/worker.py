@@ -24,8 +24,10 @@ import os
 
 from foundation.db.advanced_db_manager import AdvancedDBManager, MainDatabase
 from foundation.factory import FoundationFactory
+from foundation.messaging.factory import MessagingFactory
+from foundation.utils.icons import Icons
 from foundation.worker.base_worker import BaseWorker
-from messaging_faststream import initialize_messaging_service
+from messaging_faststream import initialize_messaging_service, messaging
 from resiliant import ResiliantServiceFactory
 from resiliant.outbox import OutboxPoller
 from resiliant.outbox.outbox_settings import get_outbox_config
@@ -42,20 +44,20 @@ class OutboxWorker(BaseWorker):
         # instead. Default 7110 keeps it distinct from ews_worker (7100).
         self.health_check_server_port = int(os.getenv('WORKER_LISTEN_PORT', '7110'))
 
-    def _init_internal_services(self) -> None:
-        resiliant_factory = ResiliantServiceFactory()
+    async def _init_services(self) -> None:
         FoundationFactory.init_default_services()
-        FoundationFactory.use_resiliant(resiliant_factory)
+        FoundationFactory.use_resiliant(ResiliantServiceFactory())
+        MessagingFactory.init_factory(
+            messaging_service=await initialize_messaging_service(),
+            decorator=messaging,
+        )
 
     # ----------------------------------------------------------- task wiring
     async def initialize_worker_tasks(self) -> 'BaseWorker':
         """Wire up messaging (publisher), resilient services, and the poller."""
         # 1. Internal services (resiliant + foundation defaults).
-        self._init_internal_services()
+        await self._init_services()
 
-        # 2. Messaging service — registers ``IMessagingService`` in the service
-        #    locator and gives us a broker publisher for the poller.
-        self.messaging_service = await initialize_messaging_service()
 
         # 3. Build the outbox poller. It reuses the resiliant OutboxRepository
         #    and publishes through the messaging service.
@@ -71,7 +73,7 @@ class OutboxWorker(BaseWorker):
         self.worker_tasks = []
         poller_task = asyncio.create_task(self._poller.run())
         self.worker_tasks.append(('outbox_poller', poller_task))
-        self.logger.info('📤 Outbox poller task started')
+        self.logger.info(f'{Icons.OUTBOX_SERVICE} Outbox poller task started')
 
         return self
 

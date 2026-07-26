@@ -129,6 +129,7 @@ class Icons:
     DEBUG = '🐞'
 
     MESSAGE = '✉️'
+    MESSAGING_SERVICE = '📡'
 
     MESSAGE_PUBLISHED = '📤'
     MESSAGE_RECEIVED = '📩'

@@ -21,7 +21,7 @@ def configure_app(app: FastAPI, config: AppConfig, **kwargs) -> FastAPI:
 
     # 4. Add a simple root endpoint for testing
     app.add_api_route(
-        '/', lambda: {'message': f'Hello from {config.app_name}!'}, methods=['GET']
+        '/', lambda: {'message': f'Hello from {config.name}!'}, methods=['GET']
     )
 
     return app

@@ -23,7 +23,7 @@ def create_app(config: AppConfig, **kwargs) -> FastAPI:
         swagger_ui_init_oauth={
             'clientId': 'eworksuite-web',
             # "clientSecret": settings.KEYCLOAK_LOGIN_CLIENT_SECRET,  # Uncomment only if using confidential client
-            'appName': f'{config.app_name} API Documentation',
+            'appName': f'{config.name} API Documentation',
             'scopes': 'openid profile email',
             'usePkceWithAuthorizationCodeGrant': True,
         },

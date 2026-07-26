@@ -63,7 +63,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
         return self._socketio_app
 
     def build_application(self) -> Litestar:
-        controllers = self.get_app_controllers()
+        controllers = self._get_enabled_app_controllers()
 
         @asynccontextmanager
         async def lifespan(_app: Litestar):
@@ -122,7 +122,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
 
         return litestar_app
 
-    def get_app_controllers(self) -> list[Any]:
+    def _get_enabled_app_controllers(self) -> list[Any]:
         return [*get_iam_controllers(), *get_ews_controllers()]
 
 

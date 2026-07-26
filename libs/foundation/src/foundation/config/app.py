@@ -1,7 +1,7 @@
 from __future__ import annotations
-from enum import StrEnum
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from starlette.responses import Response
@@ -45,7 +45,7 @@ class AppConfig:
     The final attribute values are used to instantiate the application object.
     """
 
-    app_name: str | None = field(default=None)
+    name: str | None = field(default=None)
     debug: bool = field(default=False)
 
     instrumentation: InstrumentSettings | None = field(default=None)

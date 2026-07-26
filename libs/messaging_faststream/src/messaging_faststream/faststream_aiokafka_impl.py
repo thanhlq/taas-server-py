@@ -96,8 +96,7 @@ from foundation.messaging.types import (
     BaseSendableMessage,
     DlqEvent,
     IMessageEncoder,
-    IMessagingPubSubService,
-    MessageEncodingType,
+    IMessagingService,
     MessageHandler,
     MessageServiceStats,
     MessagingProvider,
@@ -131,7 +130,7 @@ class _SubscriptionInfo:
 
 
 @singleton
-class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingPubSubService):
+class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
     """
     Kafka messaging service built on FastStream 0.6.x.
 
