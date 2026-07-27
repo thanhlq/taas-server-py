@@ -23,6 +23,7 @@ class IamDataHelper:
         tenant.description = directory_tenant.description
         tenant.alias_id = directory_tenant.alias_id
         tenant.directory_id = directory_tenant.id
+        # tenant.realm_name = directory_tenant.name
         # tenant.realm_name = event.realm_name
         tenant.id = generate_tenant_id()
 

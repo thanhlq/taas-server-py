@@ -3,6 +3,7 @@ from uuid import UUID
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
 from advanced_alchemy.base import DefaultBase as BaseDBModel
+from advanced_alchemy.mixins import SlugKey
 from advanced_alchemy.types import DateTimeUTC
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -22,6 +23,7 @@ __all__ = [
     'ID_COLUMN_TYPE',
     'JSONB',
     'Uuid36DBGenerating',
+    'SlugKey',
 ]
 
 

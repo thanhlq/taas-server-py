@@ -3,26 +3,45 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, String, text
+from sqlalchemy import (
+    TEXT,
+    TIMESTAMP,
+    Boolean,
+    Enum,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.models.base import ID_COLUMN_TYPE, JSONB, BaseDBModel, SoftDeleteColumns
 from db.models.core.constants import TENANT_TABLE
 from db.models.core.enums import TenantStatus
 
+from ..base import (
+    ID_COLUMN_TYPE,
+    JSONB,
+    TENANT_ID_COLUMN_TYPE,
+    BaseDBModel,
+    SlugKey,
+    SoftDeleteColumns,
+)
 
-class Tenant(BaseDBModel, SoftDeleteColumns):
+
+class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey):
     """Tenant model representing a Keycloak realm"""
 
     __tablename__ = TENANT_TABLE
+    __table_args__ = (UniqueConstraint('id', 'slug'),)
 
     # id: Mapped[str] = mapped_column(
     #     Text,
     #     server_default=text('gen_random_uuid()'),
     #     primary_key=True,
     # )
-    id: Mapped[int] = mapped_column(
-        String(12),
+    id: Mapped[TENANT_ID_COLUMN_TYPE] = mapped_column(
+        Integer,
         primary_key=True,
     )
     # Id that stored in Keycloak i.e. organization_id in Keycloak

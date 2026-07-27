@@ -18,7 +18,7 @@ class TenantSetupEventHandler(BaseEventHandler[TenantCreatedEvent]):
     ) -> ProcessingResult:
         # TODO: Implement tenant created email sending logic
         self.logger.warning(
-            f'🧪 TenantSetupEventHandler not implemented yet: event_id={meta.event_id}'
+            f'🧪 TenantSetupEventHandler not implemented yet: event_id={event.event_id}'
         )
 
         # print_dict_pretty(event.as_dict(), 'TenantCreatedEvent payload')

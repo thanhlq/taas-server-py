@@ -87,9 +87,18 @@ class AdvancedDBManager:
         return self._sessionmaker
 
     def new_session(self) -> AsyncSession:
+        """ Important: This method creates a new session every time it is called. It does not check for existing sessions in the context. Use get_session_generator() for context-aware session management."""
         s = self._sessionmaker()
         self.session_stats.increment_created()
         return s
+
+    def get_current_or_new_session(self) -> AsyncSession:
+        """Get the current session from context or create a new one if none exists."""
+        existing_session = self.get_current_context_session()
+        if existing_session is not None:
+            return existing_session
+        else:
+            return self.new_session()
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:

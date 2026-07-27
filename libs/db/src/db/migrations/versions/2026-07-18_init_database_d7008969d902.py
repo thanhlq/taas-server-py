@@ -581,8 +581,9 @@ def schema_upgrades() -> None:
         batch_op.create_index(batch_op.f('ix_taas_team_team_type'), ['team_type'], unique=False)
 
     op.create_table('taas_tenants',
-    sa.Column('id', sa.String(length=12), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('directory_id', sa.String(length=36), nullable=True),
+    sa.Column('slug', sa.String(length=100), nullable=True),
     sa.Column('realm_name', sa.String(length=36), nullable=True),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('code', sa.TEXT(), nullable=True),

@@ -6,7 +6,12 @@ from db import BaseAsyncRepository
 from db.common import IRepositoryFactory
 from db.models import User
 from ews.core import CoreRepositoryFactory
-from ews.core.repos import TenantRepository, UserRepository
+from ews.core.repos import (
+    RoleRepository,
+    TeamRepository,
+    TenantRepository,
+    UserRepository,
+)
 from ews.core.repos._organization_repo import OrganizationRepository
 from foundation import BaseService
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
@@ -53,6 +58,12 @@ class BaseIamService(BaseService, ABC):
 
     def get_organization_repository(self, session: DBAsyncSession | DBAsyncScopedSession) -> OrganizationRepository:
         return cast(OrganizationRepository, self.get_repository(OrganizationRepository.model_type, session))
+
+    def get_role_repository(self, session: DBAsyncSession | DBAsyncScopedSession) -> RoleRepository:
+        return cast(RoleRepository, self.get_repository(RoleRepository.model_type, session))
+
+    def get_team_repository(self, session: DBAsyncSession | DBAsyncScopedSession) -> TeamRepository:
+        return cast(TeamRepository, self.get_repository(TeamRepository.model_type, session))
 
 
 class BaseIamEventHandler[EventT: Any](BaseEventHandler[EventT], ABC):

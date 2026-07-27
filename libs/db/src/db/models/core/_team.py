@@ -7,6 +7,8 @@ from advanced_alchemy.mixins import SlugKey
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from db.models.core.enums import TeamType
+
 from ._team_tag import team_tag
 from .constants import TEAM_TABLE
 
@@ -30,7 +32,7 @@ class Team(UUIDv7AuditBase, SlugKey):
     )
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     team_type: Mapped[str] = mapped_column(
-        String(length=50), nullable=False, default='general', index=True
+        String(length=50), nullable=False, default=TeamType.GENERAL, index=True
     )
     """ team_type can be 'general', 'department', 'project', etc."""
     members: Mapped[list[TeamMember]] = relationship(

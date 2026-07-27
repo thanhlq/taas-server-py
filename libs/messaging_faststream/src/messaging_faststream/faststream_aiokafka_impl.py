@@ -257,7 +257,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         """
         try:
             self.logger.info(
-                f'📨 ➡️  Connecting FastStream broker: {self._config.kafka_bootstrap_servers}'
+                f'🌊 ➡️  Connecting FastStream broker: {self._config.kafka_bootstrap_servers}'
             )
             await self._broker.connect()
 
@@ -267,7 +267,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             await self._admin_client.start()
 
             self.running = True
-            self.logger.info('📨 ➡️ 🟢  FastStream broker connected — producer ready')
+            self.logger.info('🌊 ➡️ 🟢  FastStream broker connected — producer ready')
         except Exception as exc:
             report_error(
                 exc, title='FastStream Producer Start Error', logger=self.logger
@@ -276,22 +276,13 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def start_consumer(self) -> None:
         """
-        Record the topics that should be consumed in the main worker loop.
+        Start the consumer
 
-        The FastStream subscriber objects are **not** created here — that
-        happens in ``start_consuming()`` / ``start_consuming_sequential()``
-        so that the correct ``max_workers`` value can be applied.
-
-        Raises:
-            RuntimeError: When called before ``start_producer()``.
+        But in fact, we don't need to start here, we wait for start_consuming() to start the consumer,
+        because we need to register the subscribers first before starting the consumer.
         """
-        if not self.running:
-            raise RuntimeError('Call start_producer() before start_consumer().')
-        self._subscribed_channels.update(self._config.consumer_topics)
-        self.logger.info(
-            f'📨 ⬅️  Consumer configured: topics={self._config.consumer_topics} '
-            f'group_id={self._config.consumer_group_id}'
-        )
+
+        pass
 
     async def start_consuming(self) -> None:
         """
@@ -322,11 +313,6 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         if not self._broker:
             raise RuntimeError('Call start_producer() first.')
 
-        self.logger.info(
-            f'🔄 Starting FastStream consumption: '
-            f'topics={list(self._subscribed_channels)} max_workers={max_workers}'
-        )
-
         # Register one FastStream subscriber per configured topic.
         for topic in self._subscribed_channels:
             self._register_main_subscriber(topic, max_workers=max_workers)
@@ -336,6 +322,8 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             # It is idempotent if broker.connect() was already called.
             await self._broker.start()
             self._broker_started = True
+
+            self.logger.info(f'🌊 ⬅️  🟢  FastStream consumer started, channels={list(self._subscribed_channels)}, workers={max_workers}')
 
             # Keep the coroutine alive — FastStream handles consumption internally.
             while self.running:
@@ -351,7 +339,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         """Gracefully shut down all broker connections and clean up resources."""
         try:
             await self._do_stop()
-            self.logger.info('📨 👋 FastStream Kafka service stopped')
+            self.logger.info('🌊 👋 FastStream Kafka service stopped')
         except Exception as exc:
             report_error(exc, title='FastStream Service Stop Error', logger=self.logger)
 

@@ -1,6 +1,14 @@
 from enum import StrEnum
 
 
+class TeamType(StrEnum):
+    """Type of team."""
+
+    GENERAL = 'general'
+    DEPARTMENT = 'dept'
+    PROJECT = 'project'
+
+
 class TenantStatus(StrEnum):
     """Tenant lifecycle status."""
 

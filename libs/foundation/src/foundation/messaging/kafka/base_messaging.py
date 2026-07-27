@@ -274,5 +274,10 @@ class BaseMessagingService(BaseService, IMessagingService):
                 channel, schema_cls_to_avro_schema(schema)
             )
 
-        self._subscribed_channels.add(channel)
+        if channel not in self._subscribed_channels:
+            self._subscribed_channels.add(channel)
+            self.logger.info(
+                f'🧬 Channel [{channel}] registered with schema [{schema.__name__}]'
+            )
+
         return True

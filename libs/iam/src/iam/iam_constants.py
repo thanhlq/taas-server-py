@@ -1,3 +1,4 @@
+import os
 from enum import StrEnum
 
 
@@ -197,3 +198,9 @@ class IamConstants:
     CACHE_ACCOUNT_LOCK_PREFIX = 'iam_account_lock:'
     CACHE_LOGIN_ATTEMPTS_PREFIX = 'iam_login_attempts:'
     CACHE_SESSION_PREFIX = 'iam_session:'
+
+
+class TestMode:
+    """Constants for test mode."""
+
+    SIGNUP_TEST_MODE = os.environ.get('SIGNUP_TEST_MODE', 'false').lower() == 'true'

@@ -17,5 +17,6 @@ echo "🏃 Starting worker..."
 export TAAS_SERVICE_NAME=ews_worker
 export MESSAGING_CONSUMER_ENABLE=true
 export WORKER_LISTEN_PORT=7002
+export SIGNUP_TEST_MODE=true
 uv run python -m ews_worker.main --reload
 # uv run --package ews_worker python -m ews_worker

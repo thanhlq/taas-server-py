@@ -2,7 +2,7 @@ from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResul
 
 from iam.auth.auth_events import UserRegisteredEvent
 from iam.common.base import BaseIamEventHandler
-from iam.iam_constants import IamEvents
+from iam.iam_constants import IamEvents, TestMode
 
 
 class IamWelcomeAccountNotificationHandler(BaseIamEventHandler[UserRegisteredEvent]):
@@ -18,12 +18,17 @@ class IamWelcomeAccountNotificationHandler(BaseIamEventHandler[UserRegisteredEve
 
         # print_dict_pretty(event.as_dict(), 'UserRegisteredEvent payload')
         self.logger.info(
-            f'📧 🧪 Sending welcome email to {event.email} for new user registration...'
+            f'📧 Sending welcome email to {event.email} for new user registration...'
         )
 
-        directory_service = self.directory_service
+        directory_service = self.directory_signup_service
 
-        await directory_service.signup_send_welcome_email(event)
+        if TestMode.SIGNUP_TEST_MODE:
+            self.logger.warning(
+                f'🧪 Test mode is enabled. Skipping sending welcome email to {event.email}.'
+            )
+        else:
+            await directory_service.signup_send_welcome_email(event)
 
         return ProcessingResult(
             event_id=event.event_id,
