@@ -118,6 +118,8 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
                     'This may lead to issues with transactional guarantees.'
                 )
                 _new_session = MainDatabase.get_instance().new_session()
+
+            self.logger.info(f'🚦📤 Saving event to outbox: {event.__class__.__name__} → {channel}, event type: {getattr(event, "event_type", "N/A")}, event id: {getattr(event, "event_id", "N/A")}')
             result = await self.outbox_service.save_event(
                 session=_new_session or session,
                 event=event,

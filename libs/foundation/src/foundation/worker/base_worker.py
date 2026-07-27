@@ -24,6 +24,7 @@ from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.state import get_service
 from foundation.utils import now_in_utc
+from foundation.utils.htop import htop
 from foundation.worker.worker_settings import WorkerConfig, WorkerSettings
 
 
@@ -407,6 +408,10 @@ class BaseWorker:
                 self.logger.info(
                     f'Worker [{self.name}] health check - uptime_seconds: {uptime} '
                 )
+
+                info = self.info()
+                info.update(htop())
+                cli.info_table('Worker Health Check', info)
 
             except Exception as e:
                 report_error(

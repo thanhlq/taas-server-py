@@ -6,111 +6,111 @@ Use these constants throughout the application to maintain consistency and avoid
 """
 
 
-class Logging:
-    """Logging adapter types and configuration constants."""
+# class Logging:
+#     """Logging adapter types and configuration constants."""
 
-    LOG_FORMAT_STANDARD = 'standard'
-    LOG_FORMAT_DETAILED = 'detailed'
-    LOG_FORMAT_JSON = 'json'
+#     LOG_FORMAT_STANDARD = 'standard'
+#     LOG_FORMAT_DETAILED = 'detailed'
+#     LOG_FORMAT_JSON = 'json'
 
-    LOG_ADAPTER_CONSOLE = 'console'
-    """Console logging adapter (stdout/stderr)"""
+#     LOG_ADAPTER_CONSOLE = 'console'
+#     """Console logging adapter (stdout/stderr)"""
 
-    LOG_ADAPTER_FILE = 'file'
-    """File-based logging adapter"""
+#     LOG_ADAPTER_FILE = 'file'
+#     """File-based logging adapter"""
 
-    LOG_ADAPTER_OTLP_HTTP = 'otlp-http'
-    """OpenTelemetry Protocol HTTP logging adapter"""
+#     LOG_ADAPTER_OTLP_HTTP = 'otlp-http'
+#     """OpenTelemetry Protocol HTTP logging adapter"""
 
-    LOG_ADAPTER_OTLP_GRPC = 'otlp-grpc'
-    """OpenTelemetry Protocol gRPC logging adapter"""
+#     LOG_ADAPTER_OTLP_GRPC = 'otlp-grpc'
+#     """OpenTelemetry Protocol gRPC logging adapter"""
 
-    LOG_ADAPTER_ELK = 'elk'
+#     LOG_ADAPTER_ELK = 'elk'
 
-    LOG_OTEL_HTTP_ENDPOINT_DEFAULT = 'http://localhost:4318/v1/logs'
-    """Default HTTP endpoint for OpenTelemetry logs"""
+#     LOG_OTEL_HTTP_ENDPOINT_DEFAULT = 'http://localhost:4318/v1/logs'
+#     """Default HTTP endpoint for OpenTelemetry logs"""
 
-    LOG_OTEL_GRPC_ENDPOINT_DEFAULT = 'http://localhost:4317'
-    """Default gRPC endpoint for OpenTelemetry logs"""
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 📊 TRACING CONFIGURATION CONSTANTS
-# ═══════════════════════════════════════════════════════════════════════════════
-"""
-Distributed tracing configuration constants for different adapters and endpoints.
-These define the available tracing backends and their default configurations.
-"""
+#     LOG_OTEL_GRPC_ENDPOINT_DEFAULT = 'http://localhost:4317'
+#     """Default gRPC endpoint for OpenTelemetry logs"""
 
 
-class Tracing:
-    """Tracing adapter types and configuration constants."""
-
-    DEFAULT_TRACER_NAME = 'main'
-    """Default tracer name for the application"""
-
-    TRACING_ADAPTER_CONSOLE = 'console'
-    """Console tracing adapter (stdout for debugging)"""
-
-    TRACING_ADAPTER_ELK = 'elk'
-    """Elastic tracing adapter"""
-
-    TRACING_ADAPTER_OTLP_HTTP = 'otlp-http'
-    """OpenTelemetry Protocol HTTP tracing adapter"""
-
-    TRACING_ADAPTER_OTLP_GRPC = 'otlp-grpc'
-    """OpenTelemetry Protocol gRPC tracing adapter"""
-
-    TRACING_OTEL_HTTP_ENDPOINT_DEFAULT = 'http://localhost:4318/v1/traces'
-    """Default HTTP endpoint for OpenTelemetry traces"""
-
-    TRACING_OTEL_GRPC_ENDPOINT_DEFAULT = 'http://localhost:4317'
-    """Default gRPC endpoint for OpenTelemetry traces"""
+# # ═══════════════════════════════════════════════════════════════════════════════
+# # 📊 TRACING CONFIGURATION CONSTANTS
+# # ═══════════════════════════════════════════════════════════════════════════════
+# """
+# Distributed tracing configuration constants for different adapters and endpoints.
+# These define the available tracing backends and their default configurations.
+# """
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 👤 USER PROFILE CONSTANTS
-# ═══════════════════════════════════════════════════════════════════════════════
-"""
-Constants for user profile attributes and demographics.
-"""
+# class Tracing:
+#     """Tracing adapter types and configuration constants."""
 
-GENDER_MALE = 'male'
-"""Gender identifier: male"""
+#     DEFAULT_TRACER_NAME = 'main'
+#     """Default tracer name for the application"""
 
-GENDER_FEMALE = 'female'
-"""Gender identifier: female"""
+#     TRACING_ADAPTER_CONSOLE = 'console'
+#     """Console tracing adapter (stdout for debugging)"""
 
-GENDER_OTHER = 'other'
-"""Gender identifier: other/non-binary/prefer not to say"""
+#     TRACING_ADAPTER_ELK = 'elk'
+#     """Elastic tracing adapter"""
+
+#     TRACING_ADAPTER_OTLP_HTTP = 'otlp-http'
+#     """OpenTelemetry Protocol HTTP tracing adapter"""
+
+#     TRACING_ADAPTER_OTLP_GRPC = 'otlp-grpc'
+#     """OpenTelemetry Protocol gRPC tracing adapter"""
+
+#     TRACING_OTEL_HTTP_ENDPOINT_DEFAULT = 'http://localhost:4318/v1/traces'
+#     """Default HTTP endpoint for OpenTelemetry traces"""
+
+#     TRACING_OTEL_GRPC_ENDPOINT_DEFAULT = 'http://localhost:4317'
+#     """Default gRPC endpoint for OpenTelemetry traces"""
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 🏢 MULTI-TENANCY (SaaS) CONSTANTS
-# ═══════════════════════════════════════════════════════════════════════════════
-"""
-Constants for multi-tenant SaaS architecture.
-Tenant IDs are numeric identifiers within a specific range.
-"""
+# # ═══════════════════════════════════════════════════════════════════════════════
+# # 👤 USER PROFILE CONSTANTS
+# # ═══════════════════════════════════════════════════════════════════════════════
+# """
+# Constants for user profile attributes and demographics.
+# """
 
-MIN_TENANT_ID = 10000000
-"""Minimum tenant ID (8-digit number starting from 10,000,000)"""
+# GENDER_MALE = 'male'
+# """Gender identifier: male"""
 
-MAX_TENANT_ID = 99999999
-"""Maximum tenant ID (8-digit number ending at 99,999,999)"""
+# GENDER_FEMALE = 'female'
+# """Gender identifier: female"""
 
-TENANT_ID_LENGTH = 8
-"""Fixed length for tenant ID strings"""
+# GENDER_OTHER = 'other'
+# """Gender identifier: other/non-binary/prefer not to say"""
 
-SAAS_USER_ID_LENGTH = 21
-"""Length of SaaS user identifiers (tenant_id + user_id)"""
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 🏢 COMMON PARAMETERS
-# ═══════════════════════════════════════════════════════════════════════════════
+# # ═══════════════════════════════════════════════════════════════════════════════
+# # 🏢 MULTI-TENANCY (SaaS) CONSTANTS
+# # ═══════════════════════════════════════════════════════════════════════════════
+# """
+# Constants for multi-tenant SaaS architecture.
+# Tenant IDs are numeric identifiers within a specific range.
+# """
 
-ORG_ID_PARAM = 'org_id'
-CONTEXT_DATA_PARAM = 'context_data'
+# MIN_TENANT_ID = 10000000
+# """Minimum tenant ID (8-digit number starting from 10,000,000)"""
+
+# MAX_TENANT_ID = 99999999
+# """Maximum tenant ID (8-digit number ending at 99,999,999)"""
+
+# TENANT_ID_LENGTH = 8
+# """Fixed length for tenant ID strings"""
+
+# SAAS_USER_ID_LENGTH = 21
+# """Length of SaaS user identifiers (tenant_id + user_id)"""
+
+# # ═══════════════════════════════════════════════════════════════════════════════
+# # 🏢 COMMON PARAMETERS
+# # ═══════════════════════════════════════════════════════════════════════════════
+
+# ORG_ID_PARAM = 'org_id'
+# CONTEXT_DATA_PARAM = 'context_data'
 
 
 class Icons:

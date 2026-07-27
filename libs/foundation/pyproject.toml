@@ -14,7 +14,6 @@ dependencies = [
     # Legacy / for testing only
     "dataclasses-avroschema==0.70.0",
     "python-schema-registry-client==2.6.1",
-
     # Database
     "fastnanoid==0.4.3",
     "sqlalchemy==2.0.51",
@@ -36,10 +35,8 @@ dependencies = [
     "cachetools==7.1.4",
     "jinja2>=3.1.6",
     "fast-query-parsers>=1.0.3",
-
     # Resilience
     "tenacity>=9.0.0",
-
     # 📊 Monitoring & Logging with Opentelemetry
     # see: https://pypi.org/org/opentelemetry/
     # "opentelemetry-distro==0.54b0",
@@ -63,6 +60,7 @@ dependencies = [
     "opentelemetry-instrumentation-grpc>=0.63b1",
     "opentelemetry-instrumentation-urllib3==0.63b1",
     "opentelemetry-instrumentation-aiohttp-client==0.63b1",
+    "psutil>=7.2.2",
 ]
 
 [build-system]
@@ -73,6 +71,7 @@ build-backend = "uv_build"
 dev = [
     "pytest==9.0.2",
     "pytest-asyncio>=1.3.0",
+    "setproctitle==1.3.0",
 ]
 
 [tool.pytest.ini_options]
