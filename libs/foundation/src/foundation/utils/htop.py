@@ -2,14 +2,26 @@
 A script to return cpu/ram/... values as linux htop command does, but in a more structured dict.
 """
 
+import os
+
+is_psutil = False
+try:
+    import psutil
+
+    is_psutil = True
+except ImportError:
+    print('💾  psutil module not found. Cpu/ram will not be available')
+
 try:
     import setproctitle
 
     from foundation.config.settings import get_settings
-    setproctitle.setproctitle(f"{get_settings().app.SERVICE_NAME}-py")
+
+    setproctitle.setproctitle(f'{get_settings().app.SERVICE_NAME}-py')
 
 except ImportError:
     pass
+
 
 def human_bytes(num: float, suffix: str = 'B') -> str:
     """Format a byte count as a human-readable string (B, KB, MB, GB, ...).
@@ -38,10 +50,7 @@ def htop() -> dict:
     fields stay numeric.
     """
 
-    try:
-
-        import psutil
-    except ImportError:
+    if not is_psutil:
         return {
             'cpu/ram': 'psutil module not found. Please install it with "pip install psutil".'
         }
@@ -49,16 +58,22 @@ def htop() -> dict:
     vm = psutil.virtual_memory()
     sm = psutil.swap_memory()
 
+    # also get ram used by this process
+    process = psutil.Process(os.getpid())
+    process_ram = process.memory_info().rss
+    process_ram_human = human_bytes(process_ram)
+
     return {
         'cpu': {
             'percent': psutil.cpu_percent(interval=1),
             'count': psutil.cpu_count(),
         },
+        'ram_used_by_app': process_ram_human,
         'ram': {
             'total': human_bytes(vm.total),
             'available': human_bytes(vm.available),
             'percent': vm.percent,
-            'used': human_bytes(vm.used),
+            'used': human_bytes(num=vm.used),
             'free': human_bytes(vm.free),
         },
         'swap': {

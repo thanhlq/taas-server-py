@@ -157,3 +157,6 @@ class Icons:
     STOPPED = '👋'
 
     DELETED = '🗑️'
+
+    CPU = '🖥️',
+    RAM = '💾',
