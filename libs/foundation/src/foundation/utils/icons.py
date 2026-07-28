@@ -143,6 +143,12 @@ class Icons:
 
     EVENT_HANDLER = '🎯'
     OUTBOX_SERVICE = '📦'
+    SAGA_SERVICE = '🧵'
+    SCHEDULER_SERVICE = '⏰'
+    CRON_JOB = '⏱️'
+    # 🏊 🎭 🚦
+    MESSAGE_ROUTING = '🚦'
+    THEATER = '🎭'
     EVENT_PROCESSOR = '⚡'
     SECRET_MANAGER = '🔐'
     AUTHENTICATION = '🔑'
@@ -158,5 +164,5 @@ class Icons:
 
     DELETED = '🗑️'
 
-    CPU = '🖥️',
-    RAM = '💾',
+    CPU = '🖥️'
+    RAM = '💾'

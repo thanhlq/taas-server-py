@@ -19,7 +19,7 @@ The is the uv workspace which include the following libraries, applications and 
 | libs/iam_keycloak | The iam implementation using Keycloak |
 | libs/messaging_faststream | FastStream messaging utilities |
 | libs/messaging_kafka | Kafka messaging utilities |
-| libs/resiliant | Resilience utilities (e.g. transactional outbox pattern) |
+| libs/resiliant | Resilience implementations - the purpose is to implement best service patterns that can cover key features of Temporal.io |
 | libs/slowapi_advanced | The rate limit library - allowing to use decorator as @rate_limit('5/minutes') which internally use the limits library |
 | libs/store_memcached | Key/value store implementation using memcached |
 | libs/store_redis | Key/value store implementation using redis |
