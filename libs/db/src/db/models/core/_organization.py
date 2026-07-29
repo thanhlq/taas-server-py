@@ -6,7 +6,7 @@ It serves as the top-level container for all resources and permissions within th
 """
 
 from __future__ import annotations
-
+from advanced_alchemy.mixins import SlugKey
 from datetime import datetime
 from typing import Optional
 
@@ -16,10 +16,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from db.models.base import JSONB, SoftDeleteColumns
 from db.models.core.constants import ORGANIZATION_TABLE
-from db.models.core.enums import OrganizationStatus
+from foundation.iam.types import OrganizationStatus
 
 
-class Organization(UUIDv7AuditBase, SoftDeleteColumns):
+class Organization(UUIDv7AuditBase, SlugKey, SoftDeleteColumns):
     """Organization"""
 
     __tablename__ = ORGANIZATION_TABLE
@@ -74,10 +74,6 @@ class Organization(UUIDv7AuditBase, SoftDeleteColumns):
     sale_warn_message: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     debit_limit: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
 
-    # Status and flags
-    is_active: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('true')
-    )
     is_individual: Mapped[Optional[bool]] = mapped_column(
         Boolean, nullable=True, server_default=text('false')
     )

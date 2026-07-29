@@ -1,9 +1,10 @@
 from __future__ import annotations
+from foundation.types.types import SimpleStatus
 
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text
+from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
@@ -75,7 +76,7 @@ class WorkflowStage(UUIDv7Base, SoftDeleteColumns):
     )
 
     sort_by: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'manual'::character")
+        TEXT, nullable=True, server_default=text("'manual'::character ")
     )
     sort_order: Mapped[Optional[str]] = mapped_column(
         TEXT, nullable=True, server_default=text("'asc'::character")
@@ -87,8 +88,11 @@ class WorkflowStage(UUIDv7Base, SoftDeleteColumns):
 
     settings: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
-    is_active: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('true')
+    # status: Mapped[Optional[SimpleStatus]] = mapped_column(
+    #     Enum(SimpleStatus), nullable=True, server_default=text(f"'{SimpleStatus.ACTIVE.value}'::character varying")
+    # )
+    status: Mapped[SimpleStatus] = mapped_column(
+        Enum(SimpleStatus), nullable=False, default=SimpleStatus.ACTIVE
     )
     enabled: Mapped[Optional[bool]] = mapped_column(
         Boolean, nullable=True, server_default=text('true')

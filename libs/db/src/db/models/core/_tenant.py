@@ -1,4 +1,6 @@
 from __future__ import annotations
+from advanced_alchemy.mixins import AuditColumns
+from foundation.iam.types import TenantStatus
 
 from datetime import datetime
 from typing import Optional
@@ -17,7 +19,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.models.core.constants import TENANT_TABLE
-from db.models.core.enums import TenantStatus
 
 from ..base import (
     ID_COLUMN_TYPE,
@@ -26,10 +27,11 @@ from ..base import (
     BaseDBModel,
     SlugKey,
     SoftDeleteColumns,
+    ArchivedColumns,
 )
 
 
-class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey):
+class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey, AuditColumns, ArchivedColumns):
     """Tenant model representing a Keycloak realm"""
 
     __tablename__ = TENANT_TABLE
@@ -90,9 +92,6 @@ class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey):
     debit_limit: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Status and flags
-    is_active: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('true')
-    )
     is_individual: Mapped[Optional[bool]] = mapped_column(
         Boolean, nullable=True, server_default=text('false')
     )

@@ -31,6 +31,10 @@ from messaging_faststream import initialize_messaging_service, messaging
 from resiliant import ResiliantServiceFactory
 from resiliant.outbox import OutboxPoller
 from resiliant.outbox.outbox_settings import get_outbox_config
+from resiliant.maintenances import (
+    define_maintenance_jobs,
+    register_maintenance_callbacks,
+)
 from resiliant.schedule import SchedulerPoller
 from resiliant.schedule.schedule_settings import get_schedule_config
 
@@ -92,6 +96,11 @@ class OutboxWorker(BaseWorker):
                 session_factory=db.new_session,
                 publisher=self.messaging_service,
             )
+            # Register in-process maintenance handlers, then ensure the CRON row
+            # exists (idempotent), before the poller starts firing jobs.
+            register_maintenance_callbacks(self._scheduler)
+            await define_maintenance_jobs()
+
             scheduler_task = asyncio.create_task(self._scheduler.run())
             self.worker_tasks.append(('scheduler_poller', scheduler_task))
             self.logger.info('⏰ Scheduler poller task started')

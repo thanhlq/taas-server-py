@@ -240,6 +240,10 @@ class IScheduleService(Protocol):
         """Cancel a pending job."""
         ...
 
+    async def exists_active(self, session: Any, job_name: str) -> bool:
+        """Return ``True`` if a non-terminal job with ``job_name`` exists."""
+        ...
+
     async def get_stats(self, session: Any) -> dict[str, Any]:
         """Return counters describing the scheduler backlog."""
         ...

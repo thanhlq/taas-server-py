@@ -7,7 +7,7 @@ from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedString
 from foundation.config import Settings, get_settings
 from foundation.iam.types import UserStatus
-from sqlalchemy import Integer, String
+from sqlalchemy import Integer, String, Enum
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -73,7 +73,7 @@ class User(UUIDv7AuditBase):
     joined_at: Mapped[date] = mapped_column(default=lambda: datetime.now(UTC).date())
     login_count: Mapped[int] = mapped_column(default=0)
     status: Mapped[UserStatus] = mapped_column(
-        String(length=30), index=True, nullable=True, default=UserStatus.ACTIVE
+        Enum(UserStatus), index=True, nullable=True, default=UserStatus.ACTIVE
     )
     is_root_account: Mapped[bool] = mapped_column(default=False, nullable=False)
     properties: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)

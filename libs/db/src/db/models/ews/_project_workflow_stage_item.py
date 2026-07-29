@@ -1,13 +1,14 @@
 from __future__ import annotations
+from foundation.types.types import SimpleStatus
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
+from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
+from ..base import ID_COLUMN_TYPE, SoftDeleteColumns, ArchivedColumns
 from .constants import (
     PROJECTS_TABLE,
     PROJECTS_WORKFLOWS_STAGES_ITEMS_TABLE,
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from ._workflow_stage import WorkflowStage
 
 
-class ProjectWorkflowStageItem(UUIDv7Base, SoftDeleteColumns):
+class ProjectWorkflowStageItem(UUIDv7Base, SoftDeleteColumns, ArchivedColumns):
     """Project Workflow Stage Item (Task in Stage)"""
 
     __tablename__ = PROJECTS_WORKFLOWS_STAGES_ITEMS_TABLE
@@ -44,14 +45,9 @@ class ProjectWorkflowStageItem(UUIDv7Base, SoftDeleteColumns):
         Integer, nullable=True, server_default=text("'-1'::integer")
     )
 
-    is_active: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('true')
+    status: Mapped[SimpleStatus] = mapped_column(
+        Enum(SimpleStatus), nullable=False, default=SimpleStatus.ACTIVE
     )
-    is_archived: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('false')
-    )
-    archived_by: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
-    archived_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
 
     stage: Mapped[Optional['WorkflowStage']] = relationship(
         back_populates='stage_items', foreign_keys=[stage_id]

@@ -70,7 +70,9 @@ class UserProfile(ApiResponse):
     username: str | None = None
     phone: str | None = None
     is_superuser: bool = False
-    is_active: bool = False
+    status: UserStatus = UserStatus.ACTIVE
+    email_verified: bool = False
+    is_root_account: bool = False
     is_verified: bool = False
     mfa_enabled: bool = False
     has_password: bool = False
@@ -118,9 +120,9 @@ class UserUpdate(CamelizedBaseStruct, omit_defaults=True):
     name: str | msgspec.UnsetType | None = msgspec.UNSET
     username: str | msgspec.UnsetType | None = msgspec.UNSET
     phone: str | msgspec.UnsetType | None = msgspec.UNSET
-    is_superuser: bool | msgspec.UnsetType | None = msgspec.UNSET
-    is_active: bool | msgspec.UnsetType | None = msgspec.UNSET
-    is_verified: bool | msgspec.UnsetType | None = msgspec.UNSET
+    is_root_account: bool | msgspec.UnsetType | None = msgspec.UNSET
+    status: UserStatus | msgspec.UnsetType | None = msgspec.UNSET
+    email_verified: bool | msgspec.UnsetType | None = msgspec.UNSET
 
     def __post_init__(self) -> None:
         """Ensure at least one field is provided for update and validate fields."""
@@ -130,9 +132,9 @@ class UserUpdate(CamelizedBaseStruct, omit_defaults=True):
             self.name,
             self.username,
             self.phone,
-            self.is_superuser,
-            self.is_active,
-            self.is_verified,
+            self.is_root_account,
+            self.status,
+            self.email_verified,
         ]
         if all(field is msgspec.UNSET for field in fields):
             msg = 'At least one field must be provided for update'

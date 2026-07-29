@@ -165,6 +165,13 @@ class ScheduleService(IScheduleService, BaseService):
         """Cancel a pending job."""
         await self.repository.cancel(session, job_id)
 
+    async def exists_active(self, session: AsyncSession, job_name: str) -> bool:
+        """Return ``True`` if a non-terminal job with ``job_name`` exists.
+
+        Lets callers define a recurring job once (idempotent across restarts).
+        """
+        return await self.repository.get_active_by_name(session, job_name) is not None
+
     async def get_stats(self, session: AsyncSession) -> dict:
         """Return counters describing the scheduler backlog."""
         return await self.repository.get_stats(session)

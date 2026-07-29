@@ -44,6 +44,26 @@ class ScheduleRepository(BaseService):
         )
         return result.scalar_one_or_none()
 
+    async def get_active_by_name(
+        self, session: AsyncSession, job_name: str
+    ) -> Optional[ScheduledJobTable]:
+        """Return the first non-terminal job with ``job_name`` (or ``None``).
+
+        Used to make "define this recurring job once" idempotent across
+        restarts — a SCHEDULED or RUNNING row means the job already exists.
+        """
+        result = await session.execute(
+            select(ScheduledJobTable)
+            .where(ScheduledJobTable.job_name == job_name)
+            .where(
+                ScheduledJobTable.status.in_(
+                    [ScheduleJobStatus.SCHEDULED, ScheduleJobStatus.RUNNING]
+                )
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def fetch_due_batch(
         self,
         session: AsyncSession,

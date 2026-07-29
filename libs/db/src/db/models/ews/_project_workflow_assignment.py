@@ -1,10 +1,11 @@
 from __future__ import annotations
+from foundation.types.types import SimpleStatus
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
+from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, SoftDeleteColumns
@@ -45,8 +46,8 @@ class ProjectWorkflowAssignment(UUIDv7Base, SoftDeleteColumns):
     priority: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text('100')
     )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text('true')
+    status: Mapped[SimpleStatus] = mapped_column(
+        Enum(SimpleStatus), nullable=False, default=SimpleStatus.ACTIVE
     )
 
     effective_from: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

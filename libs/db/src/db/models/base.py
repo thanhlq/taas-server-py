@@ -29,20 +29,41 @@ __all__ = [
 
 @declarative_mixin
 class SoftDeleteColumns:
-    """Created/Updated At Fields Mixin."""
+    """Soft Delete Columns Mixin."""
 
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTimeUTC(timezone=True),
         nullable=True,
-        sort_order=3004,
+        sort_order=3100,
     )
 
     @validates('deleted_at')
-    def validate_tz_info(self, _: str, value: datetime.datetime | None) -> datetime.datetime | None:
+    def validate_deleted_at_tz_info(self, _: str, value: datetime.datetime | None) -> datetime.datetime | None:
         if value is not None and value.tzinfo is None:
             value = value.replace(tzinfo=datetime.UTC)
         return value
 
+@declarative_mixin
+class ArchivedColumns:
+    """Archived At Fields Mixin."""
+
+    archived_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTimeUTC(timezone=True),
+        nullable=True,
+        sort_order=3101,
+    )
+    archived_by: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        sort_order=3102,
+    )
+    """ The user or system that archived the record. This is a string to accommodate both user IDs and system identifiers. """
+
+    @validates('archived_at')
+    def validate_archived_at_tz_info(self, _: str, value: datetime.datetime | None) -> datetime.datetime | None:
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=datetime.UTC)
+        return value
 
 @declarative_mixin
 class Uuid36DBGenerating:

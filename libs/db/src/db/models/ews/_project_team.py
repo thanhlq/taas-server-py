@@ -1,10 +1,11 @@
 from __future__ import annotations
+from foundation.types.types import SimpleStatus
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
+from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
@@ -30,8 +31,8 @@ class ProjectTeam(UUIDv7Base, SoftDeleteColumns):
 
     team_role: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text('true')
+    status: Mapped[SimpleStatus] = mapped_column(
+        Enum(SimpleStatus), nullable=False, server_default=text('1')
     )
     joined_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
 

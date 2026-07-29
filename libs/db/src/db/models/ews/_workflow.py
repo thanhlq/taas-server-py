@@ -1,9 +1,10 @@
 from __future__ import annotations
+from foundation.types.types import SimpleStatus
 
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text
+from sqlalchemy import TEXT, Boolean, ForeignKey, Integer, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB
@@ -42,8 +43,8 @@ class Workflow(UUIDv7AuditBase):
     template_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     allowed_stage_types: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
-    is_active: Mapped[Optional[bool]] = mapped_column(
-        Boolean, nullable=True, server_default=text('true')
+    status: Mapped[SimpleStatus] = mapped_column(
+        Enum(SimpleStatus), nullable=False, default=SimpleStatus.ACTIVE
     )
     is_default: Mapped[Optional[bool]] = mapped_column(
         Boolean, nullable=True, server_default=text('false')
