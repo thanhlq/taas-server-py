@@ -1,10 +1,10 @@
 from __future__ import annotations
-from advanced_alchemy.mixins import AuditColumns
-from foundation.iam.types import TenantStatus
 
 from datetime import datetime
 from typing import Optional
 
+from advanced_alchemy.mixins import AuditColumns
+from foundation.iam.types import TenantStatus
 from sqlalchemy import (
     TEXT,
     TIMESTAMP,
@@ -18,17 +18,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.models.core.constants import TENANT_TABLE
-
 from ..base import (
     ID_COLUMN_TYPE,
     JSONB,
     TENANT_ID_COLUMN_TYPE,
+    ArchivedColumns,
     BaseDBModel,
     SlugKey,
     SoftDeleteColumns,
-    ArchivedColumns,
 )
+from .constants import TENANT_TABLE
 
 
 class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey, AuditColumns, ArchivedColumns):

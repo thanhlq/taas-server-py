@@ -10,7 +10,10 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql.named_types as pg_types    # <--- Add this line.
 from alembic import op
+from db.migrations.utils import check_enum_exists    # <--- Add this line.
+from db.models.types import JSONText              # <--- Add this line.
 from advanced_alchemy.types import EncryptedString, EncryptedText, GUID, ORA_JSONB, DateTimeUTC, StoredObject, PasswordHash, FernetBackend
 from advanced_alchemy.types.encrypted_string import PGCryptoBackend
 from sqlalchemy import Text  # noqa: F401

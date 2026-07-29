@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from advanced_alchemy.base import metadata_registry
 from alembic import context
 from alembic.autogenerate import rewriter
-from sqlalchemy import pool
+from sqlalchemy import pool, types
 from sqlalchemy.ext.asyncio import AsyncEngine, async_engine_from_config
 from sqlalchemy.sql.schema import SchemaItem
 
@@ -102,11 +102,19 @@ def do_run_migrations(connection: "Connection") -> None:
         render_as_batch=config.render_as_batch,
         process_revision_directives=writer,
         include_object=include_object,
+        # Fix duplicated enum: https://github.com/sqlalchemy/alembic/issues/1254#issuecomment-2921234852
+        render_item=render_item,    # <--- Add this line.
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
+# Fix duplicated enum: https://github.com/sqlalchemy/alembic/issues/1254#issuecomment-2921234852
+def render_item(type_, obj, autogen_context):
+    if isinstance(obj, types.Enum):
+        values = [repr(value) for value in obj.enums]
+        return f"pg_types.ENUM({', '.join(values)}, name='{obj.name}', create_type=not check_enum_exists(op, '{obj.name}'))"
+    return False
 
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode.

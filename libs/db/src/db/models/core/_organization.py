@@ -6,17 +6,21 @@ It serves as the top-level container for all resources and permissions within th
 """
 
 from __future__ import annotations
-from advanced_alchemy.mixins import SlugKey
+
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
+from advanced_alchemy.mixins import SlugKey
+from foundation.iam.types import OrganizationStatus
 from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.base import JSONB, SoftDeleteColumns
 from db.models.core.constants import ORGANIZATION_TABLE
-from foundation.iam.types import OrganizationStatus
+
+if TYPE_CHECKING:
+    from ._organization_member import OrganizationMember
 
 
 class Organization(UUIDv7AuditBase, SlugKey, SoftDeleteColumns):
@@ -100,3 +104,10 @@ class Organization(UUIDv7AuditBase, SlugKey, SoftDeleteColumns):
     # projects: Mapped[List['ProjectOrm']] = relationship(
     #     back_populates='organization', foreign_keys='ProjectOrm.org_id'
     # )
+
+    members: Mapped[list[OrganizationMember]] = relationship(
+        back_populates='organization',
+        cascade='all, delete',
+        passive_deletes=True,
+        lazy='selectin',
+    )

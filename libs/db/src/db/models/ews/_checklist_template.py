@@ -1,10 +1,10 @@
 from __future__ import annotations
-from foundation.types.types import SimpleStatus
 
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, Boolean, ForeignKey, text, Enum
+from foundation.types.types import SimpleStatus
+from sqlalchemy import TEXT, Boolean, Enum, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
@@ -38,7 +38,7 @@ class ChecklistTemplate(UUIDv7Base, SoftDeleteColumns):
         Boolean, nullable=True, server_default=text('true')
     )
     status: Mapped[SimpleStatus] = mapped_column(
-        Enum(SimpleStatus), nullable=True, server_default=text('1')
+        Enum(SimpleStatus), nullable=True, default=SimpleStatus.ACTIVE
     )
 
     settings: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

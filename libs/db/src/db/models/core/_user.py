@@ -7,13 +7,13 @@ from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.types import EncryptedString
 from foundation.config import Settings, get_settings
 from foundation.iam.types import UserStatus
-from sqlalchemy import Integer, String, Enum
+from sqlalchemy import Enum, Integer, String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.config import PHONE_LENGTH
 
-from ..base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE
+from ..base import JSONB, TENANT_ID_COLUMN_TYPE
 from .constants import USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
@@ -24,7 +24,9 @@ if TYPE_CHECKING:
         UserOAuthAccount,
         UserRole,
     )
-    from db.models.core import EmailVerificationToken
+
+    from ._email_verification_token import EmailVerificationToken
+    from ._organization_member import OrganizationMember
     # from app.db.models._oauth_account import UserOAuthAccount
     # from app.db.models._password_reset_token import PasswordResetToken
     # from app.db.models._refresh_token import RefreshToken
@@ -83,9 +85,6 @@ class User(UUIDv7AuditBase):
     tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
         Integer, index=True, nullable=True, default=None
     )
-    org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
-        String(length=36), index=True, nullable=True, default=None
-    )
     totp_secret: Mapped[str | None] = mapped_column(
         EncryptedString(key=settings.app.SECRET_KEY),
         nullable=True,
@@ -106,6 +105,14 @@ class User(UUIDv7AuditBase):
         # deferred_group="security_sensitive",
     )
     # Relationships
+
+    organizations: Mapped[list[OrganizationMember]] = relationship(
+        back_populates="user",
+        lazy="noload",
+        uselist=True,
+        cascade="all, delete",
+        viewonly=True,
+    )
 
     roles: Mapped[list[UserRole]] = relationship(
         back_populates="user",
