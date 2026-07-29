@@ -51,6 +51,7 @@ class DirectoryTenant(BaseEventPayload):
         - Used for domain names, URLs, and other user-facing identifiers.
         - Can be generated from the name, or provided by the user.
     """
+    slug: str | None = None
     description: str | None = None
     enabled: bool = True
     is_root_tenant: bool = False

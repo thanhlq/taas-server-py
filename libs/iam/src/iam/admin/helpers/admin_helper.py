@@ -2,6 +2,7 @@ from db.models import User
 from db.models.core import Tenant
 from foundation.iam.types import UserStatus
 from foundation.utils.id import generate_tenant_id, generate_uuid
+from foundation.utils.str_utils import slugify
 from iam.auth.auth_events import (
     TenantCreatedEvent,
     UserDirectoryEventPayload,
@@ -25,6 +26,7 @@ class IamDataHelper:
         tenant.directory_id = directory_tenant.id
         # tenant.realm_name = directory_tenant.name
         # tenant.realm_name = event.realm_name
+        tenant.slug = slugify(value=directory_tenant.name)
         tenant.id = generate_tenant_id()
 
         # Build user
