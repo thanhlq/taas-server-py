@@ -3,6 +3,7 @@ from ..config import TABLE_PREFIX
 # Core tables
 TENANT_TABLE = f'{TABLE_PREFIX}tenants'
 ORGANIZATION_TABLE = f'{TABLE_PREFIX}organizations'
+ORGANIZATION_MEMBER_TABLE = f'{TABLE_PREFIX}organization_members'
 PERMISSIONS_TABLE = f'{TABLE_PREFIX}permissions'
 ROLES_TABLE = f'{TABLE_PREFIX}roles'
 POLICIES_TABLE = f'{TABLE_PREFIX}policies'

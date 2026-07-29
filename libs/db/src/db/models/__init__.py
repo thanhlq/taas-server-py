@@ -14,6 +14,8 @@ from .core import (
     AuditLog,
     CasbinRule,
     EmailVerificationToken,
+    Organization,
+    OrganizationMember,
     PasswordResetToken,
     RefreshToken,
     Role,
@@ -21,6 +23,7 @@ from .core import (
     Team,
     TeamInvitation,
     TeamMember,
+    Tenant,
     User,
     UserOAuthAccount,
     UserRole,
@@ -84,6 +87,9 @@ __all__ = [
     'UserRole',
     'team_tag',
     'CasbinRule',
+    'Tenant',
+    'Organization',
+    'OrganizationMember',
 
     # Resiliant
     'DLQEventTable',

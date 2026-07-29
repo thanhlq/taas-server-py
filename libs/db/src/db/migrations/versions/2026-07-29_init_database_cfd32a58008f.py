@@ -1,21 +1,30 @@
 """init database
 
-Revision ID: 6245dec2bd8e
-Revises: 
-Create Date: 2026-07-29 09:23:06.070969
+Revision ID: cfd32a58008f
+Revises:
+Create Date: 2026-07-29 11:21:52.759103
 
 """
-
 import warnings
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
-from alembic import op
-from advanced_alchemy.types import EncryptedString, EncryptedText, GUID, ORA_JSONB, DateTimeUTC, StoredObject, PasswordHash, FernetBackend
+from advanced_alchemy.types import (
+    GUID,
+    ORA_JSONB,
+    DateTimeUTC,
+    EncryptedString,
+    EncryptedText,
+    FernetBackend,
+    PasswordHash,
+    StoredObject,
+)
 from advanced_alchemy.types.encrypted_string import PGCryptoBackend
+from alembic import op
 from db.models.types import JSONText
 from sqlalchemy import Text  # noqa: F401
 from sqlalchemy.dialects import postgresql
+
 try:
     from advanced_alchemy.types.password_hash.argon2 import Argon2Hasher
 except ImportError:
@@ -30,7 +39,7 @@ except ImportError:
     PwdlibHasher = Any  # type: ignore
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    pass
 
 __all__ = ["downgrade", "upgrade", "schema_upgrades", "schema_downgrades", "data_upgrades", "data_downgrades"]
 
@@ -48,7 +57,7 @@ sa.FernetBackend = FernetBackend
 sa.PGCryptoBackend = PGCryptoBackend
 
 # revision identifiers, used by Alembic.
-revision = '6245dec2bd8e'
+revision = 'cfd32a58008f'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -89,6 +98,7 @@ def schema_upgrades() -> None:
     schedulejobstatus_enum.create(bind, checkfirst=True)
     organizationstatus_enum.create(bind, checkfirst=True)
     tenantstatus_enum.create(bind, checkfirst=True)
+
     op.create_table('resiliant_dlq_events',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('event_id', sa.String(length=64), nullable=False, comment='Original event ID from the failed event'),
@@ -98,7 +108,7 @@ def schema_upgrades() -> None:
     sa.Column('source_service', sa.String(length=100), nullable=True, comment='Optional source service name'),
     sa.Column('payload', sa.JSON(), nullable=False, comment='Full event payload as JSON (used for retry)'),
     sa.Column('headers', sa.JSON(), nullable=True, comment='Event headers including trace context'),
-    sa.Column('status', postgresql.ENUM('PENDING', 'APPROVED', 'CANCELLED', 'PROCESSING', 'RESOLVED', 'FAILED', 'ABANDONED', 'ARCHIVED', name='dlqstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'APPROVED', 'CANCELLED', 'PROCESSING', 'RESOLVED', 'FAILED', 'ABANDONED', 'ARCHIVED', name='dlqstatus'), nullable=False),
     sa.Column('retry_count', sa.Integer(), nullable=False, comment='Number of retry attempts made'),
     sa.Column('max_retries', sa.Integer(), nullable=False, comment='Maximum number of retries allowed'),
     sa.Column('original_error', sa.Text(), nullable=False, comment='Error message from the initial failure'),
@@ -132,7 +142,7 @@ def schema_upgrades() -> None:
     sa.Column('source_service', sa.String(length=100), nullable=True),
     sa.Column('payload', sa.JSON(), nullable=False),
     sa.Column('headers', sa.JSON(), nullable=True),
-    sa.Column('status', postgresql.ENUM('PENDING', 'APPROVED', 'CANCELLED', 'PROCESSING', 'RESOLVED', 'FAILED', 'ABANDONED', 'ARCHIVED', name='dlqstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'APPROVED', 'CANCELLED', 'PROCESSING', 'RESOLVED', 'FAILED', 'ABANDONED', 'ARCHIVED', name='dlqstatus'), nullable=False),
     sa.Column('retry_count', sa.Integer(), nullable=False),
     sa.Column('max_retries', sa.Integer(), nullable=False),
     sa.Column('original_error', sa.Text(), nullable=False),
@@ -161,7 +171,7 @@ def schema_upgrades() -> None:
     sa.Column('ordering_key', sa.String(length=255), nullable=True),
     sa.Column('payload', sa.JSON(), nullable=False),
     sa.Column('headers', sa.JSON(), nullable=True),
-    sa.Column('status', postgresql.ENUM('PENDING', 'PROCESSING', 'PUBLISHED', 'FAILED', 'DEAD_LETTER', name='outboxstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'PROCESSING', 'PUBLISHED', 'FAILED', 'DEAD_LETTER', name='outboxstatus'), nullable=False),
     sa.Column('retry_count', sa.Integer(), nullable=False),
     sa.Column('max_retries', sa.Integer(), nullable=False),
     sa.Column('last_error', sa.Text(), nullable=True),
@@ -205,7 +215,7 @@ def schema_upgrades() -> None:
     sa.Column('saga_id', sa.String(length=64), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('saga_key', sa.String(length=255), nullable=True),
-    sa.Column('status', postgresql.ENUM('RUNNING', 'COMPLETED', 'COMPENSATING', 'ABORTED', 'FAILED', name='sagastatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('RUNNING', 'COMPLETED', 'COMPENSATING', 'ABORTED', 'FAILED', name='sagastatus'), nullable=False),
     sa.Column('current_step', sa.String(length=255), nullable=True),
     sa.Column('context', sa.JSON(), nullable=False),
     sa.Column('steps', sa.JSON(), nullable=False),
@@ -228,7 +238,7 @@ def schema_upgrades() -> None:
     op.create_table('resiliant_scheduled_jobs',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('job_name', sa.String(length=255), nullable=False),
-    sa.Column('kind', postgresql.ENUM('ONCE', 'INTERVAL', 'CRON', name='schedulejobkind', create_type=False), nullable=False),
+    sa.Column('kind', sa.Enum('ONCE', 'INTERVAL', 'CRON', name='schedulejobkind'), nullable=False),
     sa.Column('cron_expr', sa.String(length=255), nullable=True),
     sa.Column('interval_seconds', sa.Integer(), nullable=True),
     sa.Column('channel', sa.String(length=255), nullable=True),
@@ -239,7 +249,7 @@ def schema_upgrades() -> None:
     sa.Column('next_run_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('last_run_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('claimed_at', sa.TIMESTAMP(), nullable=True),
-    sa.Column('status', postgresql.ENUM('SCHEDULED', 'RUNNING', 'DONE', 'FAILED', 'CANCELLED', name='schedulejobstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('SCHEDULED', 'RUNNING', 'DONE', 'FAILED', 'CANCELLED', name='schedulejobstatus'), nullable=False),
     sa.Column('run_count', sa.Integer(), nullable=False),
     sa.Column('max_runs', sa.Integer(), nullable=True),
     sa.Column('attempts', sa.Integer(), nullable=False),
@@ -427,21 +437,23 @@ def schema_upgrades() -> None:
     sa.Column('sale_warn', sa.Boolean(), nullable=True),
     sa.Column('sale_warn_message', sa.TEXT(), nullable=True),
     sa.Column('debit_limit', sa.Numeric(precision=10, scale=2), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.Column('is_individual', sa.Boolean(), server_default=sa.text('false'), nullable=True),
-    sa.Column('status', postgresql.ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', name='organizationstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', name='organizationstatus'), nullable=False),
     sa.Column('avatar_url', sa.TEXT(), nullable=True),
     sa.Column('color', sa.TEXT(), nullable=True),
     sa.Column('analytics', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('org_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('slug', sa.String(length=100), nullable=False),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_organizations'))
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_organizations')),
+    sa.UniqueConstraint('slug', name='uq_taas_organizations_slug')
     )
     with op.batch_alter_table('taas_organizations', schema=None) as batch_op:
+        batch_op.create_index('ix_taas_organizations_slug_unique', ['slug'], unique=True)
         batch_op.create_index(batch_op.f('ix_taas_organizations_status'), ['status'], unique=False)
 
     op.create_table('taas_payrates',
@@ -619,7 +631,7 @@ def schema_upgrades() -> None:
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('description', sa.String(length=500), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', name='teamstatus'), nullable=False),
     sa.Column('team_type', sa.String(length=50), nullable=False),
     sa.Column('slug', sa.String(length=100), nullable=False),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
@@ -667,9 +679,8 @@ def schema_upgrades() -> None:
     sa.Column('sale_warn', sa.Boolean(), nullable=True),
     sa.Column('sale_warn_message', sa.TEXT(), nullable=True),
     sa.Column('debit_limit', sa.Numeric(precision=10, scale=2), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.Column('is_individual', sa.Boolean(), server_default=sa.text('false'), nullable=True),
-    sa.Column('status', postgresql.ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', name='tenantstatus', create_type=False), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'DELETED', name='tenantstatus'), nullable=False),
     sa.Column('root_account_id', sa.GUID(length=16), nullable=False),
     sa.Column('analytics', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -677,7 +688,11 @@ def schema_upgrades() -> None:
     sa.Column('avatar_url', sa.TEXT(), nullable=True),
     sa.Column('color', sa.TEXT(), nullable=True),
     sa.Column('slug', sa.String(length=100), nullable=False),
+    sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('archived_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('archived_by', sa.String(length=36), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_tenants')),
     sa.UniqueConstraint('id', 'slug', name=op.f('uq_taas_tenants_id'))
     )
@@ -703,7 +718,7 @@ def schema_upgrades() -> None:
     sa.Column('verified_at', sa.Date(), nullable=True),
     sa.Column('joined_at', sa.Date(), nullable=False),
     sa.Column('login_count', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=30), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED', 'BLOCKED', name='userstatus'), nullable=True),
     sa.Column('is_root_account', sa.Boolean(), nullable=False),
     sa.Column('properties', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('password_reset_at', sa.DateTimeUTC(timezone=True), nullable=True),
@@ -759,7 +774,7 @@ def schema_upgrades() -> None:
     sa.Column('scope', sa.TEXT(), server_default=sa.text("'task'::character"), nullable=True),
     sa.Column('project_id', sa.GUID(length=16), nullable=True),
     sa.Column('is_template', sa.Boolean(), server_default=sa.text('true'), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), server_default=sa.text('1'), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
@@ -810,6 +825,23 @@ def schema_upgrades() -> None:
     with op.batch_alter_table('taas_email_verification_token', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_taas_email_verification_token_token_hash'), ['token_hash'], unique=True)
         batch_op.create_index(batch_op.f('ix_taas_email_verification_token_user_id'), ['user_id'], unique=False)
+
+    op.create_table('taas_organization_members',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('user_id', sa.GUID(length=16), nullable=False),
+    sa.Column('organization_id', sa.GUID(length=16), nullable=False),
+    sa.Column('role', sa.String(length=50), nullable=False),
+    sa.Column('is_owner', sa.Boolean(), nullable=False),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['taas_organizations.id'], name=op.f('fk_taas_organization_members_organization_id_taas_organizations'), ondelete='cascade'),
+    sa.ForeignKeyConstraint(['user_id'], ['taas_user_account.id'], name=op.f('fk_taas_organization_members_user_id_taas_user_account'), ondelete='cascade'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_organization_members')),
+    sa.UniqueConstraint('user_id', 'organization_id', name=op.f('uq_taas_organization_members_user_id'))
+    )
+    with op.batch_alter_table('taas_organization_members', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_organization_members_role'), ['role'], unique=False)
 
     op.create_table('taas_password_reset_token',
     sa.Column('id', sa.GUID(length=16), nullable=False),
@@ -892,7 +924,7 @@ def schema_upgrades() -> None:
     sa.Column('project_id', sa.GUID(length=16), nullable=False),
     sa.Column('team_id', sa.TEXT(), nullable=False),
     sa.Column('team_role', sa.TEXT(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), server_default=sa.text('1'), nullable=False),
     sa.Column('joined_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('permissions', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -956,7 +988,7 @@ def schema_upgrades() -> None:
     sa.Column('user_id', sa.TEXT(), nullable=True),
     sa.Column('template_id', sa.TEXT(), nullable=True),
     sa.Column('allowed_stage_types', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), nullable=False),
     sa.Column('is_default', sa.Boolean(), server_default=sa.text('false'), nullable=True),
     sa.Column('is_template', sa.Boolean(), server_default=sa.text('false'), nullable=True),
     sa.Column('privacy', sa.TEXT(), server_default=sa.text("'project'::character"), nullable=True),
@@ -1118,7 +1150,7 @@ def schema_upgrades() -> None:
     sa.Column('assigned_by', sa.TEXT(), nullable=True),
     sa.Column('assigned_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('priority', sa.Integer(), server_default=sa.text('100'), nullable=False),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), nullable=False),
     sa.Column('effective_from', sa.TIMESTAMP(), nullable=True),
     sa.Column('effective_until', sa.TIMESTAMP(), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
@@ -1132,7 +1164,7 @@ def schema_upgrades() -> None:
     sa.Column('name', sa.TEXT(), nullable=True),
     sa.Column('description', sa.TEXT(), nullable=True),
     sa.Column('stage_type', sa.TEXT(), nullable=True),
-    sa.Column('status', sa.TEXT(), server_default=sa.text("'active'::character"), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), nullable=False),
     sa.Column('workflow_id', sa.GUID(length=16), nullable=True),
     sa.Column('project_id', sa.GUID(length=16), nullable=True),
     sa.Column('owner_user_id', sa.TEXT(), nullable=True),
@@ -1150,14 +1182,13 @@ def schema_upgrades() -> None:
     sa.Column('icon', sa.TEXT(), nullable=True),
     sa.Column('display_order', sa.Integer(), server_default=sa.text('0'), nullable=True),
     sa.Column('position', sa.Integer(), server_default=sa.text('0'), nullable=True),
-    sa.Column('sort_by', sa.TEXT(), server_default=sa.text("'manual'::character"), nullable=True),
+    sa.Column('sort_by', sa.TEXT(), server_default=sa.text("'manual'::character "), nullable=True),
     sa.Column('sort_order', sa.TEXT(), server_default=sa.text("'asc'::character"), nullable=True),
     sa.Column('user_id', sa.TEXT(), nullable=True),
     sa.Column('assignees_ids', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('next_stages', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('previous_stages', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.Column('enabled', sa.Boolean(), server_default=sa.text('true'), nullable=True),
     sa.Column('is_default', sa.Boolean(), server_default=sa.text('false'), nullable=True),
     sa.Column('sms_template_id', sa.TEXT(), nullable=True),
@@ -1255,12 +1286,11 @@ def schema_upgrades() -> None:
     sa.Column('task_id', sa.GUID(length=16), nullable=True),
     sa.Column('color', sa.TEXT(), nullable=True),
     sa.Column('display_order', sa.Integer(), server_default=sa.text("'-1'::integer"), nullable=True),
-    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=True),
-    sa.Column('is_archived', sa.Boolean(), server_default=sa.text('false'), nullable=True),
-    sa.Column('archived_by', sa.TEXT(), nullable=True),
-    sa.Column('archived_at', sa.TIMESTAMP(), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', 'CLOSED', 'ARCHIVED', 'DELETED', name='simplestatus'), nullable=False),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('archived_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('archived_by', sa.String(length=36), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_workflows_stages_items_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['stage_id'], ['taas_projects_workflows_stages.id'], name=op.f('fk_taas_projects_workflows_stages_items_stage_id_taas_projects_workflows_stages')),
     sa.ForeignKeyConstraint(['task_id'], ['taas_tasks.id'], name=op.f('fk_taas_projects_workflows_stages_items_task_id_taas_tasks')),
@@ -1461,6 +1491,10 @@ def schema_downgrades() -> None:
         batch_op.drop_index(batch_op.f('ix_taas_password_reset_token_token_hash'))
 
     op.drop_table('taas_password_reset_token')
+    with op.batch_alter_table('taas_organization_members', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_taas_organization_members_role'))
+
+    op.drop_table('taas_organization_members')
     with op.batch_alter_table('taas_email_verification_token', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_taas_email_verification_token_user_id'))
         batch_op.drop_index(batch_op.f('ix_taas_email_verification_token_token_hash'))
@@ -1543,6 +1577,7 @@ def schema_downgrades() -> None:
     op.drop_table('taas_payrates')
     with op.batch_alter_table('taas_organizations', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_taas_organizations_status'))
+        batch_op.drop_index('ix_taas_organizations_slug_unique')
 
     op.drop_table('taas_organizations')
     op.drop_table('taas_crypto_token')
@@ -1609,17 +1644,6 @@ def schema_downgrades() -> None:
         batch_op.drop_index('idx_dlq_status_created')
 
     op.drop_table('resiliant_dlq_events')
-
-    # Drop the shared enum types last, after every table that referenced them is
-    # gone. create_type=False + checkfirst keeps this safe/idempotent.
-    bind = op.get_bind()
-    postgresql.ENUM(name='tenantstatus', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='organizationstatus', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='schedulejobstatus', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='schedulejobkind', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='sagastatus', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='outboxstatus', create_type=False).drop(bind, checkfirst=True)
-    postgresql.ENUM(name='dlqstatus', create_type=False).drop(bind, checkfirst=True)
     # ### end Alembic commands ###
 
 def data_upgrades() -> None:
