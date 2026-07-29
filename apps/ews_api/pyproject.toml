@@ -11,6 +11,8 @@ dependencies = [
   'http_fastapi',
   'db',
   'iam',
+  'iam_keycloak',
+  'resiliant',
   'store_redis',
   'messaging_faststream',
   'fastapi==0.136.1',

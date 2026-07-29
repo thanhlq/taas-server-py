@@ -4,6 +4,8 @@ from foundation.messaging.types import IMessageRoutingService
 from foundation.resiliant.dlq import IDLQService
 from foundation.resiliant.idempotency import IIdempotencyService
 from foundation.resiliant.outbox import IOutboxService
+from foundation.resiliant.saga import SagaService
+from foundation.resiliant.schedule import IScheduleService
 from foundation.resiliant.types import ResiliantServiceFactoryT
 from foundation.utils.singleton import singleton
 
@@ -20,6 +22,8 @@ class ResiliantServiceFactory(BaseService, ResiliantServiceFactoryT):
         self._dlq_service: IDLQService | None = None
         self._idempotency_service: IIdempotencyService | None = None
         self._message_routing_service: IMessageRoutingService | None = None
+        self._saga_service: SagaService | None = None
+        self._schedule_service: IScheduleService | None = None
 
     def get_outbox_service(self) -> IOutboxService:
         """
@@ -54,3 +58,19 @@ class ResiliantServiceFactory(BaseService, ResiliantServiceFactoryT):
                 ResiliantServiceBuilder.build_idempotency_service()
             )
         return self._idempotency_service
+
+    def get_saga_service(self) -> SagaService:
+        """
+        Return a durable (database-backed) SagaService.
+        """
+        if self._saga_service is None:
+            self._saga_service = ResiliantServiceBuilder.build_saga_service()
+        return self._saga_service
+
+    def get_schedule_service(self) -> IScheduleService:
+        """
+        Return the durable-timer / scheduler service.
+        """
+        if self._schedule_service is None:
+            self._schedule_service = ResiliantServiceBuilder.build_schedule_service()
+        return self._schedule_service

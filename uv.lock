@@ -512,6 +512,18 @@ wheels = [
 ]
 
 [[package]]
+name = "croniter"
+version = "6.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/57/2e2a65aee2a70483cb28e2b7e15a072d00a523207593b44400d4717bb100/croniter-6.2.4.tar.gz", hash = "sha256:fc124f751b1b04805c2a04b061898b436b45ab2320b045e1e052ea895de65189", size = 166267, upload-time = "2026-07-10T09:52:59.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/ba/d678e5bd329646ca51d3c92addbc77804e86d21f4b6b6a027218e6abb010/croniter-6.2.4-py3-none-any.whl", hash = "sha256:8ef3d544107a5c05a150a2d78f8bf5a8eb9c5c4d93405a736b824109574e3f4d", size = 46677, upload-time = "2026-07-10T09:52:58.425Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "48.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -711,8 +723,10 @@ dependencies = [
     { name = "foundation" },
     { name = "http-fastapi" },
     { name = "iam" },
+    { name = "iam-keycloak" },
     { name = "messaging-faststream" },
     { name = "redis" },
+    { name = "resiliant" },
     { name = "store-redis" },
     { name = "uvicorn" },
 ]
@@ -725,8 +739,10 @@ requires-dist = [
     { name = "foundation", editable = "libs/foundation" },
     { name = "http-fastapi", editable = "libs/http_fastapi" },
     { name = "iam", editable = "libs/iam" },
+    { name = "iam-keycloak", editable = "libs/iam_keycloak" },
     { name = "messaging-faststream", editable = "libs/messaging_faststream" },
     { name = "redis", specifier = "==7.4.0" },
+    { name = "resiliant", editable = "libs/resiliant" },
     { name = "store-redis", editable = "libs/store_redis" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]
@@ -2666,6 +2682,7 @@ version = "0.1.0"
 source = { editable = "libs/resiliant" }
 dependencies = [
     { name = "advanced-alchemy" },
+    { name = "croniter" },
     { name = "db" },
     { name = "foundation" },
 ]
@@ -2680,6 +2697,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "advanced-alchemy" },
+    { name = "croniter", specifier = ">=3.0.0" },
     { name = "db", editable = "libs/db" },
     { name = "foundation", editable = "libs/foundation" },
 ]
@@ -2934,10 +2952,22 @@ dependencies = [
     { name = "redis" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "foundation", editable = "libs/foundation" },
     { name = "redis", specifier = "==7.4.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [[package]]

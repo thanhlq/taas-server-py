@@ -60,6 +60,8 @@ from .resiliant import (
     OutboxEventArchiveTable,
     OutboxEventTable,
     ProcessedEventTable,
+    SagaStateTable,
+    ScheduledJobTable,
 )
 
 # from sqlalchemy.orm import DeclarativeBase
@@ -89,6 +91,8 @@ __all__ = [
     'OutboxEventTable',
     'OutboxEventArchiveTable',
     'ProcessedEventTable',
+    'SagaStateTable',
+    'ScheduledJobTable',
 
     # CRM
     'CrmAccount',

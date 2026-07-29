@@ -593,6 +593,7 @@ def schema_upgrades() -> None:
     sa.Column('alias_id', sa.TEXT(), nullable=True),
     sa.Column('display_name', sa.TEXT(), nullable=True),
     sa.Column('title', sa.TEXT(), nullable=True),
+    sa.Column('slug', sa.String(length=100), nullable=False),
     sa.Column('email', sa.TEXT(), nullable=True),
     sa.Column('email_alt1', sa.TEXT(), nullable=True),
     sa.Column('email_alt2', sa.TEXT(), nullable=True),

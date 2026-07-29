@@ -24,10 +24,14 @@ def register_resiliant_factory(factory: 'ResiliantServiceFactoryT'):
     from foundation.resiliant.dlq import IDLQService
     from foundation.resiliant.idempotency import IIdempotencyService
     from foundation.resiliant.outbox import IOutboxService
+    from foundation.resiliant.saga import SagaService
+    from foundation.resiliant.schedule import IScheduleService
     from foundation.resiliant.types import ResiliantServiceFactoryT
 
     register_service(IOutboxService, factory.get_outbox_service())
     register_service(IDLQService, factory.get_dlq_service())
     register_service(IIdempotencyService, factory.get_idempotency_service())
     register_service(IMessageRoutingService, factory.get_message_routing_service())
+    register_service(SagaService, factory.get_saga_service())
+    register_service(IScheduleService, factory.get_schedule_service())
     register_service(ResiliantServiceFactoryT, factory)
