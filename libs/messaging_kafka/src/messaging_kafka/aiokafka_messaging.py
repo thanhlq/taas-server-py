@@ -52,6 +52,7 @@ Lifecycle
 from __future__ import annotations
 
 import asyncio
+import ssl
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -104,6 +105,9 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         self.consumer: Optional[AIOKafkaConsumer] = None
         self.dlq_producer: Optional[AIOKafkaProducer] = None
         self.admin_client: Optional[AIOKafkaAdminClient] = None
+
+        # Built once on first use, shared by producer/consumer/admin clients.
+        self._cached_ssl_context: Optional[ssl.SSLContext] = None
 
         # Dynamic subscriptions (created via ``subscribe()``).
         self._subscriptions: dict[str, _SubscriptionInfo] = {}
@@ -797,15 +801,24 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self._schema_registry_encoder)  # type: ignore
 
     def _sasl_kwargs(self) -> dict[str, Any]:
-        """Build security/SASL kwargs for aiokafka clients."""
+        """Build security/SASL/TLS kwargs for aiokafka clients."""
+        self._ssl_context()  # log the TLS setup once
+        return self._config.build_kafka_client_kwargs()
+
+    def _ssl_context(self) -> Optional[ssl.SSLContext]:
+        """TLS context for ``SSL``/``SASL_SSL`` brokers, logged once."""
         cfg = self._config
-        kw: dict[str, Any] = {}
-        if cfg.kafka_security_protocol:
-            kw['security_protocol'] = cfg.kafka_security_protocol
-        if cfg.kafka_sasl_mechanism:
-            kw['sasl_mechanism'] = cfg.kafka_sasl_mechanism
-        if cfg.kafka_sasl_username:
-            kw['sasl_plain_username'] = cfg.kafka_sasl_username
-        if cfg.kafka_sasl_password:
-            kw['sasl_plain_password'] = cfg.kafka_sasl_password
-        return kw
+        if self._cached_ssl_context is not None:
+            return self._cached_ssl_context
+
+        context = cfg.build_kafka_ssl_context()
+        if context is None:
+            return None
+
+        self.logger.info(
+            f'📨 🔐  Kafka TLS enabled [{cfg.kafka_security_protocol}], '
+            f'ca={cfg.kafka_ssl_trust_source}, '
+            f'check_hostname={context.check_hostname}'
+        )
+        self._cached_ssl_context = context
+        return context

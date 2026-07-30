@@ -1,5 +1,10 @@
+import base64
+import binascii
+import ssl
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional
+from functools import lru_cache
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from foundation.messaging.types import MessageEncodingType
 
@@ -9,6 +14,84 @@ from foundation.messaging.types import MessageEncodingType
 
 if TYPE_CHECKING:
     from ..kafka.sr import SchemaRegistryConfig
+
+
+PEM_CERT_MARKER = '-----BEGIN CERTIFICATE-----'
+
+
+def normalize_ca_data(raw: str) -> str:
+    """
+    Turn an env-var-carried CA bundle into PEM text OpenSSL accepts.
+
+    Handles the three shapes a CA realistically arrives in when it is injected
+    as a variable rather than mounted as a file:
+
+    * plain multi-line PEM (dotenv quoted value, Docker/K8s multi-line env),
+    * single-line PEM with literal ``\\n`` escapes (CI/CD secret stores),
+    * base64-encoded PEM (e.g. a Kubernetes secret's raw ``ca.crt`` value).
+
+    Raises ``ValueError`` when the result still isn't a certificate, so a
+    mangled secret fails at startup instead of at the first TLS handshake.
+    """
+    data = raw.strip()
+
+    if PEM_CERT_MARKER not in data:
+        # Not PEM as-is — the only other sane encoding is base64-wrapped PEM.
+        try:
+            data = base64.b64decode(data, validate=True).decode('ascii').strip()
+        except (binascii.Error, UnicodeDecodeError) as exc:
+            raise ValueError(
+                'KAFKA_CA_DATA is neither PEM nor base64-encoded PEM'
+            ) from exc
+
+    # Secret stores commonly flatten newlines into the two-character escape.
+    data = data.replace('\\n', '\n').strip()
+
+    if PEM_CERT_MARKER not in data:
+        raise ValueError(
+            f'KAFKA_CA_DATA does not contain a {PEM_CERT_MARKER!r} block'
+        )
+
+    # OpenSSL requires the PEM to end with a newline.
+    return data + '\n'
+
+
+@lru_cache(maxsize=8)
+def _build_ssl_context(
+    ca_location: Optional[str],
+    ca_data: Optional[str],
+    check_hostname: bool,
+    strict_verify: bool,
+) -> ssl.SSLContext:
+    """
+    Build a client TLS context, cached per distinct set of TLS settings.
+
+    Kafka clients take the trust anchor as an :class:`ssl.SSLContext` rather
+    than a ``ssl.ca.location``-style path, so the PEM bundle is loaded here.
+    Trust anchor precedence: CA file → inline CA data → system trust store.
+    """
+    if ca_location:
+        ca_path = Path(ca_location).expanduser()
+        if not ca_path.is_file():
+            raise FileNotFoundError(
+                f'KAFKA_SSL_CA_LOCATION points to a missing file: {ca_path}'
+            )
+        context = ssl.create_default_context(cafile=str(ca_path))
+    elif ca_data:
+        context = ssl.create_default_context(cadata=normalize_ca_data(ca_data))
+    else:
+        context = ssl.create_default_context()
+
+    if not strict_verify:
+        # Python 3.13+ enables VERIFY_X509_STRICT by default, which rejects CA
+        # certificates lacking a keyUsage extension — common for private CAs
+        # (e.g. a hand-rolled Strimzi cluster CA). Chain and hostname
+        # verification stay on; only the RFC 5280 strictness checks are relaxed.
+        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+
+    if not check_hostname:
+        context.check_hostname = False
+    return context
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -98,6 +181,18 @@ class MessagingConfig:
     kafka_sasl_username: Optional[str] = None
     kafka_sasl_password: Optional[str] = None
 
+    kafka_ssl_ca_location: Optional[str] = None
+    """Path to a PEM CA bundle used to verify the broker certificate (SSL/SASL_SSL)."""
+
+    kafka_ssl_ca_data: Optional[str] = None
+    """Inline CA bundle (PEM, escaped PEM, or base64 PEM) — used when no CA file is set."""
+
+    kafka_ssl_check_hostname: bool = True
+    """Verify the broker hostname against its certificate; disable only for dev."""
+
+    kafka_ssl_strict_verify: bool = True
+    """Apply RFC 5280 strict checks (Python 3.13+ default); off for CAs without keyUsage."""
+
     # ---- Schema Registry ----------------------------------------------------
     schema_registry_url: Optional[str] = None
     """Confluent Schema Registry endpoint (required for ``schema-registry-avro``)."""
@@ -118,6 +213,52 @@ class MessagingConfig:
     def kafka_bootstrap_servers_list(self) -> list[str]:
         """Split ``kafka_bootstrap_servers`` into a list."""
         return [s.strip() for s in self.kafka_bootstrap_servers.split(',') if s.strip()]
+
+    @property
+    def kafka_ssl_trust_source(self) -> str:
+        """Human-readable description of where the TLS trust anchor comes from."""
+        if self.kafka_ssl_ca_location:
+            return f'file:{self.kafka_ssl_ca_location}'
+        if self.kafka_ssl_ca_data:
+            return f'inline KAFKA_CA_DATA ({len(self.kafka_ssl_ca_data)} chars)'
+        return 'system trust store'
+
+    def build_kafka_client_kwargs(self) -> dict[str, Any]:
+        """
+        Security kwargs accepted by every aiokafka client class.
+
+        Shared by the producer/consumer/admin clients so a single config change
+        applies everywhere. Omitted keys leave the aiokafka defaults in place.
+        """
+        kw: dict[str, Any] = {}
+        if self.kafka_security_protocol:
+            kw['security_protocol'] = self.kafka_security_protocol
+        if self.kafka_sasl_mechanism:
+            kw['sasl_mechanism'] = self.kafka_sasl_mechanism
+        if self.kafka_sasl_username:
+            kw['sasl_plain_username'] = self.kafka_sasl_username
+        if self.kafka_sasl_password:
+            kw['sasl_plain_password'] = self.kafka_sasl_password
+        ssl_context = self.build_kafka_ssl_context()
+        if ssl_context is not None:
+            kw['ssl_context'] = ssl_context
+        return kw
+
+    def build_kafka_ssl_context(self) -> Optional[ssl.SSLContext]:
+        """
+        TLS context for ``SSL``/``SASL_SSL`` brokers, ``None`` otherwise.
+
+        ``None`` means "no ssl_context kwarg" — correct for PLAINTEXT and
+        SASL_PLAINTEXT connections.
+        """
+        if not (self.kafka_security_protocol or '').endswith('SSL'):
+            return None
+        return _build_ssl_context(
+            self.kafka_ssl_ca_location,
+            self.kafka_ssl_ca_data,
+            self.kafka_ssl_check_hostname,
+            self.kafka_ssl_strict_verify,
+        )
 
     @property
     def schema_registry_enabled(self) -> bool:

@@ -88,6 +88,12 @@ from typing import Any, Optional, Union
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from faststream.kafka import KafkaBroker, KafkaMessage
+from faststream.security import (
+    BaseSecurity,
+    SASLPlaintext,
+    SASLScram256,
+    SASLScram512,
+)
 from foundation.exceptions.report_error import report_error
 from foundation.messaging.events.event_processor import EventProcessor
 from foundation.messaging.kafka.base_messaging import BaseMessagingService
@@ -106,6 +112,13 @@ from foundation.utils.icons import Icons
 from foundation.utils.singleton import singleton
 
 from .helper import FastStreamHelper
+
+# SASL mechanism name (as configured for Kafka) → FastStream security class.
+_SASL_MECHANISMS = {
+    'PLAIN': SASLPlaintext,
+    'SCRAM-SHA-256': SASLScram256,
+    'SCRAM-SHA-512': SASLScram512,
+}
 
 # ---------------------------------------------------------------------------
 # Internal data structures
@@ -157,8 +170,11 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         # FastStream broker — created eagerly so subscribers can be
         # registered before start() is called (required for TestKafkaBroker).
         # ------------------------------------------------------------------
+        # Pass the parsed list: a comma-separated string is treated by aiokafka
+        # as a single host, which breaks multi-broker bootstrap.
         self._broker = KafkaBroker(
-            bootstrap_servers=self._config.kafka_bootstrap_servers,
+            bootstrap_servers=self._config.kafka_bootstrap_servers_list,
+            security=self._broker_security(),
         )
         self._broker_started: bool = False
 
@@ -263,6 +279,9 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
             self._admin_client = AIOKafkaAdminClient(
                 bootstrap_servers=self._config.kafka_bootstrap_servers_list,
+                # The admin client is raw aiokafka, so it takes the kwargs form
+                # rather than FastStream's ``security=`` object.
+                **self._config.build_kafka_client_kwargs(),
             )
             await self._admin_client.start()
 
@@ -745,6 +764,38 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
     # -----------------------------------------------------------------------
     # Internal helpers
     # -----------------------------------------------------------------------
+
+    def _broker_security(self) -> Optional[BaseSecurity]:
+        """
+        Translate the messaging config into a FastStream security object.
+
+        FastStream wraps SASL/TLS in a ``BaseSecurity`` subclass instead of the
+        raw aiokafka kwargs; ``None`` means an unauthenticated PLAINTEXT broker.
+        """
+        cfg = self._config
+        protocol = (cfg.kafka_security_protocol or 'PLAINTEXT').upper()
+        if protocol == 'PLAINTEXT':
+            return None
+
+        ssl_context = cfg.build_kafka_ssl_context()
+        use_ssl = protocol.endswith('SSL')
+
+        if not protocol.startswith('SASL'):
+            return BaseSecurity(ssl_context=ssl_context, use_ssl=use_ssl)
+
+        mechanism = (cfg.kafka_sasl_mechanism or 'PLAIN').upper()
+        sasl_class = _SASL_MECHANISMS.get(mechanism)
+        if sasl_class is None:
+            raise ValueError(
+                f'Unsupported KAFKA_SASL_MECHANISM={mechanism!r} for the '
+                f'FastStream provider; supported: {sorted(_SASL_MECHANISMS)}'
+            )
+        return sasl_class(
+            username=cfg.kafka_sasl_username or '',
+            password=cfg.kafka_sasl_password or '',
+            ssl_context=ssl_context,
+            use_ssl=use_ssl,
+        )
 
     async def _encode_message(
         self, topic: str, message: BaseSendableMessage

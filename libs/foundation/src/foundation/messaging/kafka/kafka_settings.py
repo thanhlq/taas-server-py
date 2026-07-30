@@ -79,6 +79,24 @@ class KafkaSettings:
     KAFKA_SASL_PASSWORD: str | None = field(
         default_factory=get_env('KAFKA_SASL_PASSWORD', None, str)
     )
+    KAFKA_SSL_CA_LOCATION: str | None = field(
+        default_factory=get_env('KAFKA_SSL_CA_LOCATION', None, str)
+    )
+    KAFKA_CA_DATA: str | None = field(
+        default_factory=get_env('KAFKA_CA_DATA', None, str)
+    )
+    """
+    Inline CA bundle, for deployments that inject the cert as a variable rather
+    than mounting a file (K8s secrets, CI/CD, PaaS). Accepts multi-line PEM,
+    single-line PEM with ``\\n`` escapes, or base64-encoded PEM.
+    Ignored when ``KAFKA_SSL_CA_LOCATION`` is set.
+    """
+    KAFKA_SSL_CHECK_HOSTNAME: bool = field(
+        default_factory=get_env('KAFKA_SSL_CHECK_HOSTNAME', True, bool)
+    )
+    KAFKA_SSL_STRICT_VERIFY: bool = field(
+        default_factory=get_env('KAFKA_SSL_STRICT_VERIFY', True, bool)
+    )
 
     # schema registry
     KAFKA_SCHEMA_REGISTRY_URL: str | None = field(
@@ -140,6 +158,10 @@ def build_messaging_config(
         kafka_sasl_mechanism=settings.KAFKA_SASL_MECHANISM,
         kafka_sasl_username=settings.KAFKA_SASL_USERNAME,
         kafka_sasl_password=settings.KAFKA_SASL_PASSWORD,
+        kafka_ssl_ca_location=settings.KAFKA_SSL_CA_LOCATION,
+        kafka_ssl_ca_data=settings.KAFKA_CA_DATA,
+        kafka_ssl_check_hostname=settings.KAFKA_SSL_CHECK_HOSTNAME,
+        kafka_ssl_strict_verify=settings.KAFKA_SSL_STRICT_VERIFY,
         # schema registry
         schema_registry_url=settings.KAFKA_SCHEMA_REGISTRY_URL,
         schema_registry_username=settings.KAFKA_SCHEMA_REGISTRY_USERNAME,

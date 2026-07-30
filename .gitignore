@@ -261,3 +261,6 @@ output/
 tmp/
 temp/
 .temp/
+
+*.dump
+*.dump.*
