@@ -173,7 +173,15 @@ class MessagingConfig:
 
     # ---- Kafka: security ----------------------------------------------------
     kafka_security_protocol: Optional[str] = None
-    """``PLAINTEXT`` | ``SSL`` | ``SASL_PLAINTEXT`` | ``SASL_SSL`` (None = PLAINTEXT)."""
+    """
+    ``PLAINTEXT`` | ``SSL`` | ``SASL_PLAINTEXT`` | ``SASL_SSL`` (None = PLAINTEXT).
+
+    - PLAINTEXT: no TLS, no SASL
+    - SSL: TLS only, no SASL
+    - SASL_PLAINTEXT: SASL auth, no TLS
+    - SASL_SSL: SASL auth over TLS
+
+    """
 
     kafka_sasl_mechanism: Optional[str] = None
     """``PLAIN`` | ``SCRAM-SHA-256`` | ``SCRAM-SHA-512`` when SASL is used."""
