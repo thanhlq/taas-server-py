@@ -20,7 +20,7 @@ def register_resiliant_factory(factory: 'ResiliantServiceFactoryT'):
     """
     Register a resiliant service factory.
     """
-    from foundation.messaging.types import IMessageRoutingService
+    from foundation.messaging.types import MessageRoutingServiceT
     from foundation.resiliant.dlq import IDLQService
     from foundation.resiliant.idempotency import IIdempotencyService
     from foundation.resiliant.outbox import IOutboxService
@@ -31,7 +31,7 @@ def register_resiliant_factory(factory: 'ResiliantServiceFactoryT'):
     register_service(IOutboxService, factory.get_outbox_service())
     register_service(IDLQService, factory.get_dlq_service())
     register_service(IIdempotencyService, factory.get_idempotency_service())
-    register_service(IMessageRoutingService, factory.get_message_routing_service())
+    register_service(MessageRoutingServiceT, factory.get_message_routing_service())
     register_service(SagaService, factory.get_saga_service())
     register_service(IScheduleService, factory.get_schedule_service())
     register_service(ResiliantServiceFactoryT, factory)

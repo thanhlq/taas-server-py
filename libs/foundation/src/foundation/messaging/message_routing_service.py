@@ -5,28 +5,28 @@ from foundation import BaseService
 from foundation.cli import cli
 from foundation.db.advanced_db_manager import MainDatabase
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
-from foundation.messaging.kafka.base_messaging import BaseEvent
+from foundation.messaging.base_messaging import BaseEvent
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig
 from foundation.state import get_service
 from foundation.utils.singleton import singleton
 
-from .types import BaseSendableMessage, IMessageRoutingService, IMessagingService
+from .types import BaseSendableMessage, MessageRoutingServiceT, MessagingServiceT
 
 
 @singleton
-class MessageRoutingService(BaseService, IMessageRoutingService):
+class MessageRoutingService(BaseService, MessageRoutingServiceT):
     """
     A service that routes messages either through the outbox pattern or directly to the messaging service based on configuration.
     """
 
-    _messaging_service: Optional[IMessagingService]
+    _messaging_service: Optional[MessagingServiceT]
     _outbox_service: Optional[IOutboxService]
     _outbox_config: OutboxConfig
 
     def __init__(
         self,
         outbox_config: OutboxConfig,
-        messaging_service: Optional[IMessagingService] = None,
+        messaging_service: Optional[MessagingServiceT] = None,
         outbox_service: Optional[IOutboxService] = None,
     ):
         super().__init__()
@@ -58,9 +58,9 @@ class MessageRoutingService(BaseService, IMessageRoutingService):
         return self._outbox_config.enabled
 
     @property
-    def messaging_service(self) -> IMessagingService:
+    def messaging_service(self) -> MessagingServiceT:
         if not self._messaging_service:
-            self._messaging_service = get_service(IMessagingService)
+            self._messaging_service = get_service(MessagingServiceT)
 
         return self._messaging_service
 

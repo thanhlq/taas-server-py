@@ -34,7 +34,7 @@ from resiliant.schedule import ScheduleRepository, SchedulerPoller, ScheduleServ
 from resiliant.schedule.schedule_settings import get_schedule_config
 
 if TYPE_CHECKING:
-    from foundation.messaging.types import IMessagingService
+    from foundation.messaging.types import MessagingServiceT
     from sqlalchemy.ext.asyncio import AsyncSession
 
 # --------------------------------------------------------------------------- #
@@ -82,7 +82,7 @@ class ResiliantServiceBuilder:
     def build_outbox_poller(
         session_factory: 'Callable[[], AsyncSession]',
         config: OutboxConfig | None = None,
-        publisher: 'IMessagingService | None' = None,
+        publisher: 'MessagingServiceT | None' = None,
     ) -> 'OutboxPoller':
         """Return an :class:`OutboxPoller` wired to a fresh repository.
 
@@ -197,7 +197,7 @@ class ResiliantServiceBuilder:
     def build_scheduler_poller(
         session_factory: 'Callable[[], AsyncSession]',
         config: ScheduleConfig | None = None,
-        publisher: 'IMessagingService | None' = None,
+        publisher: 'MessagingServiceT | None' = None,
     ) -> SchedulerPoller:
         """Return a :class:`SchedulerPoller` (a pure poller driven by a worker)."""
         config = config or get_schedule_config()

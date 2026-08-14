@@ -1,19 +1,23 @@
 from typing import Optional
 
-from core.conf.settings import AppSetting, get_app_settings
-from core.messaging.types import IMessagingService
-from core.safety.retry import retry
-from core.services.service_registry import get_service_locator
+from foundation.config import get_settings
+from foundation.messaging.config.messaging_settings import (
+    MessagingSettings,
+)
+from foundation.messaging.types import (
+    MessagingServiceT,
+)
+from foundation.resiliant.retry import retry
 
 from .aiokafka_messaging import AiokafkaMessagingService as KafkaMessagingService
 from .decorator import messaging
 
 
-async def create_pubsub_service(settings: AppSetting) -> IMessagingService:
+async def create_pubsub_service(settings: MessagingSettings) -> MessagingServiceT:
     """Create pub/sub service based on configuration."""
 
     kafka = KafkaMessagingService()
-    if settings.CONSUMER_ENABLE:
+    if settings.CONSUMER_ENABLED:
         await kafka.start_producer()
         await kafka.start_consumer()
     else:
@@ -24,15 +28,15 @@ async def create_pubsub_service(settings: AppSetting) -> IMessagingService:
 
 @retry.decorator(name='initialize_messaging_service')
 async def initialize_messaging_service(
-    settings: Optional[AppSetting] = None,
-) -> IMessagingService:
+    settings: MessagingSettings,
+) -> MessagingServiceT:
     """Initialize async services that require await."""
-    settings = get_app_settings() if settings is None else settings
 
     # locator = get_service_locator()
     pubsub_service = await create_pubsub_service(settings)
     # locator.register(IMessagingService, pubsub_service)
     return pubsub_service
+
 
 __all__ = [
     'initialize_messaging_service',

@@ -7,12 +7,12 @@ import socketio
 from litestar.utils import join_paths
 from rich.console import Console
 
+from foundation.app.app_config import AppConfig
 from foundation.cli import get_console
 from foundation.config import DatabaseSettings, Settings
-from foundation.app.app_config import AppConfig
 from foundation.config.openapi import build_openapi_config
-from foundation.messaging.types import IMessagingService
-from foundation.observability.types import InstrumentSettings
+from foundation.messaging.types import MessagingServiceT
+from foundation.observability.types import ServiceInstrumentConfig
 from foundation.state import get_service
 
 __all__ = ('BaseApiApplication', 'AppConfig')
@@ -28,7 +28,7 @@ class BaseApiApplication[A](ABC):
     _runtime_path: str
     _socketio_app: Optional[socketio.ASGIApp] = None
 
-    def __init__(self, settings: Settings, runtime_path: str, instrumentation: InstrumentSettings | None = None) -> None:
+    def __init__(self, settings: Settings, runtime_path: str, instrumentation: ServiceInstrumentConfig | None = None) -> None:
         self._settings = settings
         self._config = AppConfig(
             name=settings.app.NAME,
@@ -39,7 +39,7 @@ class BaseApiApplication[A](ABC):
             websocket_config=settings.app.get_websocket_config(),
             cors_config=settings.app.get_cors_config(),
             # csrf_config=config.app.get_csrf_config(),
-            instrumentation=instrumentation or InstrumentSettings(),
+            instrumentation=instrumentation or ServiceInstrumentConfig(),
         )
         self._runtime_path = runtime_path
         self._db_config = settings.db
@@ -54,12 +54,12 @@ class BaseApiApplication[A](ABC):
 
         self.show_app_info()
 
-    def get_instrument_settings(self) -> InstrumentSettings:
+    def get_instrument_settings(self) -> ServiceInstrumentConfig:
         return self._config.instrumentation # type: ignore
 
     @property
-    def messaging_service(self) -> IMessagingService:
-        return get_service(IMessagingService)
+    def messaging_service(self) -> MessagingServiceT:
+        return get_service(MessagingServiceT)
 
     @property
     def settings(self) -> Settings:

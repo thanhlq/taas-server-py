@@ -233,7 +233,7 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
         """ Convenience method to get the payload as the expected type E (subclass of BaseEventPayload). """
         return cast(E, self.payload)  # type: ignore[reportGeneralTypeIssues]
 
-    def _serialize(self, encoder: 'IMessageEncoder', **kwargs: Any) -> Any:
+    def _serialize(self, encoder: 'MessageEncoderT', **kwargs: Any) -> Any:
         """
         The hook method for serialization logic, called by the message service when serializing an event at runtime
         - The msg encoder only serializes the default "payload field" as bytes or str, and leaves the rest of the fields as-is
@@ -248,7 +248,7 @@ class BaseEvent[E: BaseEventPayload](msgspec.Struct, _AvroModelBase, kw_only=Tru
 
         return self  # No-op by default, can be overridden by subclasses for custom serialization logic
 
-    def _deserialize(self, encoder: 'IMessageEncoder', **kwargs: Any) -> Any:
+    def _deserialize(self, encoder: 'MessageEncoderT', **kwargs: Any) -> Any:
         """
         The hook method for deserialization logic, called by the message service when deserializing an event at runtime
         - The msg encoder only deserializes the default "payload field" as bytes or str, and leaves the rest of the fields as-is
@@ -488,7 +488,7 @@ class MessageServiceStats(BaseModel):
         return _dc.asdict(self)
 
 
-class IMessageEncoder(Protocol):
+class MessageEncoderT(Protocol):
     """Protocol for message encoders."""
 
     def __init__(
@@ -501,7 +501,7 @@ class IMessageEncoder(Protocol):
 
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
-    ) -> 'IMessageEncoder': ...
+    ) -> 'MessageEncoderT': ...
 
     """
         This is used for registering the event class for a given serializer name.
@@ -558,7 +558,7 @@ class IMessageEncoder(Protocol):
     def decode_field(self, val: Any) -> dict: ...
 
 
-class IMessagingService[M](ABC):
+class MessagingServiceT[ProducerT, ConsumerT, MessageT](ABC):
     """
     Base messaging service interface.
 
@@ -578,6 +578,11 @@ class IMessagingService[M](ABC):
     """
 
     @abstractmethod
+    async def get_admin_client(self) -> MessagingAdminServiceT:
+        """Get the admin client for managing topics/queues/streams."""
+        ...
+
+    @abstractmethod
     def get_messaging_encoding_type(self) -> str:
         """Return the configured message encoding type (e.g., json, msgpack, avro)."""
         ...
@@ -588,12 +593,12 @@ class IMessagingService[M](ABC):
         ...
 
     @abstractmethod
-    def get_msg_encoder(self) -> IMessageEncoder:
+    def get_msg_encoder(self) -> MessageEncoderT:
         """Get the message encoder used for serialization."""
         pass
 
     @abstractmethod
-    def get_stats(self) -> MessageServiceStats:
+    def get_stats(self) -> MessageServiceStats | dict:
         """Get comprehensive messaging service statistics."""
         pass
 
@@ -601,14 +606,6 @@ class IMessagingService[M](ABC):
     def get_provider(self) -> 'MessagingProvider':
         """Get the messaging provider type."""
         pass
-
-    # @abstractmethod
-    # async def astart(self) -> None:
-    #     """
-    #     Initialize and start the service based on configuration.
-    #     This is a convenience method that may start producer, consumer, or both.
-    #     """
-    #     pass
 
     @abstractmethod
     async def start_producer(self) -> None:
@@ -678,7 +675,7 @@ class IMessagingService[M](ABC):
         reply_to: str = '',
         no_confirm: bool = False,
         **kwargs,
-    ) -> asyncio.Future[M | None] | None:
+    ) -> asyncio.Future[MessageT | None] | None:
         """
         Publish message to destination (channel/stream/queue).
 
@@ -732,7 +729,7 @@ class IMessagingService[M](ABC):
     @abstractmethod
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
-    ) -> 'IMessagingService': ...
+    ) -> 'MessagingServiceT': ...
 
     """
         This is used for registering the event class for a given serializer name.
@@ -768,7 +765,7 @@ class ChannelInfo:
     metadata: Optional[dict[str, Any]] = None
 
 
-class IMessagingAdminService(ABC):
+class MessagingAdminServiceT(ABC):
     """
     Admin interface for messaging service management.
 
@@ -776,6 +773,11 @@ class IMessagingAdminService(ABC):
     operations that may not be needed by all implementations but are useful
     for managing the messaging infrastructure.
     """
+
+    @abstractmethod
+    async def stop(self):
+        """Stop the admin service (if applicable)."""
+        ...
 
     @abstractmethod
     async def create_channel(
@@ -815,7 +817,7 @@ class IMessagingAdminService(ABC):
         """Get detailed information about a specific channel."""
         pass
 
-class IMessageRoutingService(ABC):
+class MessageRoutingServiceT(ABC):
     """
     Responsible for determining the routing of messages to actual outbox or messsaging service
     depending on the configuration and environment.
@@ -829,7 +831,7 @@ class IMessageRoutingService(ABC):
 
     @property
     @abstractmethod
-    def messaging_service(self) -> IMessagingService:
+    def messaging_service(self) -> MessagingServiceT:
         """
         Retrieve the messaging service instance.
 
@@ -905,7 +907,7 @@ class IMessageRoutingService(ABC):
 # ============================================================================
 
 
-class IMessagingStreamService(IMessagingService):
+class IMessagingStreamService(MessagingServiceT):
     """
     Abstract message stream service interface for log-based streaming.
 
@@ -950,7 +952,7 @@ class IMessagingStreamService(IMessagingService):
 # ============================================================================
 
 
-class IMessagingQueueService(IMessagingService):
+class MessagingQueueServiceT(MessagingServiceT):
     """
     Abstract message queue service interface for point-to-point messaging.
 
@@ -989,7 +991,7 @@ type AgentHandler = Callable[..., Any]
 
 
 @runtime_checkable
-class IMessagingDecorators(Protocol):
+class MessagingDecoratorT(Protocol):
     """Provider-agnostic decorator namespace exposed by a messaging backend.
 
     A backend implementation (FastStream, pure aiokafka, Redis Streams, ...)
@@ -998,9 +1000,9 @@ class IMessagingDecorators(Protocol):
 
     .. code-block:: python
 
-        from core.messaging.types import IMessagingDecorators
+        from core.messaging.types import MessagingDecoratorT
 
-        def register_agents(messaging: IMessagingDecorators) -> None:
+        def register_agents(messaging: MessagingDecoratorT) -> None:
             @messaging.subscriber(SharedTopics.SCOPE_TRACKER_EVENT)
             async def scope_tracker(event, message):
                 ...
@@ -1022,15 +1024,15 @@ class IMessagingDecorators(Protocol):
 
     def subscriber(
         self,
-        topic: str,
+        channel: str,
         *,
         group_id: Optional[str] = None,
         auto_offset_reset: Optional[Literal['latest', 'earliest', 'none']] = None,
     ) -> Callable[[AgentHandler], AgentHandler]:
-        """Register the decorated coroutine as a subscriber for *topic*.
+        """Register the decorated coroutine as a subscriber for *channel*.
 
         Args:
-            topic: Logical topic / stream / channel name to subscribe to.
+            channel: Logical topic / stream / channel name to subscribe to.
             group_id: Override the consumer-group id. ``None`` means use
                 the backend's configured default group.
             auto_offset_reset: Override the offset-reset policy for this

@@ -23,7 +23,7 @@ Architecture
     │  └───────────────┘  └─────────────────────────────────┘ │
     │                                                         │
     │  Main loop (start_consuming):                           │
-    │      AIOKafkaConsumer(*CONSUMER_TOPICS)                    │
+    │      AIOKafkaConsumer(*CONSUMER_CHANNELS)                    │
     │        → _process_message() → EventProcessorFast        │
     │            → handler / retry / DLQ                      │
     │                                                         │
@@ -61,9 +61,26 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError
 from aiokafka.structs import RecordMetadata
-from foundation.messaging.kafka.base_messaging import BaseMessagingService
-from foundation.messaging.types import IMessagingService, MessageHandler
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.events.event_processor import EventProcessor
+from foundation.messaging.kafka.base_kafka_messaging import BaseKafkaMessagingService
+from foundation.messaging.types import (
+    BaseEvent,
+    BaseSendableMessage,
+    DlqEvent,
+    MessageHandler,
+    MessageServiceStats,
+    MessagingProvider,
+    MessagingServiceT,
+)
+from foundation.messaging.utils.msg_encoder import MsgDecoderError
+from foundation.observability.tracing_factory import TracingFactory
+from foundation.observability.types import ITracingManager
+from foundation.resiliant.retry import retry
 from foundation.utils.singleton import singleton
+
+from messaging_kafka.aiokafka_security import get_aiokafka_security_kwargs
+from messaging_kafka.kafka_admin_service import KafkaAdminService
 
 from .aiokafka_helper import AiokafkaHelper
 
@@ -89,7 +106,7 @@ class _SubscriptionInfo:
 # ---------------------------------------------------------------------------
 
 @singleton
-class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
+class AiokafkaMessagingService(BaseKafkaMessagingService[AIOKafkaProducer, AIOKafkaConsumer, RecordMetadata], MessagingServiceT[AIOKafkaProducer, AIOKafkaConsumer, RecordMetadata]):
     """
     Kafka pub/sub service using pure ``aiokafka``.
 
@@ -98,11 +115,11 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     :class:`BaseMessagingService`.
     """
 
+    _admin_client: Optional[KafkaAdminService] = None
+
     def __init__(self, *, avro_schemas: Optional[dict[str, dict]] = None) -> None:
         super().__init__(avro_schemas=avro_schemas)
 
-        self.producer: Optional[AIOKafkaProducer] = None
-        self.consumer: Optional[AIOKafkaConsumer] = None
         self.dlq_producer: Optional[AIOKafkaProducer] = None
         self.admin_client: Optional[AIOKafkaAdminClient] = None
 
@@ -119,9 +136,9 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         self.event_processor = EventProcessor(stats=self.stats)
 
         self.logger.info(
-            f'📨 🔌  AiokafkaMessagingService initialised [{self.get_provider()}], '
+            f'📨 🔌  AiokafkaMessagingService initialised, '
             f'encoder={self.msg_encoder}, '
-            f'bootstrap={self._config.kafka_bootstrap_servers}'
+            f'bootstrap={self.kafka_config.KAFKA_BOOTSTRAP_SERVERS}, '
         )
 
     # -----------------------------------------------------------------------
@@ -138,79 +155,75 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         self.stats.active_subscriptions = len(self._subscriptions)
         return self.stats
 
+    async def get_admin_client(self) -> KafkaAdminService:
+        """ Lazily create and return the KafkaAdminService singleton. """
+        if self._admin_client is None:
+            self._admin_client = KafkaAdminService(
+                config=self.config,
+                kafka_config=self.kafka_config,
+                kafka_security_config=self.security_config,
+            )
+            await self._admin_client.start()
+
+        return self._admin_client
+
     # -----------------------------------------------------------------------
     # Lifecycle
     # -----------------------------------------------------------------------
 
-    async def start(self) -> None:
-        """Start producer and, when enabled, consumer."""
-        await self.start_producer()
-        if self._config.kafka_consumer_enable:
-            await self.start_consumer()
-            self.logger.info('Kafka service started with PRODUCER and CONSUMER ➡️ ⬅️')
-        else:
-            self.logger.info('Kafka service started with PRODUCER only ➡️')
-
     @retry.decorator(name='start_kafka_producer')
     async def start_producer(self) -> None:
         """Create and start the producer, DLQ producer, and admin client."""
-        cfg = self._config
         try:
-            self.logger.info(
-                f'📨 ➡️  Starting Kafka producer/admin: '
-                f'{cfg.kafka_bootstrap_servers_list}'
-            )
-
-            # value_serializer is NOT set: we encode in publish() because
-            # encode_msg is async and aiokafka's serializer hook is sync.
-            self.producer = AIOKafkaProducer(
-                bootstrap_servers=cfg.kafka_bootstrap_servers_list,
-                **self._sasl_kwargs(),
+            self._producer = AIOKafkaProducer(
+                bootstrap_servers=self.kafka_bootstrap_servers,
+                **get_aiokafka_security_kwargs(self.security_config),
             )
             await self.producer.start()
 
-            if cfg.dlq_enabled:
+            if self.dlq_enabled:
                 self.dlq_producer = AIOKafkaProducer(
-                    bootstrap_servers=cfg.kafka_bootstrap_servers_list,
-                    **self._sasl_kwargs(),
+                    bootstrap_servers=self.kafka_bootstrap_servers,
+                    **get_aiokafka_security_kwargs(self.security_config),
                 )
                 await self.dlq_producer.start()
-
-            self.admin_client = AIOKafkaAdminClient(
-                bootstrap_servers=cfg.kafka_bootstrap_servers_list,
-                **self._sasl_kwargs(),
-            )
-            await self.admin_client.start()
 
             self.running = True
             self.logger.info('📨 ➡️  Kafka producer + admin client ready')
 
         except Exception as exc:
-            report_error(exc, title=f'📬 Kafka Producer Start Error (url: {cfg.kafka_bootstrap_servers_list})', logger=self.logger)
+            report_error(
+                exc,
+                title=f'📬 Kafka Producer Start Error (url: {self.kafka_bootstrap_servers})',
+                logger=self.logger,
+            )
             raise
+
+    def create_consumer(self, **kwargs) -> AIOKafkaConsumer:
+        return AIOKafkaConsumer(
+            *self.consumer_channels,
+            bootstrap_servers=self.kafka_bootstrap_servers,
+            group_id=self.get_consumer_group_id(),
+            auto_offset_reset=self.auto_offset_reset,
+            enable_auto_commit=self.auto_commit,
+            max_poll_records=self.kafka_config.KAFKA_MAX_POLL_RECORDS,
+            session_timeout_ms=self.kafka_config.KAFKA_SESSION_TIMEOUT_MS,
+            heartbeat_interval_ms=self.kafka_config.KAFKA_HEARTBEAT_INTERVAL_MS,
+            **get_aiokafka_security_kwargs(self.security_config),
+            **kwargs,
+        )
 
     async def start_consumer(self) -> None:
         """Create and start the main-loop consumer for the configured topics."""
         if not self.producer:
             raise RuntimeError('Call start_producer() before start_consumer().')
 
-        cfg = self._config
         try:
-            self.consumer = AIOKafkaConsumer(
-                *cfg.consumer_topics,
-                bootstrap_servers=cfg.kafka_bootstrap_servers_list,
-                group_id=cfg.consumer_group_id,
-                auto_offset_reset=cfg.kafka_auto_offset_reset,
-                enable_auto_commit=cfg.kafka_enable_auto_commit,
-                max_poll_records=cfg.kafka_max_poll_records,
-                session_timeout_ms=cfg.kafka_session_timeout_ms,
-                heartbeat_interval_ms=cfg.kafka_heartbeat_interval_ms,
-                **self._sasl_kwargs(),
-            )
+            self.consumer: AIOKafkaConsumer = self.create_consumer()
             await self.consumer.start()
             self.logger.info(
-                f'⬅️  Kafka consumer started: topics={cfg.consumer_topics} '
-                f'group_id={cfg.consumer_group_id}'
+                f'⬅️  Kafka consumer started: topics={self.consumer_channels} '
+                f'group_id={self.get_consumer_group_id()}'
             )
         except Exception as exc:
             report_error(exc, title='Kafka Consumer Start Error', logger=self.logger)
@@ -244,7 +257,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*self.processing_tasks, return_exceptions=True),
-                    timeout=self._config.graceful_shutdown_timeout,
+                    timeout=self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT,
                 )
             except TimeoutError:
                 self.logger.warning('Graceful shutdown timeout exceeded')
@@ -254,7 +267,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             try:
                 await asyncio.wait_for(
                     self.event_processor.cleanup(),
-                    timeout=self._config.graceful_shutdown_timeout,
+                    timeout=self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT,
                 )
             except TimeoutError:
                 self.logger.warning('EventProcessor cleanup timeout exceeded')
@@ -292,7 +305,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def start_consuming(self) -> None:
         """Blocking concurrent consumption loop bounded by ``max_concurrent_tasks``."""
-        await self._run_consuming(max_workers=self._config.max_concurrent_tasks)
+        await self._run_consuming(max_workers=self.kafka_config.KAFKA_CONSUMER_MAX_WORKERS)
 
     async def start_consuming_sequential(self) -> None:
         """Blocking sequential consumption loop (preserves ordering)."""
@@ -315,7 +328,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
         self.logger.info(
             f'🔄 Starting Kafka consumption loop | max_workers={max_workers} '
-            f'topics={self._config.consumer_topics}'
+            f'topics={self.consumer_channels}'
         )
 
         try:
@@ -409,14 +422,14 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         # Failure path.
         self.stats.messages_failed += 1
         if (
-            self._config.dlq_enabled
-            and event.retry_count >= self._config.max_retries
+            self.dlq_enabled
+            and event.retry_count >= self.config.RETRY_MAX_RETRIES
         ):
-            event.handler_name = result.handler_name
+            # event.handler_name = result.handler_name
             await self.send_to_dlq(event, result.error, traceparent)
             self.stats.messages_dlq += 1
             await self._maybe_commit()
-        elif self._config.dlq_enabled:
+        elif self.dlq_enabled:
             self.stats.messages_retried += 1
         else:
             self.logger.warning(
@@ -426,7 +439,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def _maybe_commit(self) -> None:
         """Commit consumer offset when auto-commit is disabled."""
-        if self.consumer and not self._config.kafka_enable_auto_commit:
+        if self.consumer and not self.auto_commit:
             try:
                 await self.consumer.commit()
             except Exception as exc:
@@ -439,7 +452,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     async def publish(
         self,
         channel: str,
-        message: BaseEvent | dict,
+        message: BaseSendableMessage | dict,
         *,
         key: bytes | str | Any | None = None,
         timestamp_ms: int | None = None,
@@ -566,32 +579,24 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
             raise RuntimeError('Service not running. Call start_producer() first.')
 
         sub_id = str(uuid.uuid4())
-        cfg = self._config
+        # cfg = self._config
+        resolved_group_id: str = consumer_group or self.get_consumer_group_id()
+        resolved_auto_offset = 'earliest' if from_beginning else 'latest'
 
-        if consumer_group is None:
-            group_id = f'{cfg.consumer_group_id}_pubsub_{sub_id}'
-            auto_offset = 'latest'
-        else:
-            group_id = consumer_group
-            auto_offset = 'earliest' if from_beginning else 'latest'
+        # consumer = AIOKafkaConsumer(
+        #     channel,
+        #     bootstrap_servers=self.kafka_bootstrap_servers,
+        #     group_id=resolved_group_id,
+        #     auto_offset_reset=resolved_auto_offset,
+        #     enable_auto_commit=self.auto_commit,
+        #     **get_aiokafka_security_kwargs(self.security_config),
+        # )
+        # await consumer.start()
 
-        consumer = AIOKafkaConsumer(
-            channel,
-            bootstrap_servers=cfg.kafka_bootstrap_servers_list,
-            group_id=group_id,
-            auto_offset_reset=auto_offset,
-            enable_auto_commit=True,
-            **self._sasl_kwargs(),
-            **kwargs,
-        )
-        await consumer.start()
+        consumer = self.consumer
 
         async def _consume_loop() -> None:
             try:
-                self.logger.info(
-                    f'⬅️  Subscription started: sub_id={sub_id} channel={channel} '
-                    f'group_id={group_id}'
-                )
                 async for record in consumer:
                     if not self.running:
                         break
@@ -635,14 +640,14 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         self._subscriptions[sub_id] = _SubscriptionInfo(
             handler=handler,
             topic=channel,
-            consumer_group=group_id,
+            consumer_group=resolved_group_id,
             from_beginning=from_beginning,
             consumer=consumer,
             task=task,
         )
         self.stats.active_subscriptions = len(self._subscriptions)
         self.logger.info(
-            f'⬅️  Subscribed: channel={channel} sub_id={sub_id} group_id={group_id}'
+            f'⬅️  Subscribed: channel={channel} sub_id={sub_id} group_id={resolved_group_id}, auto_offset_reset={resolved_auto_offset}'
         )
         return sub_id
 
@@ -758,7 +763,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
         correlation_id: Optional[str] = None,
         headers: Optional[dict[str, str]] = None,
     ) -> Any:
-        if not self._config.dlq_enabled:
+        if not self.dlq_enabled:
             self.logger.warning('DLQ is disabled. Skipping publish.')
             return None
         if not self.dlq_producer:
@@ -767,7 +772,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
                 'start_producer() was called.'
             )
 
-        dlq_topic = self._config.dlq_topic
+        dlq_topic = self.dlq_topic
         encoded = await self._encode_message(dlq_topic, dlq_event)
 
         merged: dict[str, str] = {}
@@ -789,7 +794,7 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     # -----------------------------------------------------------------------
 
     async def _encode_message(
-        self, topic: str, message: BaseEvent | DlqEvent | dict
+        self, topic: str, message: BaseSendableMessage
     ) -> Any:
         """Encode an event/dict to wire bytes (or Avro record)."""
         return await self.msg_encoder.encode_msg(
@@ -799,26 +804,3 @@ class AiokafkaMessagingService(BaseMessagingService, IMessagingService):
     async def _decode_message(self, topic: str, raw: bytes) -> BaseEvent:
         """Decode raw Kafka bytes back into a ``BaseEvent``."""
         return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self._schema_registry_encoder)  # type: ignore
-
-    def _sasl_kwargs(self) -> dict[str, Any]:
-        """Build security/SASL/TLS kwargs for aiokafka clients."""
-        self._ssl_context()  # log the TLS setup once
-        return self._config.build_kafka_client_kwargs()
-
-    def _ssl_context(self) -> Optional[ssl.SSLContext]:
-        """TLS context for ``SSL``/``SASL_SSL`` brokers, logged once."""
-        cfg = self._config
-        if self._cached_ssl_context is not None:
-            return self._cached_ssl_context
-
-        context = cfg.build_kafka_ssl_context()
-        if context is None:
-            return None
-
-        self.logger.info(
-            f'📨 🔐  Kafka TLS enabled [{cfg.kafka_security_protocol}], '
-            f'ca={cfg.kafka_ssl_trust_source}, '
-            f'check_hostname={context.check_hostname}'
-        )
-        self._cached_ssl_context = context
-        return context

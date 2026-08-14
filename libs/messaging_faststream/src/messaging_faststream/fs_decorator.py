@@ -47,7 +47,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
 from faststream.kafka import KafkaMessage
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.types import IMessagingDecorators
+from foundation.messaging.types import MessagingDecoratorT
 from foundation.messaging.utils.msg_encoder import MsgDecoderError
 from foundation.observability.log_factory import LogFactory
 
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
 AgentHandler = Callable[..., Awaitable[None]]
 
 
-class _MessagingDecorators(IMessagingDecorators):
+class _FaststreamMessagingDecorator(MessagingDecoratorT):
     """Namespace exposing ``@messaging.subscriber`` and related decorators.
 
     The underlying ``FastStreamKafkaMessagingService`` is a singleton —
@@ -69,7 +69,7 @@ class _MessagingDecorators(IMessagingDecorators):
 
     def subscriber(
         self,
-        topic: str,
+        channel: str,
         *,
         group_id: Optional[str] = None,
         auto_offset_reset: Optional[Literal['latest', 'earliest', 'none']] = None,
@@ -116,19 +116,19 @@ class _MessagingDecorators(IMessagingDecorators):
             async def _agent_handler(msg: bytes, message: KafkaMessage) -> None:
                 if not msg:
                     service.logger.warning(
-                        f'Skipping null/empty message on topic={topic} '
+                        f'Skipping null/empty message on topic={channel} '
                         f'agent={agent_name}'
                     )
                     return
 
                 try:
-                    event = await service._decode_message(topic, msg)  # type: ignore[reportPrivateUsage]
+                    event = await service._decode_message(channel, msg)  # type: ignore[reportPrivateUsage]
                 except MsgDecoderError as exc:
                     report_error(
                         exc,
                         title='FastStream Agent Decode Error',
                         extra_context={
-                            'topic': topic,
+                            'topic': channel,
                             'agent': agent_name,
                         },
                         logger=service.logger,
@@ -142,20 +142,23 @@ class _MessagingDecorators(IMessagingDecorators):
                         exc,
                         title='FastStream Agent Handler Error',
                         extra_context={
-                            'topic': topic,
+                            'topic': channel,
                             'agent': agent_name,
                         },
                         logger=service.logger,
                     )
 
             # resolved_group_id= group_id or f'{service.messaging_config.consumer_group_id}_agent_{agent_name}'
-            resolved_group_id= group_id or service.config.consumer_group_id
+            resolved_group_id = group_id or service.config.consumer_group_id
+            resolved_subs_auto_offset_reset = (
+                auto_offset_reset or service.config.kafka_auto_offset_reset
+            )
             LogFactory().get_logger().debug(
-                f'📨 RESOLVED group_id for agent={agent_name} on topic={topic}: {resolved_group_id}'
+                f'📨 RESOLVED group_id for agent={agent_name} on topic={channel}: {resolved_group_id}'
             )
 
-            subscriber = service._broker.subscriber(  # type: ignore[reportPrivateUsage]
-                topic,
+            subscriber = service.broker.subscriber(  # type: ignore[reportPrivateUsage]
+                channel,
                 # Default to a per-handler consumer group so each
                 # `@subscriber` registration is an independent logical
                 # subscription (fan-out). Without this, multiple handlers
@@ -164,8 +167,7 @@ class _MessagingDecorators(IMessagingDecorators):
                 # ONE handler ever sees a given record. Mirrors the
                 # aiokafka backend's default of `{base}_agent_{name}`.
                 group_id=resolved_group_id,
-                auto_offset_reset=auto_offset_reset
-                or service.subs_auto_offset_reset,
+                auto_offset_reset=resolved_subs_auto_offset_reset,
             )
             subscriber(func=_agent_handler)
 
@@ -179,7 +181,7 @@ class _MessagingDecorators(IMessagingDecorators):
             # for every decorated topic.
 
             service.logger.info(
-                f'🤖 Registered agent: topic={topic} agent={agent_name}'
+                f'🤖 Registered agent: channel={channel} agent={agent_name}, group={resolved_group_id}, auto_offset_reset={resolved_subs_auto_offset_reset}'
             )
             return func
 
@@ -197,7 +199,7 @@ def _get_service() -> 'FastStreamKafkaMessagingService':
     return FastStreamKafkaMessagingService()
 
 
-messaging = _MessagingDecorators()
+messaging = _FaststreamMessagingDecorator()
 """Singleton namespace for FastStream messaging decorators.
 
 Usage::

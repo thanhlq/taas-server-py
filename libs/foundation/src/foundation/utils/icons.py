@@ -133,6 +133,8 @@ class Icons:
 
     MESSAGE_PUBLISHED = '📤'
     MESSAGE_RECEIVED = '📩'
+    # I.e kafka topic
+    MESSAGE_CHANNEL = '📢'
 
     KAFKA = '📨'
     RABBIT_MQ = '🐇'

@@ -55,6 +55,9 @@ def _config(**overrides) -> MessagingConfig:
     return MessagingConfig(
         **{
             'kafka_security_protocol': 'SASL_SSL',
+            'kafka_sasl_mechanism': 'PLAIN',
+            'kafka_sasl_username': 'unit-test',
+            'kafka_sasl_password': 'unit-test',
             'kafka_ssl_strict_verify': False,
             **overrides,
         }
@@ -97,7 +100,7 @@ class TestBuildKafkaSslContext:
         assert config.build_kafka_ssl_context() is None
 
     def test_none_for_sasl_plaintext(self) -> None:
-        config = MessagingConfig(kafka_security_protocol='SASL_PLAINTEXT')
+        config = _config(kafka_security_protocol='SASL_PLAINTEXT')
         assert config.build_kafka_ssl_context() is None
 
     def test_loads_ca_from_file(self, tmp_path) -> None:
@@ -164,6 +167,87 @@ class TestBuildKafkaSslContext:
 
         assert context is not None
         assert context.check_hostname is False
+
+
+class TestSecurityNormalization:
+    """``kafka_security_protocol`` / ``kafka_sasl_mechanism`` are canonicalised."""
+
+    def test_uppercases_protocol_and_mechanism(self) -> None:
+        config = _config(
+            kafka_security_protocol='sasl_ssl', kafka_sasl_mechanism='scram-sha-512'
+        )
+        assert config.kafka_security_protocol == 'SASL_SSL'
+        assert config.kafka_sasl_mechanism == 'SCRAM-SHA-512'
+
+    def test_folds_underscores_in_mechanism(self) -> None:
+        """The protocol uses ``_``, so ``SCRAM_SHA_512`` is an easy env typo."""
+        assert _config(kafka_sasl_mechanism='SCRAM_SHA_512').kafka_sasl_mechanism == (
+            'SCRAM-SHA-512'
+        )
+
+    def test_blank_protocol_is_none(self) -> None:
+        """``KAFKA_SECURITY_PROTOCOL=`` in a dotenv yields ``''``, not ``None``."""
+        config = MessagingConfig(kafka_security_protocol='  ')
+        assert config.kafka_security_protocol is None
+        assert config.kafka_effective_security_protocol == 'PLAINTEXT'
+
+    def test_lowercase_protocol_still_enables_tls(self) -> None:
+        """Regression: case-sensitive ``endswith('SSL')`` used to skip TLS here."""
+        assert _config(kafka_security_protocol='sasl_ssl').kafka_tls_enabled
+        assert _config(kafka_security_protocol='sasl_ssl').build_kafka_ssl_context()
+
+    def test_derived_flags(self) -> None:
+        cases = {
+            'PLAINTEXT': (False, False),
+            'SSL': (True, False),
+            'SASL_PLAINTEXT': (False, True),
+            'SASL_SSL': (True, True),
+        }
+        for protocol, (tls, sasl) in cases.items():
+            config = _config(
+                kafka_security_protocol=protocol,
+                kafka_sasl_mechanism='PLAIN' if sasl else None,
+            )
+            assert (config.kafka_tls_enabled, config.kafka_sasl_enabled) == (tls, sasl)
+
+
+class TestSecurityValidation:
+    """Contradictory protocol/mechanism pairs fail at startup, not at connect."""
+
+    def test_rejects_unknown_protocol(self) -> None:
+        with pytest.raises(ValueError, match='Invalid KAFKA_SECURITY_PROTOCOL'):
+            MessagingConfig(kafka_security_protocol='SASL-SSL')
+
+    def test_rejects_unknown_mechanism(self) -> None:
+        with pytest.raises(ValueError, match='Invalid KAFKA_SASL_MECHANISM'):
+            _config(kafka_sasl_mechanism='SCRAM-SHA-1')
+
+    def test_rejects_mechanism_without_sasl_protocol(self) -> None:
+        """Would otherwise be silently dropped — TLS up, credential unused."""
+        with pytest.raises(ValueError, match='would be ignored'):
+            _config(kafka_security_protocol='SSL')
+
+    def test_rejects_sasl_protocol_without_mechanism(self) -> None:
+        """Would otherwise silently default to PLAIN."""
+        with pytest.raises(ValueError, match='refusing to guess PLAIN'):
+            _config(kafka_sasl_mechanism=None)
+
+    @pytest.mark.parametrize('missing', ['kafka_sasl_username', 'kafka_sasl_password'])
+    def test_rejects_password_mechanism_without_credentials(self, missing) -> None:
+        with pytest.raises(ValueError, match='missing: KAFKA_SASL_'):
+            _config(**{missing: None})
+
+    def test_allows_ticket_mechanism_without_credentials(self) -> None:
+        """GSSAPI/OAUTHBEARER carry their own credential, not user/password."""
+        config = _config(
+            kafka_sasl_mechanism='GSSAPI',
+            kafka_sasl_username=None,
+            kafka_sasl_password=None,
+        )
+        assert config.kafka_sasl_mechanism == 'GSSAPI'
+
+    def test_plaintext_needs_nothing(self) -> None:
+        assert MessagingConfig().kafka_effective_security_protocol == 'PLAINTEXT'
 
 
 class TestTrustSourceDescription:

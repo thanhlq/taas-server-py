@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 settings: Settings
 root_path: str
 
+os.environ.setdefault(f'{CONFIG_PREFIX}_SERVICE_NAME', os.environ.get(f'{CONFIG_PREFIX}_SERVICE_NAME', 'ews_api'))
+
 
 def setup_environment(env_file: str = '.env') -> tuple[Settings, str]:
     """Configure the environment variables and path."""

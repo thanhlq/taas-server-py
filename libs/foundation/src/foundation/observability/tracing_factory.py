@@ -13,7 +13,7 @@ from .defaults import NoopContextTracer
 from .types import IContextTracer, ITracingManager
 
 if TYPE_CHECKING:
-    from foundation.observability.types import InstrumentSettings
+    from foundation.observability.types import ServiceInstrumentConfig
 
 
 @singleton
@@ -33,7 +33,7 @@ class TracingFactory:
             self._tracing_manager = TracingManager(self.logger)
         return self._tracing_manager
 
-    def init_instrumentation(self, ins_settings: InstrumentSettings) -> None:
+    def init_instrumentation(self, ins_settings: ServiceInstrumentConfig) -> None:
         if ins_settings.logger:
             self._logger = ins_settings.logger
 

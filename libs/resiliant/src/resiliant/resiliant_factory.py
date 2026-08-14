@@ -1,6 +1,6 @@
 from foundation import BaseService
 from foundation.messaging.message_routing_service import MessageRoutingService
-from foundation.messaging.types import IMessageRoutingService
+from foundation.messaging.types import MessageRoutingServiceT
 from foundation.resiliant.dlq import IDLQService
 from foundation.resiliant.idempotency import IIdempotencyService
 from foundation.resiliant.outbox import IOutboxService
@@ -21,7 +21,7 @@ class ResiliantServiceFactory(BaseService, ResiliantServiceFactoryT):
         self._outbox_service: IOutboxService | None = None
         self._dlq_service: IDLQService | None = None
         self._idempotency_service: IIdempotencyService | None = None
-        self._message_routing_service: IMessageRoutingService | None = None
+        self._message_routing_service: MessageRoutingServiceT | None = None
         self._saga_service: SagaService | None = None
         self._schedule_service: IScheduleService | None = None
 
@@ -33,7 +33,7 @@ class ResiliantServiceFactory(BaseService, ResiliantServiceFactoryT):
             self._outbox_service = ResiliantServiceBuilder.build_outbox_service()
         return self._outbox_service
 
-    def get_message_routing_service(self) -> IMessageRoutingService:
+    def get_message_routing_service(self) -> MessageRoutingServiceT:
         """
         Return an instance of MessageRoutingService.
         """

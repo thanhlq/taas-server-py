@@ -13,7 +13,7 @@ CONFIG_PREFIX = 'TAAS'
 
 
 @dataclass
-class TracingSettings:
+class InstrumentSettings:
     """Monitoring, APM and OpenTelemetry observability configuration.
 
     Ported from the legacy pydantic ``AppSetting`` (MONITORING & OBSERVABILITY
@@ -106,6 +106,10 @@ class TracingSettings:
         default_factory=get_env('ELK_APM_SECRET', None, str)
     )
     """🔑 Elastic APM secret token"""
+
+    SAMPLING_RATE: float = field(default_factory=get_env('SAMPLING_RATE', 0.1, float))
+    HOST_NAME: str | None = field(default_factory=get_env('HOST_NAME', None, str))
+    """🏷️ Host name for APM identification"""
 
     def is_tracing_enabled(self) -> bool:
         if self.TRACING_ADAPTERS:

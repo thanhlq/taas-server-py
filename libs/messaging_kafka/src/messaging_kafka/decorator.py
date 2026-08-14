@@ -49,9 +49,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional, cast
 
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
-from core.messaging.types import IMessagingDecorators, MessageHandler
-from core.messaging.utils.msg_encoder import MsgDecoderError
-from core.observability.error_reporter import report_error
+from foundation.exceptions.report_error import report_error
+from foundation.messaging.types import MessageHandler, MessagingDecoratorT
+from foundation.messaging.utils.msg_encoder import MsgDecoderError
+
+from messaging_kafka.aiokafka_security import get_aiokafka_security_kwargs
 
 if TYPE_CHECKING:
     from .aiokafka_messaging import AiokafkaMessagingService
@@ -71,7 +73,7 @@ class _PendingSubscription:
     auto_offset_reset: Optional[Literal['latest', 'earliest', 'none']] = None
 
 
-class _MessagingDecorators(IMessagingDecorators):
+class _MessagingDecorators(MessagingDecoratorT):
     """Namespace exposing ``@messaging.subscriber`` for the aiokafka backend.
 
     Decoration is sync and side-effect free beyond appending to
@@ -91,7 +93,7 @@ class _MessagingDecorators(IMessagingDecorators):
 
     def subscriber(
         self,
-        topic: str,
+        channel: str,
         *,
         group_id: Optional[str] = None,
         auto_offset_reset: Optional[Literal['latest', 'earliest', 'none']] = None,
@@ -119,7 +121,7 @@ class _MessagingDecorators(IMessagingDecorators):
             agent_name = getattr(func, '__name__', '<agent>')
             self._pending.append(
                 _PendingSubscription(
-                    topic=topic,
+                    topic=channel,
                     handler=func,
                     agent_name=agent_name,
                     group_id=group_id,
@@ -155,10 +157,10 @@ class _MessagingDecorators(IMessagingDecorators):
         service: 'AiokafkaMessagingService',
         pending: _PendingSubscription,
     ) -> None:
-        cfg = service._config
+        cfg = service.kafka_config
         group_id = (
             pending.group_id
-            or f'{cfg.consumer_group_id}_agent_{pending.agent_name}'
+            or f'{service.get_consumer_group_id()}_agent_{pending.agent_name}'
         )
 
         dedupe_key = (pending.topic, group_id)
@@ -169,7 +171,7 @@ class _MessagingDecorators(IMessagingDecorators):
             )
             return
 
-        auto_offset = pending.auto_offset_reset or cfg.kafka_auto_offset_reset
+        auto_offset = pending.auto_offset_reset or service.auto_offset_reset
 
         # Build a dedicated consumer so we can hand the user coroutine
         # both the decoded event AND the raw ConsumerRecord — matching
@@ -185,7 +187,7 @@ class _MessagingDecorators(IMessagingDecorators):
             group_id=group_id,
             auto_offset_reset=auto_offset,
             enable_auto_commit=True,
-            **service._sasl_kwargs(),  # type: ignore[reportPrivateUsage]
+            **get_aiokafka_security_kwargs(service.security_config),
         )
         await consumer.start()
 

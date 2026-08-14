@@ -24,7 +24,7 @@ from typing import Any, Callable, Optional
 
 from db.models.resiliant import OutboxEventTable
 from foundation.cli import cli
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.outbox import OutboxConfig
 from foundation.state import get_service
@@ -70,7 +70,7 @@ class OutboxPoller:
         self,
         config: OutboxConfig,
         session_factory: Callable[[], AsyncSession],
-        publisher: Optional[IMessagingService] = None,
+        publisher: Optional[MessagingServiceT] = None,
         repository: Optional[OutboxRepository] = None,
     ):
         """
@@ -125,10 +125,10 @@ class OutboxPoller:
         # self.logger.info(f'Outbox poller initialized: {startup_info}')
 
     @property
-    def publisher(self) -> IMessagingService:
+    def publisher(self) -> MessagingServiceT:
         """Get the message publisher."""
         if not self._publisher:
-            self._publisher = get_service(IMessagingService)
+            self._publisher = get_service(MessagingServiceT)
         return self._publisher
 
     async def start(self) -> None:
@@ -505,7 +505,9 @@ class OutboxPoller:
         except Exception as e:
             # Mark as failed
             error_msg = f'{type(e).__name__}: {str(e)}'
-            await self.repository.mark_failed(session, event.id, error_msg)
+
+            # TODO: consider moving to DLQ if retry count exceeded
+            # await self.repository.mark_failed(session, event.id, error_msg)
 
             publish_duration_ms = (datetime.now() - start_time).total_seconds() * 1000
 

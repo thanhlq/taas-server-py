@@ -8,12 +8,12 @@ def is_tracing_enabled() -> bool:
 
 def is_elk_tracing_enabled() -> bool:
     settings: Settings = get_settings()
-    return Tracing.TRACING_ADAPTER_ELK in settings.trace.TRACING_ADAPTERS
+    return Tracing.TRACING_ADAPTER_ELK in settings.instrument.TRACING_ADAPTERS
 
 
 def is_otel_tracing_enabled() -> bool:
     settings: Settings = get_settings()
     return (
-        Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.trace.TRACING_ADAPTERS
-        or Tracing.TRACING_ADAPTER_OTLP_GRPC in settings.trace.TRACING_ADAPTERS
+        Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.instrument.TRACING_ADAPTERS
+        or Tracing.TRACING_ADAPTER_OTLP_GRPC in settings.instrument.TRACING_ADAPTERS
     )

@@ -4,13 +4,12 @@
 Centralized event processing with retry logic, error handling, and observability.
 Can be used by any pubsub implementation (Kafka, RabbitMQ, Redis, etc.)
 """
-
 import time
 from typing import Optional
 
+from foundation import BaseService
 from foundation.exceptions.report_error import report_error
 from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResult
-from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.resiliant.retry import Retry
 
@@ -20,7 +19,7 @@ from .event_processor_config import EventProcessorConfig, get_event_processor_co
 # from .safety.exp_backoff_retry import ExponentialBackoffRetry as Retry
 
 
-class EventProcessor:
+class EventProcessor(BaseService):
     """
     Centralized event processor with retry logic and observability.
 
@@ -59,7 +58,6 @@ class EventProcessor:
             stats: Optional statistics dict to track retries. If None, internal stats are used.
         """
         self._config = config or get_event_processor_config()
-        self.logger = LogFactory().get_logger(self.__class__.__name__)
         self._internal_stats = {
             'messages_retried': 0,
         }

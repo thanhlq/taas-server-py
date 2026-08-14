@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.resiliant.schedule import ScheduleConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,7 @@ def build_schedule_service(config: ScheduleConfig | None = None) -> ScheduleServ
 def build_scheduler_poller(
     session_factory: Callable[[], AsyncSession],
     config: ScheduleConfig | None = None,
-    publisher: Optional[IMessagingService] = None,
+    publisher: Optional[MessagingServiceT] = None,
 ) -> SchedulerPoller:
     """Return a :class:`SchedulerPoller` wired to a fresh repository."""
     config = config or get_schedule_config()

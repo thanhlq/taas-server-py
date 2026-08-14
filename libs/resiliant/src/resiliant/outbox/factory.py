@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.resiliant.outbox import OutboxConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +30,7 @@ def build_outbox_service(config: OutboxConfig | None = None) -> OutboxService:
 def build_outbox_poller(
     session_factory: Callable[[], AsyncSession],
     config: OutboxConfig | None = None,
-    publisher: Optional[IMessagingService] = None,
+    publisher: Optional[MessagingServiceT] = None,
 ) -> OutboxPoller:
     """Return an :class:`OutboxPoller` wired to a fresh repository.
 

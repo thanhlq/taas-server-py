@@ -38,7 +38,7 @@ async def main(partitions: int, replication: int, dry_run: bool) -> int:
 
     get_settings(env_file='.env')
 
-    from foundation.messaging.kafka.kafka_settings import (
+    from foundation.messaging.config.messaging_settings import (
         KafkaSettings,
         build_messaging_config,
     )

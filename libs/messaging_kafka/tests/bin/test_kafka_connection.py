@@ -27,7 +27,7 @@ import time
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from foundation.messaging.config.messaging_config import MessagingConfig
-from foundation.messaging.kafka.kafka_settings import (
+from foundation.messaging.config.messaging_settings import (
     KafkaSettings,
     build_messaging_config,
 )

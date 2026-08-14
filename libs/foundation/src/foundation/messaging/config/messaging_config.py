@@ -1,5 +1,3 @@
-import base64
-import binascii
 import ssl
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -7,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from foundation.messaging.types import MessageEncodingType
+from foundation.utils.ca_data_utils import normalize_ca_data
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -16,44 +15,19 @@ if TYPE_CHECKING:
     from ..kafka.sr import SchemaRegistryConfig
 
 
-PEM_CERT_MARKER = '-----BEGIN CERTIFICATE-----'
 
 
-def normalize_ca_data(raw: str) -> str:
-    """
-    Turn an env-var-carried CA bundle into PEM text OpenSSL accepts.
+KAFKA_SECURITY_PROTOCOLS = frozenset({'PLAINTEXT', 'SSL', 'SASL_PLAINTEXT', 'SASL_SSL'})
+"""The four protocol names Kafka accepts in ``listener.security.protocol.map``."""
 
-    Handles the three shapes a CA realistically arrives in when it is injected
-    as a variable rather than mounted as a file:
+KAFKA_SASL_MECHANISMS = frozenset(
+    {'PLAIN', 'SCRAM-SHA-256', 'SCRAM-SHA-512', 'GSSAPI', 'OAUTHBEARER'}
+)
+"""SASL mechanisms an aiokafka client can negotiate."""
 
-    * plain multi-line PEM (dotenv quoted value, Docker/K8s multi-line env),
-    * single-line PEM with literal ``\\n`` escapes (CI/CD secret stores),
-    * base64-encoded PEM (e.g. a Kubernetes secret's raw ``ca.crt`` value).
+KAFKA_SASL_PASSWORD_MECHANISMS = frozenset({'PLAIN', 'SCRAM-SHA-256', 'SCRAM-SHA-512'})
+"""Subset of :data:`KAFKA_SASL_MECHANISMS` that authenticates with user/password."""
 
-    Raises ``ValueError`` when the result still isn't a certificate, so a
-    mangled secret fails at startup instead of at the first TLS handshake.
-    """
-    data = raw.strip()
-
-    if PEM_CERT_MARKER not in data:
-        # Not PEM as-is — the only other sane encoding is base64-wrapped PEM.
-        try:
-            data = base64.b64decode(data, validate=True).decode('ascii').strip()
-        except (binascii.Error, UnicodeDecodeError) as exc:
-            raise ValueError(
-                'KAFKA_CA_DATA is neither PEM nor base64-encoded PEM'
-            ) from exc
-
-    # Secret stores commonly flatten newlines into the two-character escape.
-    data = data.replace('\\n', '\n').strip()
-
-    if PEM_CERT_MARKER not in data:
-        raise ValueError(
-            f'KAFKA_CA_DATA does not contain a {PEM_CERT_MARKER!r} block'
-        )
-
-    # OpenSSL requires the PEM to end with a newline.
-    return data + '\n'
 
 
 @lru_cache(maxsize=8)
@@ -143,7 +117,7 @@ class MessagingConfig:
     kafka_bootstrap_servers: str = 'localhost:9092'
     """Comma-separated broker addresses (``host1:9092,host2:9092``)."""
 
-    consumer_topics: list[str] = field(default_factory=list)
+    consumer_channels: list[str] = field(default_factory=list)
     """Topics statically subscribed in worker (consumer) mode."""
 
     kafka_consumer_enable: bool = False
@@ -171,35 +145,64 @@ class MessagingConfig:
     kafka_heartbeat_interval_ms: int = 3_000
     """Background heartbeat cadence; must be < ``kafka_session_timeout_ms / 3``."""
 
-    # ---- Kafka: security ----------------------------------------------------
+    
+
     kafka_security_protocol: Optional[str] = None
     """
-    ``PLAINTEXT`` | ``SSL`` | ``SASL_PLAINTEXT`` | ``SASL_SSL`` (None = PLAINTEXT).
+    Transport framing + whether a SASL handshake happens at all.
 
-    - PLAINTEXT: no TLS, no SASL
-    - SSL: TLS only, no SASL
-    - SASL_PLAINTEXT: SASL auth, no TLS
-    - SASL_SSL: SASL auth over TLS
-
+    One of :data:`KAFKA_SECURITY_PROTOCOLS`; ``None`` is treated as ``PLAINTEXT``.
+    Must match the broker listener you are connecting to — a mismatch fails at
+    the first handshake, not at startup. Normalized to upper case.
     """
 
     kafka_sasl_mechanism: Optional[str] = None
-    """``PLAIN`` | ``SCRAM-SHA-256`` | ``SCRAM-SHA-512`` when SASL is used."""
+    """
+    Which SASL mechanism proves identity, once the protocol says SASL runs.
+
+    One of :data:`KAFKA_SASL_MECHANISMS`; required when (and only when)
+    ``kafka_security_protocol`` starts with ``SASL_``. Normalized to upper case
+    with ``_`` folded to ``-`` (so ``scram_sha_512`` → ``SCRAM-SHA-512``).
+    Says nothing about encryption — that is the protocol's job.
+    """
 
     kafka_sasl_username: Optional[str] = None
+    """SASL identity. Required for :data:`KAFKA_SASL_PASSWORD_MECHANISMS`."""
+
     kafka_sasl_password: Optional[str] = None
+    """SASL secret. Required for :data:`KAFKA_SASL_PASSWORD_MECHANISMS`."""
 
     kafka_ssl_ca_location: Optional[str] = None
-    """Path to a PEM CA bundle used to verify the broker certificate (SSL/SASL_SSL)."""
+    """
+    Path to the PEM CA bundle that signs the broker certificate.
+
+    Highest-precedence trust anchor; use when the CA is mounted as a file.
+    Ignored unless the protocol is TLS-bearing (``SSL``/``SASL_SSL``).
+    """
 
     kafka_ssl_ca_data: Optional[str] = None
-    """Inline CA bundle (PEM, escaped PEM, or base64 PEM) — used when no CA file is set."""
+    """
+    The same CA bundle carried inline, for when it arrives as a variable
+    instead of a file (K8s secret, CI/CD store). Accepts multi-line PEM,
+    single-line PEM with ``\\n`` escapes, or base64 PEM.
+    Used only when ``kafka_ssl_ca_location`` is unset.
+    """
 
     kafka_ssl_check_hostname: bool = True
-    """Verify the broker hostname against its certificate; disable only for dev."""
+    """
+    Verify the broker's certificate matches the hostname you dialed.
+
+    Turning this off still verifies the chain, but accepts *any* host the CA
+    signed — acceptable for a dev cluster reached by IP, never in production.
+    """
 
     kafka_ssl_strict_verify: bool = True
-    """Apply RFC 5280 strict checks (Python 3.13+ default); off for CAs without keyUsage."""
+    """
+    Apply the RFC 5280 strict checks Python 3.13+ enables by default.
+
+    Set ``False`` for private CAs that omit the ``keyUsage`` extension (e.g. a
+    hand-rolled Strimzi cluster CA). Chain and hostname verification stay on.
+    """
 
     # ---- Schema Registry ----------------------------------------------------
     schema_registry_url: Optional[str] = None
@@ -221,6 +224,21 @@ class MessagingConfig:
     def kafka_bootstrap_servers_list(self) -> list[str]:
         """Split ``kafka_bootstrap_servers`` into a list."""
         return [s.strip() for s in self.kafka_bootstrap_servers.split(',') if s.strip()]
+
+    @property
+    def kafka_effective_security_protocol(self) -> str:
+        """The protocol actually used on the wire (``None`` means ``PLAINTEXT``)."""
+        return self.kafka_security_protocol or 'PLAINTEXT'
+
+    @property
+    def kafka_tls_enabled(self) -> bool:
+        """True for ``SSL``/``SASL_SSL`` — the connection is TLS-wrapped."""
+        return self.kafka_effective_security_protocol.endswith('SSL')
+
+    @property
+    def kafka_sasl_enabled(self) -> bool:
+        """True for ``SASL_PLAINTEXT``/``SASL_SSL`` — a SASL handshake runs."""
+        return self.kafka_effective_security_protocol.startswith('SASL')
 
     @property
     def kafka_ssl_trust_source(self) -> str:
@@ -259,7 +277,7 @@ class MessagingConfig:
         ``None`` means "no ssl_context kwarg" — correct for PLAINTEXT and
         SASL_PLAINTEXT connections.
         """
-        if not (self.kafka_security_protocol or '').endswith('SSL'):
+        if not self.kafka_tls_enabled:
             return None
         return _build_ssl_context(
             self.kafka_ssl_ca_location,
@@ -284,7 +302,79 @@ class MessagingConfig:
             password=self.schema_registry_password,
         )
 
+    def _normalize_kafka_security(self) -> None:
+        """
+        Canonicalise the security pair so every provider sees identical values.
+
+        Env vars arrive lower-cased, whitespace-padded, or empty (``VAR=`` yields
+        ``''``, not ``None``). Folding that here — once, at construction — is
+        what keeps the providers in agreement: they used to case-fold
+        differently, so a lower-case ``sasl_ssl`` disabled TLS on the aiokafka
+        path while the FastStream path still enabled it.
+        """
+        protocol = (self.kafka_security_protocol or '').strip().upper()
+        mechanism = (self.kafka_sasl_mechanism or '').strip().upper().replace('_', '-')
+        object.__setattr__(self, 'kafka_security_protocol', protocol or None)
+        object.__setattr__(self, 'kafka_sasl_mechanism', mechanism or None)
+
+    def _validate_kafka_security(self) -> None:
+        """
+        Reject security combinations that would otherwise fail silently or late.
+
+        Protocol and mechanism are orthogonal but overlap on one bit — whether
+        SASL runs — so a config can state that bit twice and contradict itself.
+        Each case below used to be swallowed: the credential was quietly
+        dropped, or a mechanism was quietly guessed.
+        """
+        protocol = self.kafka_security_protocol
+        mechanism = self.kafka_sasl_mechanism
+
+        if protocol is not None and protocol not in KAFKA_SECURITY_PROTOCOLS:
+            raise ValueError(
+                f'Invalid KAFKA_SECURITY_PROTOCOL={protocol!r}; must be one of '
+                f'{sorted(KAFKA_SECURITY_PROTOCOLS)}'
+            )
+        if mechanism is not None and mechanism not in KAFKA_SASL_MECHANISMS:
+            raise ValueError(
+                f'Invalid KAFKA_SASL_MECHANISM={mechanism!r}; must be one of '
+                f'{sorted(KAFKA_SASL_MECHANISMS)}'
+            )
+
+        if not self.kafka_sasl_enabled:
+            if mechanism is not None:
+                raise ValueError(
+                    f'KAFKA_SASL_MECHANISM={mechanism!r} is set but '
+                    f'KAFKA_SECURITY_PROTOCOL={self.kafka_effective_security_protocol!r} '
+                    'runs no SASL handshake, so the credential would be ignored. '
+                    'Use SASL_SSL (with TLS) or SASL_PLAINTEXT (without), '
+                    'or unset the mechanism.'
+                )
+            return
+
+        if mechanism is None:
+            raise ValueError(
+                f'KAFKA_SECURITY_PROTOCOL={protocol!r} performs a SASL handshake, '
+                'so KAFKA_SASL_MECHANISM must be set explicitly (one of '
+                f'{sorted(KAFKA_SASL_MECHANISMS)}); refusing to guess PLAIN.'
+            )
+        if mechanism in KAFKA_SASL_PASSWORD_MECHANISMS:
+            missing = [
+                name
+                for name, value in (
+                    ('KAFKA_SASL_USERNAME', self.kafka_sasl_username),
+                    ('KAFKA_SASL_PASSWORD', self.kafka_sasl_password),
+                )
+                if not value
+            ]
+            if missing:
+                raise ValueError(
+                    f'KAFKA_SASL_MECHANISM={mechanism!r} authenticates with a '
+                    f'username/password pair; missing: {", ".join(missing)}'
+                )
+
     def __post_init__(self) -> None:
+        self._normalize_kafka_security()
+        self._validate_kafka_security()
         if self.kafka_auto_offset_reset not in {'latest', 'earliest', 'none'}:
             raise ValueError(
                 f'Invalid kafka_auto_offset_reset={self.kafka_auto_offset_reset!r}; '

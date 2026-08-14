@@ -264,7 +264,7 @@ class ITracingManager(ABC):
 
 
 @dataclass
-class InstrumentSettings:
+class ServiceInstrumentConfig:
     """
     Parameters for setting up the application context.
     """

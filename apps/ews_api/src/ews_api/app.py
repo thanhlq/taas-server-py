@@ -39,7 +39,7 @@ from store_redis import RedisCacheServiceFactory
 from .bootstrap import root_path, settings
 
 if TYPE_CHECKING:
-    from foundation.observability.types import InstrumentSettings
+    from foundation.observability.types import ServiceInstrumentConfig
 
 
 class EwsApplication(BaseApiApplication[FastAPI]):
@@ -53,11 +53,11 @@ class EwsApplication(BaseApiApplication[FastAPI]):
 
         self.build_application()  # Build the app during initialization to ensure _socketio_app is set if WebSocket is enabled
 
-    def instrument_settings(self) -> 'InstrumentSettings':
-        from foundation.observability.types import InstrumentSettings
+    def instrument_settings(self) -> 'ServiceInstrumentConfig':
+        from foundation.observability.types import ServiceInstrumentConfig
 
         if not hasattr(self, '_instrument_settings'):
-            self._instrument_settings = InstrumentSettings()
+            self._instrument_settings = ServiceInstrumentConfig()
         return self._instrument_settings
 
     def get_app_id(self) -> str:

@@ -1,14 +1,21 @@
 {
+  "[markdown]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
   "[python]": {
-    // "editor.formatOnSave": true,
+    "editor.formatOnSave": false,
     "editor.formatOnSaveMode": "file",
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
     "editor.trimAutoWhitespace": true,
+    // see https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
+      // "source.fixAll": explicit | never |
+      //  fix lint violations on-save by enabling the source.fixAll: explicit
       "source.fixAll": "explicit",
-      "source.organizeImports": "explicit"
+      "source.organizeImports": "never"
     }
   },
   "files.associations": {

@@ -42,22 +42,18 @@ from foundation.messaging.kafka.sr.schema_registry_fast import (
     SchemaRegistryEncoder,
     SchemaRegistryError,
 )
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 
-from .decorator import messaging
 from .faststream_aiokafka_impl import FastStreamKafkaMessagingService
-from .helper import FastStreamHelper
+from .fs_decorator import messaging
+from .fs_helper import FastStreamHelper
 
 
-async def create_pubsub_service(settings: Settings) -> IMessagingService:
+async def create_pubsub_service(settings: Settings) -> MessagingServiceT:
     """Create pub/sub service based on configuration."""
 
     kafka = FastStreamKafkaMessagingService()
-    if settings.messaging.CONSUMER_ENABLE:
-        await kafka.start_producer()
-        await kafka.start_consumer()
-    else:
-        await kafka.start_producer()
+    await kafka.start()
 
     return kafka
 
@@ -65,7 +61,7 @@ async def create_pubsub_service(settings: Settings) -> IMessagingService:
 # @retry.decorator(name='initialize_messaging_service')
 async def initialize_messaging_service(
     settings: Optional[Settings] = None,
-) -> IMessagingService:
+) -> MessagingServiceT:
     """Initialize async services that require await."""
     settings = get_settings() if settings is None else settings
     pubsub_service = await create_pubsub_service(settings)

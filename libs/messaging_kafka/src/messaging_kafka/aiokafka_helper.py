@@ -1,13 +1,12 @@
 """
 Specialized helper functions for working with aiokafka.
 """
+import json
 from typing import Sequence
 
-import json
-
 from aiokafka import ConsumerRecord
-from core.events.types import BaseEvent
-from core.observability.log_factory import LogFactory
+from foundation.messaging.types import BaseEvent
+from foundation.observability.log_factory import LogFactory
 
 
 def print_kafka_headers(headers: Sequence[tuple[bytes, bytes]]) -> None:
@@ -76,3 +75,4 @@ class AiokafkaHelper:
             f'value={record.value}, headers={record.headers})'
             f'traceparent={AiokafkaHelper.find_traceparent(record)}'
         )
+

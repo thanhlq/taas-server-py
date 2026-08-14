@@ -7,7 +7,7 @@ from typing import Any, Optional, Union, get_args, get_type_hints
 
 import msgspec
 from foundation.cli import cli
-from foundation.messaging.config.messaging_config import MessagingConfig
+from foundation.messaging.config.messaging_settings import MessagingSettings
 from foundation.messaging.kafka.sr import SchemaRegistryEncoder
 from foundation.messaging.types import (
     EVENT_META_SERIALIZER_FIELD,
@@ -15,11 +15,10 @@ from foundation.messaging.types import (
     BaseEvent,
     BaseSendableMessage,
     DlqEvent,
-    IMessageEncoder,
+    MessageEncoderT,
     MessageEncodingType,
     MessageFieldEncodingType,
 )
-from foundation.utils.singleton import singleton
 
 
 class MsgDecoderError(Exception):
@@ -28,18 +27,18 @@ class MsgDecoderError(Exception):
     _debug: bool = False
 
     def __init__(self, message: str | None = None, error_code: str | None = None):
-        super().__init__(f'💥 {message if message is not None else "An error occurred while decoding the message."}')
+        super().__init__(
+            f'💥 {message if message is not None else "An error occurred while decoding the message."}'
+        )
         self.error_code = error_code
 
 
-@singleton
-class MsgEncoder(IMessageEncoder):
+class MsgEncoder(MessageEncoderT):
     """
     A default message encoder/decoder that supports multiple encoding formats (JSON, MsgPack, Protobuf, Avro).
     The encoding format can be specified via the constructor or will default to the setting defined in App
     """
 
-    _instance: 'MsgEncoder | None' = None
     _msg_encoding: str
     _field_encoding: str
     _logger: Logger | None = None
@@ -49,23 +48,18 @@ class MsgEncoder(IMessageEncoder):
     _json_decoder: Optional[msgspec.json.Decoder] = None
     _field_types_cache: dict[type, dict[str, Any]]
 
-    # @staticmethod
-    # def get() -> 'MsgEncoder':
-    #     """Get the singleton instance of MsgEncoder."""
-    #     if not MsgEncoder._instance:
-    #         raise ValueError('MsgEncoder instance has not been initialized yet. Please create an instance of MsgEncoder before calling MsgEncoder.get().')
-    #     return MsgEncoder._instance
-
     def __init__(
         self,
         msg_encoding: str | None = None,
         field_encoding: str | None = None,
         *,
-        config: MessagingConfig | None = None,
+        config: MessagingSettings | None = None,
     ):
+        _config = config or MessagingSettings()
+
         # Resolution order: explicit args > MessagingConfig > 'json' default.
-        cfg_msg = config.message_encoding if config is not None else None
-        cfg_field = config.message_field_encoding if config is not None else None
+        cfg_msg = _config.MESSAGE_ENCODING
+        cfg_field = _config.MESSAGE_FIELD_ENCODING
         self._field_types_cache = {}
         self._msg_encoding = msg_encoding or cfg_msg or 'json'
 
@@ -123,7 +117,7 @@ class MsgEncoder(IMessageEncoder):
 
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
-    ) -> 'IMessageEncoder':
+    ) -> 'MessageEncoderT':
         name = serializer or self.get_serializer_name(cls)
         self._event_type_registry[name] = cls
         self.logger.debug(
@@ -131,7 +125,7 @@ class MsgEncoder(IMessageEncoder):
         )
         return self
 
-    def _get_field_types(self, cls: type) -> dict[str, Any]:
+    def _get_field_types(self, cls) -> dict[str, Any]:
         """Resolve and cache type hints for a dataclass event subclass."""
         cached = self._field_types_cache.get(cls)
         if cached is not None:

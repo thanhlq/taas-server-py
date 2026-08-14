@@ -19,7 +19,7 @@ from aiohttp import web
 from foundation.cli import cli
 from foundation.config import get_settings
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.observability.log_factory import LogFactory
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.state import get_service
@@ -84,7 +84,6 @@ class BaseWorker:
         self.worker_tasks: list[tuple[str, asyncio.Task]] = []
 
         self._config: WorkerConfig = config or WorkerSettings().get_config()
-        self._config.messaging_consumer_enabled = settings.messaging.CONSUMER_ENABLE
         self._health_check_task: Optional[asyncio.Task] = None
 
         cli.info_table('Worker Info', self.info())
@@ -95,8 +94,8 @@ class BaseWorker:
         return self._config
 
     @property
-    def messaging_service(self) -> IMessagingService:
-        return get_service(IMessagingService)
+    def messaging_service(self) -> MessagingServiceT:
+        return get_service(MessagingServiceT)
 
     def _owned_pending_tasks(self) -> list[asyncio.Task]:
         """Tasks owned by this worker (worker tasks + health check loop) still pending.
@@ -227,7 +226,6 @@ class BaseWorker:
             'running': self.running,
             'uptime_seconds': uptime,
             'outbox_poller_enabled': self.config.outbox_poller_enabled,
-            'messaging_consumer_enabled': self.config.messaging_consumer_enabled,
             'worker_tasks': self.get_worker_task_names(),
             'health_check_enabled': self.config.health_check_enabled,
             'health_check_port': self.config.health_check_server_port,

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
+
+from foundation.messaging.kafka.kafka_settings import KafkaSettings
 
 
 @dataclass
@@ -44,3 +46,18 @@ class SchemaRegistryConfig:
         if self.username and self.password:
             return (self.username, self.password)
         return None
+
+
+def build_schema_registry_config(config: KafkaSettings) -> SchemaRegistryConfig:
+    """Materialise a :class:`SchemaRegistryConfig` if SR encoding is active."""
+    if config.KAFKA_SCHEMA_REGISTRY_URL is None:
+        raise ValueError(
+            'MESSAGE_ENCODING is schema-registry-avro but '
+            'KAFKA_SCHEMA_REGISTRY_URL is not configured.'
+        )
+
+    return SchemaRegistryConfig(
+        url=config.KAFKA_SCHEMA_REGISTRY_URL,
+        username=config.KAFKA_SCHEMA_REGISTRY_USERNAME,
+        password=config.KAFKA_SCHEMA_REGISTRY_PASSWORD,
+    )

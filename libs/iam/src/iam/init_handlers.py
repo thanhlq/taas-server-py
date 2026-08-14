@@ -15,8 +15,8 @@ from foundation.messaging.events.flow_registration import (
 )
 from foundation.messaging.types import (
     BaseEvent,
-    IMessagingDecorators,
-    IMessagingService,
+    MessagingDecoratorT,
+    MessagingServiceT,
 )
 
 from iam.auth.auth_events import UserDirectoryCreatedEvent, UserRegisteredEvent
@@ -43,7 +43,7 @@ def _iam_topic_for_event(event_cls: type[BaseEvent]) -> str:
     return get_iam_topic_for_event(IamEvents(event_type_value(event_cls)))
 
 
-def register_iam_schema_registry_schemas(msg_service: IMessagingService) -> None:
+def register_iam_schema_registry_schemas(msg_service: MessagingServiceT) -> None:
     """Register Avro schemas for every topic referenced by IAM flows."""
     # Imported here, not at module level: iam_event_flows imports the handler
     # classes from this package, so a top-level back-import is circular.
@@ -57,7 +57,7 @@ def register_iam_schema_registry_schemas(msg_service: IMessagingService) -> None
 def register_iam_handlers(
     registry: HandlerRegistry = handlerRegistry,
     *,
-    msg_service: IMessagingService,
+    msg_service: MessagingServiceT,
 ) -> None:
     """Register IAM event handlers from ``IAM_ALL_FLOWS`` into ``registry``."""
     # See register_iam_schema_registry_schemas for why this import is deferred.
@@ -73,18 +73,18 @@ def register_iam_handlers(
 
 
 # Testing only
-def register_handler_by_decorator(decorator: IMessagingDecorators) -> None:
+def register_handler_by_decorator(decorator: MessagingDecoratorT) -> None:
     """Register handlers using the provided decorator."""
 
     print('✅  Registering handlers using decorator...')
 
-    @decorator.subscriber(topic=IamTopics.IAM_USER_REGISTER, group_id='test-group')
+    @decorator.subscriber(channel=IamTopics.IAM_USER_REGISTER, group_id='test-group')
     async def handle_user_directory_created(event: UserDirectoryCreatedEvent, _message: Any) -> None:
         print('---------------------------')
         print(f'✅ [handle_user_directory_created] Handling, event type {event.event_type}, event id {event.event_id} with decorated handler...')
         print('---------------------------')
 
-    @decorator.subscriber(topic=IamTopics.IAM_USER_REGISTER, group_id='test-group')
+    @decorator.subscriber(channel=IamTopics.IAM_USER_REGISTER, group_id='test-group')
     async def handle_user_created(event: UserRegisteredEvent, _message: Any) -> None:
         print('---------------------------')
         print(f'✅ [handle_user_created] Handling, event type {event.event_type}, event id {event.event_id} with decorated handler...')

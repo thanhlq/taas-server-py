@@ -1,97 +1,58 @@
-from typing import Literal, Optional
+from abc import ABC, abstractmethod
+from typing import Optional
 
 from foundation import BaseService
 from foundation.exceptions.report_error import report_error
-from foundation.messaging.config.messaging_config import MessagingConfig
-from foundation.messaging.kafka.kafka_settings import (
-    KafkaSettings,
-    build_messaging_config,
-)
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.config.messaging_settings import MessagingSettings
+from foundation.messaging.types import MessagingServiceT
 from foundation.messaging.utils.msg_encoder import MsgEncoder
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.utils import now_in_utc
 
-from ..types import (
+from .types import (
     BaseEvent,
     DlqEvent,
-    IMessageEncoder,
-    MessageEncodingType,
+    MessageEncoderT,
     MessageServiceStats,
+    MessagingAdminServiceT,
 )
-from .sr import SchemaRegistryConfig, SchemaRegistryEncoder
 
 
-class BaseMessagingService(BaseService, IMessagingService):
+class BaseMessagingService[ProducerT, ConsumerT, MessageT](
+    BaseService, MessagingServiceT[ProducerT, ConsumerT, MessageT], ABC
+):
     """Base kafka messaging service that provides common functionality for all messaging services."""
 
-    _config: MessagingConfig
-    """Provider-agnostic, frozen configuration snapshot. Built once in
-    ``__init__`` from :class:`AppSetting`; subclasses should read from this
-    instead of touching ``self._config`` for messaging knobs."""
-
-    subs_auto_offset_reset: Literal['latest', 'earliest', 'none'] = 'latest'
-    subs_auto_commit: bool = False
-    subs_max_workers: int = 1
+    _config: MessagingSettings | None = None
     _subscribed_channels: set[str] = set()
     """ Number of workers to process messages concurrently """
 
-    msg_encoding: str
     _msg_encoder: MsgEncoder | None = None
 
-    _dlq_enabled: bool = False
-    """
-    Whether to enable Dead Letter Queue (DLQ) for failed messages. If True, failed messages will be sent to
-    a DLQ topic for later analysis and reprocessing.
-    """
-    _dlq_topic: str = 'dlq'
+    _producer: ProducerT | None = None
+    _producer_started: bool = False
+    _consumer: ConsumerT | None = None
+    _consumer_started: bool = False
+    _consumer_running: bool = False
+    """ Indicates whether the consumer is currently running. """
+    _admin_client: MessagingAdminServiceT | None = None
+    _admin_client_started: bool = False
+    _dlq_producer: ProducerT | None = None
+    _dlq_producer_started: bool = False
 
     stats: MessageServiceStats
     """ In-memory stats for monitoring and debugging. Not persisted across restarts. Useful for tracking message processing metrics. """
 
-    schema_registry_enabled: bool = False
-    _schema_registry_encoder: Optional[SchemaRegistryEncoder] = None
-    schema_registry_config: Optional[SchemaRegistryConfig] = None
-    _debug: bool = True
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    # Event-type registry: maps event_type string → typed BaseEvent subclass
-
-    def __init__(self, *, avro_schemas: Optional[dict[str, dict]] = None):
-        super().__init__()
-
-        self._config = build_messaging_config(KafkaSettings())
-        if self._config.consumer_topics and len(self._config.consumer_topics) > 0:
-            self.logger.info(f'Kafka topics configured: {self._config.consumer_topics}')
-            self._subscribed_channels.update(self._config.consumer_topics)
-
-        cfg = self._config
-        self.subs_auto_offset_reset = cfg.kafka_auto_offset_reset
-        self.subs_auto_commit = cfg.kafka_enable_auto_commit
-        self.subs_max_workers = cfg.max_concurrent_tasks
-        self.msg_encoding = cfg.message_encoding
-
-        # ------------------------------------------------------------------
-        # Schema Registry
-        # ------------------------------------------------------------------
-        self.schema_registry_enabled = cfg.schema_registry_enabled
-        if self.schema_registry_enabled:
-            sr_cfg = cfg.build_schema_registry_config()
-            if sr_cfg is None:
-                raise ValueError(
-                    'MESSAGE_ENCODING is schema-registry-avro but '
-                    'KAFKA_SCHEMA_REGISTRY_URL is not configured.'
-                )
-            self.schema_registry_config = sr_cfg
-            self._schema_registry_encoder = SchemaRegistryEncoder(
-                registry_config=sr_cfg,
-                avro_schemas=avro_schemas,
+        if self.config.CONSUMER_CHANNELS and len(self.config.CONSUMER_CHANNELS) > 0:
+            self._subscribed_channels.update(self.config.CONSUMER_CHANNELS)
+        else:
+            self.logger.warning(
+                'No consumer channels configured. '
+                'Set CONSUMER_CHANNELS in your environment to enable consumption.'
             )
-
-        # ------------------------------------------------------------------
-        # DLQ
-        # ------------------------------------------------------------------
-        self._dlq_enabled = cfg.dlq_enabled
-        self._dlq_topic = cfg.dlq_topic
 
         # ------------------------------------------------------------------
         # Stats & processors
@@ -108,14 +69,28 @@ class BaseMessagingService(BaseService, IMessagingService):
         )
 
     @property
-    def config(self) -> MessagingConfig:
+    def config(self) -> MessagingSettings:
         """Return the provider-agnostic, frozen configuration snapshot."""
+        if self._config is None:
+            self._config = MessagingSettings()
         return self._config
 
-    def _validate_config(self):
-        # Validation now lives in BaseMessagingConfig.__post_init__.
-        # Kept for backward-compat with subclasses that still call it.
-        return
+    @property
+    def debug(self) -> bool:
+        """Return True if debug logging is enabled."""
+        return self.config.MESSAGING_DEBUG
+
+    @property
+    def consumer_channels(self) -> set[str]:
+        return self._subscribed_channels
+
+    def is_consumer_enabled(self) -> bool:
+        """Return True if the consumer is enabled and running."""
+        return self.config.CONSUMER_ENABLED
+
+    def get_consumer_group_id(self) -> str:
+        """Return the consumer group ID from the configuration."""
+        return self.config.CONSUMER_GROUP_ID
 
     @property
     def msg_encoder(self) -> MsgEncoder:
@@ -123,18 +98,74 @@ class BaseMessagingService(BaseService, IMessagingService):
             self._msg_encoder = MsgEncoder(config=self._config)
         return self._msg_encoder
 
-    def get_msg_encoder(self) -> IMessageEncoder:
+    def get_msg_encoder(self) -> MessageEncoderT:
         return self.msg_encoder
 
     def get_messaging_encoding_type(self) -> str:
         """Return the configured message encoding type (e.g., json, msgpack, avro)."""
-        return self._config.message_encoding
+        return self.msg_encoder.msg_encoding()
+
+    def get_stats(self) -> MessageServiceStats:
+        """Return the current in-memory stats snapshot."""
+        return self.stats
+
+    @property
+    def producer(self) -> ProducerT:
+        if self._producer is None:
+            raise RuntimeError(
+                'Producer is not initialized. Call start_producer() first.'
+            )
+        return self._producer
+
+    @property
+    def consumer(self) -> ConsumerT:
+        if self._consumer is None:
+            raise RuntimeError(
+                'Consumer is not initialized. Call start_consumer() first.'
+            )
+        if not self.is_consumer_enabled():
+            raise RuntimeError(
+                'Consumer is disabled. Set CONSUMER_ENABLE=True in your environment to enable it.'
+            )
+        return self._consumer
+
+    @property
+    def admin_client(self) -> MessagingAdminServiceT:
+        if self._admin_client is None:
+            raise RuntimeError(
+                'Admin client is not initialized. Call start_admin_client() first.'
+            )
+        return self._admin_client
+
+    @property
+    def dlq_enabled(self) -> bool:
+        return self.config.DLQ_ENABLED
+
+    @property
+    def dlq_topic(self) -> str:
+        return self.config.DLQ_TOPIC
 
     def register_event_serializer(
         self, cls: type[BaseEvent], serializer: Optional[str] = None
-    ) -> 'IMessagingService':
+    ) -> 'MessagingServiceT':
         self.msg_encoder.register_event_serializer(cls, serializer)
         return self
+
+    async def start(self) -> 'BaseMessagingService':
+        await self.start_producer()
+
+        if self.is_consumer_enabled():
+            await self.start_consumer()
+            self.logger.info('📨 Kafka service started with PRODUCER and CONSUMER ➡️ ⬅️')
+        else:
+            self.logger.info('📨 Kafka service started with PRODUCER only ➡️')
+        return self
+
+    @abstractmethod
+    async def start_producer(self) -> None: ...
+
+    @abstractmethod
+    async def start_consumer(self) -> None: ...
 
     async def _publish_dlq_event(
         self,
@@ -156,7 +187,7 @@ class BaseMessagingService(BaseService, IMessagingService):
         Returns:
             The result of the publish operation (e.g., Kafka send result).
         """
-        if not self._dlq_enabled:
+        if not self.dlq_enabled:
             self.logger.warning('DLQ is disabled. Skipping publish of DLQ event.')
             return None
 
@@ -187,7 +218,7 @@ class BaseMessagingService(BaseService, IMessagingService):
             span.set_attribute('event_type', event.event_type)
             span.set_attribute('retry_count', event.retry_count)
             span.set_attribute('error', error or 'Unknown error')
-            span.set_attribute('dlq_topic', self._dlq_topic)
+            span.set_attribute('dlq_topic', self.dlq_topic)
             # span.set_attribute('handler_name', event.handler_name or 'unknown')
 
             try:
@@ -202,7 +233,7 @@ class BaseMessagingService(BaseService, IMessagingService):
                     error=error or 'Unknown error',
                     failed_at=now_in_utc(),
                     retry_count=event.retry_count,
-                    handler_name=event.handler_name,
+                    # handler_name=event.handler_name,
                 )
 
                 # await self.dlq_producer.send(  # type: ignore
@@ -226,58 +257,8 @@ class BaseMessagingService(BaseService, IMessagingService):
                     title='Failed to send event to DLQ',
                     extra_context={
                         'event_id': event.event_id,
-                        'dlq_topic': self._dlq_topic,
+                        'dlq_topic': self.dlq_topic,
                     },
                     logger=self.logger,
                 )
                 raise e
-
-    def register_schema(self, channel: str, schema: type[BaseEvent]) -> bool:
-        """Register an Avro schema for *channel* at runtime.
-
-        Requires ``schema_registry_config`` to have been provided at
-        construction time.
-
-        Args:
-            channel: Kafka channel name.
-            schema: Event class (subclass of BaseEvent).
-
-        Raises:
-            RuntimeError: When the service was not initialised with a
-                Schema Registry configuration.
-        """
-
-        if self.is_consumer_enabled() is False:
-            return False
-
-        self.logger.info(f'registering channel={channel}, schema_cls={schema.__name__}')
-
-        if (
-            self.get_messaging_encoding_type()
-            != MessageEncodingType.SCHEMA_REGISTRY_AVRO
-        ):
-            # Do nothing
-            self.logger.debug(
-                f'Ignoring register_schema for channel={channel}: '
-                f'messaging encoding is {self.get_messaging_encoding_type()}'
-            )
-        else:
-            if self._schema_registry_encoder is None:
-                raise RuntimeError(
-                    'Cannot register Avro schema: service was initialised without '
-                    'a SchemaRegistryConfig. Pass schema_registry_config= to the '
-                    'constructor.'
-                )
-            from .sr.serializer import schema_cls_to_avro_schema
-
-            self._schema_registry_encoder.register_topic_schema(
-                channel, schema_cls_to_avro_schema(schema)
-            )
-
-        if channel not in self._subscribed_channels:
-            self._subscribed_channels.add(channel)
-            self.logger.info(
-                f'🧬 Channel [{channel}] registered with schema [{schema.__name__}]'
-            )
-
-        return True

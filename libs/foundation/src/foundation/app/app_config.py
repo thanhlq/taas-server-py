@@ -9,7 +9,7 @@ from starlette.responses import Response
 from foundation.config.allowed_hosts import AllowedHostsConfig
 from foundation.datastructures import State
 from foundation.events.emitter import SimpleEventEmitter
-from foundation.observability.types import InstrumentSettings
+from foundation.observability.types import ServiceInstrumentConfig
 from foundation.types.composite_types import Middleware
 from foundation.types.empty import Empty
 
@@ -48,7 +48,7 @@ class AppConfig:
     name: str | None = field(default=None)
     debug: bool = field(default=False)
 
-    instrumentation: InstrumentSettings | None = field(default=None)
+    instrumentation: ServiceInstrumentConfig | None = field(default=None)
     """The configuration for observability instrumentation. If provided,
     the app will be automatically instrumented according to the settings. If not provided, no instrumentation will be applied."""
 
@@ -133,14 +133,14 @@ class AppConfig:
     allowed_hosts: AllowedHostsConfig | list[str] | None = field(default=None)
     # """ csrf_config: CSRFConfig | None = field(default=None) """
 
-    def get_instrumentation_settings(self) -> InstrumentSettings:
+    def get_instrumentation_settings(self) -> ServiceInstrumentConfig:
         """Return the instrumentation settings for the application.
 
         Returns:
             The instrumentation settings.
         """
         if not self.instrumentation:
-            self.instrumentation = InstrumentSettings()
+            self.instrumentation = ServiceInstrumentConfig()
         return self.instrumentation
 
     def __post_init__(self) -> None:

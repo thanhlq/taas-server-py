@@ -6,8 +6,9 @@ based on application settings from Pydantic configuration.
 
 Author: Thanh Le
 """
+from foundation.cli import cli
 from logging import Logger
-from typing import Optional
+from typing import Optional, Any
 
 from opentelemetry import trace
 from opentelemetry.context.context import Context
@@ -17,18 +18,19 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter as OTLPHttpSpanExporter,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import HOST_NAME, SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
 
 # from opentracing import Span
 from opentelemetry.trace.span import Span
 
 from foundation.observability.base_logger import DefaultLogAdapter
 from foundation.utils.singleton import singleton
-
+# new place for imported of attributes
 from ..types import (
     IContextTracer,
     ITracingManager,
@@ -36,6 +38,8 @@ from ..types import (
 from .otel_config import (
     OtelConfig,
 )
+
+
 
 
 @singleton
@@ -49,7 +53,7 @@ class OtelTracingManager(ITracingManager):
     _logger: Optional[Logger] = None
 
     def __init__(self, logger: Optional[Logger] = None):
-        super().__init__(logger)
+        # super().__init__(logger)
         self.config = OtelConfig()
         # self.default_tracer = None  # Initialize before conditional use
         if self.config.is_tracing_enabled():
@@ -70,6 +74,10 @@ class OtelTracingManager(ITracingManager):
 
     def get_context_tracer(self) -> type[IContextTracer]:
         return OtelContextTracer
+
+    def create_sampler(self):
+        sampler = ParentBased(root=TraceIdRatioBased(self.config.sampling_rate))
+        return sampler
 
     def capture_exception(self, e: Exception):
         try:
@@ -113,14 +121,40 @@ class OtelTracingManager(ITracingManager):
         span_id = span.get_span_context().span_id
         return self.int_to_hex(span_id)
 
+    def info(self) -> dict[str, Any]:
+        return {
+            'service_name': self.config.service_name,
+            'host_name': self.config.host_name,
+            'trace_exporter_endpoint': self.config.trace_exporter_endpoint,
+            'trace_exporter_protocol': self.config.trace_exporter_protocol,
+            'trace_exporter_insecured': self.config.trace_exporter_insecured,
+            'sampling_rate': self.config.sampling_rate,
+        }
+
     def init_tracer_provider(self):
-        config: OtelConfig = self.config
-        resource = Resource(
-            attributes={
-                SERVICE_NAME: config.service_name,
-            }
+        cli.info_table(
+            title='OpenTelemetry Tracing Configuration',
+            data=self.info(),
         )
-        provider = TracerProvider(resource=resource)
+
+        config: OtelConfig = self.config
+        attributes: dict[str, Any] = {
+            SERVICE_NAME: config.service_name,
+        }
+
+        if config.host_name:
+            attributes[HOST_NAME] = config.host_name
+        else:
+            self.logger.warning(
+                '⚠️ HOST_NAME is not set in OtelConfig; ignoring hostname -> you should configure in otel collector'
+            )
+
+        resource = Resource.create(
+            attributes=attributes
+        )
+        provider = TracerProvider(
+            sampler=self.create_sampler(),  # Use the custom sampler
+            resource=resource)
 
         if config.trace_exporter_protocol == 'grpc':
             otlp_exporter = OTLPGrpcSpanExporter(

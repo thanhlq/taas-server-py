@@ -1,57 +1,29 @@
 from dataclasses import dataclass, field
-from typing import Literal, cast
 
 from foundation.utils.env_utils import get_env
-
-from ..config.messaging_config import MessagingConfig
 
 
 @dataclass
 class KafkaSettings:
-    """Kafka settings."""
-
-    # encoding
-    MESSAGE_ENCODING: str = field(
-        default_factory=get_env('MESSAGE_ENCODING', 'msgpack')
-    )
-    MESSAGE_FIELD_ENCODING: str = field(
-        default_factory=get_env('MESSAGE_FIELD_ENCODING', 'msgpack')
-    )
-
-    # provider
-    PUBSUB_SERVICE_PROVIDER: str = field(
-        default_factory=get_env('PUBSUB_SERVICE_PROVIDER', 'kafka')
-    )
+    """Kafka settings, hashable and comparable for caching and equality checks."""
 
     # concurrency
-    MAX_CONCURRENT_TASKS: int = field(
-        default_factory=get_env('MAX_CONCURRENT_TASKS', 10)
+    KAFKA_CONSUMER_MAX_WORKERS: int = field(
+        default_factory=get_env('KAFKA_CONSUMER_MAX_WORKERS', 1)
     )
-    GRACEFUL_SHUTDOWN_TIMEOUT: int = field(
-        default_factory=get_env('GRACEFUL_SHUTDOWN_TIMEOUT', 5)
+    KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT: int = field(
+        default_factory=get_env('KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT', 5)
     )
-
-    # retry / DLQ
-    MAX_RETRIES: int = field(default_factory=get_env('MAX_RETRIES', 3))
-    RETRY_BACKOFF_MS: int = field(default_factory=get_env('RETRY_BACKOFF_MS', 1000))
-    DLQ_ENABLE: bool = field(default_factory=get_env('DLQ_ENABLE', True, bool))
-    DLQ_TOPIC: str = field(default_factory=get_env('DLQ_TOPIC', 'dlq.events'))
 
     # kafka connection
     KAFKA_BOOTSTRAP_SERVERS: str = field(
-        default_factory=get_env('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
-    )
-    CONSUMER_TOPICS: list[str] = field(
-        default_factory=get_env('CONSUMER_TOPICS', [], list[str])
-    )
-    CONSUMER_ENABLE: bool = field(
-        default_factory=get_env('CONSUMER_ENABLE', True, bool)
+        default_factory=get_env('KAFKA_BOOTSTRAP_SERVERS', 'localhost:29092')
     )
     KAFKA_CONSUMER_GROUP_ID: str = field(
         default_factory=get_env('KAFKA_CONSUMER_GROUP_ID', 'eworksuite-worker-group')
     )
-    KAFKA_AUTO_OFFSET_RESET: str = field(
-        default_factory=get_env('KAFKA_AUTO_OFFSET_RESET', 'earliest')
+    KAFKA_MESSAGE_CONSUMING_FROM_BEGINING: bool = field(
+        default_factory=get_env('KAFKA_MESSAGE_CONSUMING_FROM_BEGINING', False, bool)
     )
     KAFKA_ENABLE_AUTO_COMMIT: bool = field(
         default_factory=get_env('KAFKA_ENABLE_AUTO_COMMIT', False, bool)
@@ -67,21 +39,44 @@ class KafkaSettings:
     )
 
     # kafka security
+    #
+    # PROTOCOL sets the transport (is it TLS? is anyone authenticated?);
+    # MECHANISM sets which credential the SASL handshake carries. Both are
+    # needed for SASL_* listeners — see MessagingConfig for the full matrix.
     KAFKA_SECURITY_PROTOCOL: str | None = field(
         default_factory=get_env('KAFKA_SECURITY_PROTOCOL', None, str)
     )
+    """
+    ``PLAINTEXT`` (default) | ``SSL`` | ``SASL_PLAINTEXT`` | ``SASL_SSL``.
+
+    Must match the broker listener being dialed. Anything with ``SSL`` is
+    TLS-wrapped; anything with ``SASL`` runs an authentication handshake.
+    """
     KAFKA_SASL_MECHANISM: str | None = field(
         default_factory=get_env('KAFKA_SASL_MECHANISM', None, str)
     )
+    """
+    ``PLAIN`` | ``SCRAM-SHA-256`` | ``SCRAM-SHA-512`` | ``GSSAPI`` | ``OAUTHBEARER``.
+
+    Required when ``KAFKA_SECURITY_PROTOCOL`` starts with ``SASL_``, and rejected
+    otherwise — a mechanism without a SASL protocol is a silently ignored
+    credential. Note FastStream supports only ``PLAIN`` and the ``SCRAM-*`` pair.
+    """
     KAFKA_SASL_USERNAME: str | None = field(
         default_factory=get_env('KAFKA_SASL_USERNAME', None, str)
     )
+    """SASL identity. Required for ``PLAIN`` and ``SCRAM-*``; unused by GSSAPI/OAUTHBEARER."""
     KAFKA_SASL_PASSWORD: str | None = field(
         default_factory=get_env('KAFKA_SASL_PASSWORD', None, str)
     )
+    """SASL secret. Required for ``PLAIN`` and ``SCRAM-*``; unused by GSSAPI/OAUTHBEARER."""
     KAFKA_SSL_CA_LOCATION: str | None = field(
         default_factory=get_env('KAFKA_SSL_CA_LOCATION', None, str)
     )
+    """
+    Path to the PEM CA bundle that signed the broker certificate. Preferred when
+    the CA is mounted as a file; takes precedence over ``KAFKA_CA_DATA``.
+    """
     KAFKA_CA_DATA: str | None = field(
         default_factory=get_env('KAFKA_CA_DATA', None, str)
     )
@@ -94,9 +89,17 @@ class KafkaSettings:
     KAFKA_SSL_CHECK_HOSTNAME: bool = field(
         default_factory=get_env('KAFKA_SSL_CHECK_HOSTNAME', True, bool)
     )
+    """
+    Verify the broker certificate matches the hostname dialed. ``false`` still
+    verifies the chain but trusts any host the CA signed — dev only.
+    """
     KAFKA_SSL_STRICT_VERIFY: bool = field(
         default_factory=get_env('KAFKA_SSL_STRICT_VERIFY', True, bool)
     )
+    """
+    Apply RFC 5280 strict checks (Python 3.13+ default). Set ``false`` for
+    private CAs lacking a ``keyUsage`` extension, e.g. a Strimzi cluster CA.
+    """
 
     # schema registry
     KAFKA_SCHEMA_REGISTRY_URL: str | None = field(
@@ -109,64 +112,7 @@ class KafkaSettings:
         default_factory=get_env('KAFKA_SCHEMA_REGISTRY_PASSWORD', None, str)
     )
 
-    # outbox
-    OUTBOX_ENABLE: bool = field(default_factory=get_env('OUTBOX_ENABLE', False, bool))
-    OUTBOX_POLLER_ENABLE: bool = field(
-        default_factory=get_env('OUTBOX_POLLER_ENABLE', False, bool)
-    )
-
-
-def build_messaging_config(
-    settings: KafkaSettings,
-) -> MessagingConfig:
-    """
-    Materialise :class:`BaseMessagingConfig` from :class:`AppSetting`.
-
-    Centralises the env→config mapping so subclasses don't reach into
-    ``AppSetting`` directly. Pass an explicit ``settings`` instance for
-    testing; otherwise the cached app settings singleton is used.
-    """
-    return MessagingConfig(
-        # encoding
-        message_encoding=settings.MESSAGE_ENCODING,
-        message_field_encoding=settings.MESSAGE_FIELD_ENCODING,
-        # provider
-        pubsub_provider=settings.PUBSUB_SERVICE_PROVIDER,
-        # concurrency
-        max_concurrent_tasks=settings.MAX_CONCURRENT_TASKS,
-        graceful_shutdown_timeout=settings.GRACEFUL_SHUTDOWN_TIMEOUT,
-        # retry / DLQ
-        max_retries=settings.MAX_RETRIES,
-        retry_backoff_ms=settings.RETRY_BACKOFF_MS,
-        dlq_enabled=settings.DLQ_ENABLE,
-        dlq_topic=settings.DLQ_TOPIC,
-        # kafka connection
-        kafka_bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-        consumer_topics=list(settings.CONSUMER_TOPICS),
-        kafka_consumer_enable=settings.CONSUMER_ENABLE,
-        consumer_group_id=settings.KAFKA_CONSUMER_GROUP_ID,
-        kafka_auto_offset_reset=cast(
-            Literal['latest', 'earliest', 'none'],
-            settings.KAFKA_AUTO_OFFSET_RESET,
-        ),
-        kafka_enable_auto_commit=settings.KAFKA_ENABLE_AUTO_COMMIT,
-        kafka_max_poll_records=settings.KAFKA_MAX_POLL_RECORDS,
-        kafka_session_timeout_ms=settings.KAFKA_SESSION_TIMEOUT_MS,
-        kafka_heartbeat_interval_ms=settings.KAFKA_HEARTBEAT_INTERVAL_MS,
-        # kafka security
-        kafka_security_protocol=settings.KAFKA_SECURITY_PROTOCOL,
-        kafka_sasl_mechanism=settings.KAFKA_SASL_MECHANISM,
-        kafka_sasl_username=settings.KAFKA_SASL_USERNAME,
-        kafka_sasl_password=settings.KAFKA_SASL_PASSWORD,
-        kafka_ssl_ca_location=settings.KAFKA_SSL_CA_LOCATION,
-        kafka_ssl_ca_data=settings.KAFKA_CA_DATA,
-        kafka_ssl_check_hostname=settings.KAFKA_SSL_CHECK_HOSTNAME,
-        kafka_ssl_strict_verify=settings.KAFKA_SSL_STRICT_VERIFY,
-        # schema registry
-        schema_registry_url=settings.KAFKA_SCHEMA_REGISTRY_URL,
-        schema_registry_username=settings.KAFKA_SCHEMA_REGISTRY_USERNAME,
-        schema_registry_password=settings.KAFKA_SCHEMA_REGISTRY_PASSWORD,
-        # outbox
-        outbox_enabled=settings.OUTBOX_ENABLE,
-        outbox_poller_enabled=settings.OUTBOX_POLLER_ENABLE,
-    )
+    @property
+    def kafka_bootstrap_servers_list(self) -> list[str]:
+        """Split ``kafka_bootstrap_servers`` into a list."""
+        return [s.strip() for s in self.KAFKA_BOOTSTRAP_SERVERS.split(',') if s.strip()]

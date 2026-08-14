@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from foundation.messaging.types import IMessageRoutingService
+from foundation.messaging.types import MessageRoutingServiceT
 from foundation.resiliant.dlq import IDLQService
 from foundation.resiliant.idempotency import IIdempotencyService
 from foundation.resiliant.outbox import IOutboxService
@@ -24,7 +24,7 @@ class ResiliantServiceFactoryT(ABC):
         ...
 
     @abstractmethod
-    def get_message_routing_service(self) -> IMessageRoutingService:
+    def get_message_routing_service(self) -> MessageRoutingServiceT:
         """
         Return an instance of MessageRoutingService.
         """

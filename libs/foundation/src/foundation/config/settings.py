@@ -12,13 +12,12 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from foundation.app.app_settings import BASE_DIR, CONFIG_PREFIX
 from foundation.cli._cli import console
 from foundation.config import AppSettings
-from foundation.app.app_settings import BASE_DIR, CONFIG_PREFIX
 from foundation.config.log import LogSettings
-from foundation.config.messaging_settings import MessagingSettings
 from foundation.config.otel import OtelSettings
-from foundation.config.tracing import TracingSettings
+from foundation.config.instrument_settings import InstrumentSettings
 from foundation.db.sa_config import (
     SQLAlchemyAsyncConfig,
 )
@@ -57,11 +56,10 @@ class Settings:
     server: ServerSettings = field(default_factory=ServerSettings)
     # saq: SaqSettings = field(default_factory=SaqSettings)
     log: LogSettings = field(default_factory=LogSettings)
-    trace: TracingSettings = field(default_factory=TracingSettings)
+    instrument: InstrumentSettings = field(default_factory=InstrumentSettings)
     alchemy: SQLAlchemyAsyncConfig = field(default_factory=SQLAlchemyAsyncConfig)
     otel: OtelSettings = field(default_factory=OtelSettings)
     email: EmailSettings = field(default_factory=EmailSettings)
-    messaging: MessagingSettings = field(default_factory=MessagingSettings)
 
     environment: str = field(default_factory=get_env('ENVIRONMENT', 'local'))
     """The current environment (development, staging, production)."""
@@ -137,10 +135,9 @@ class Settings:
             # vite: ViteSettings = ViteSettings()
             app: AppSettings = AppSettings()
             log: LogSettings = LogSettings()
-            trace: TracingSettings = TracingSettings()
+            trace: InstrumentSettings = InstrumentSettings()
             otel: OtelSettings = OtelSettings()
             email: EmailSettings = EmailSettings()
-            messaging: MessagingSettings = MessagingSettings()
         except Exception as e:  # noqa: BLE001
             logger.fatal('Could not load settings. %s', e)
             sys.exit(1)
@@ -149,10 +146,9 @@ class Settings:
             db=db,
             server=server,
             log=log,
-            trace=trace,
+            instrument=trace,
             otel=otel,
             email=email,
-            messaging=messaging,
         )
 
 

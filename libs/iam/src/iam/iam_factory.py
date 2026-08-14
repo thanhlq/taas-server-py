@@ -1,7 +1,7 @@
 from foundation.messaging.events.flow_registration import (
     register_event_handlers_for_app_module,
 )
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.state import get_service, register_service
 from foundation.utils.singleton import singleton
 
@@ -34,8 +34,8 @@ class IamFactory:
         # register_iam_schema_registry_schemas(_messaging)
 
     @staticmethod
-    def get_messaging_service() -> IMessagingService:
-        return get_service(IMessagingService)
+    def get_messaging_service() -> MessagingServiceT:
+        return get_service(MessagingServiceT)
 
     @staticmethod
     def get_iam_service_factory() -> 'IIamServiceFactory':

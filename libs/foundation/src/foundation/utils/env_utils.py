@@ -43,8 +43,38 @@ def _parse_bool(key: str, value: str) -> bool:
         f"Use one of: {allowed} (case-insensitive), or unset."
     )
 
+
+def _parse_int(key: str, value: str) -> int:
+    """Parse an int env var, reporting the offending key instead of a bare ValueError."""
+    try:
+        return int(value.strip())
+    except ValueError as e:
+        msg = f"Cannot parse env var {key}={value!r} as int."
+        raise ValueError(msg) from e
+
+
+def _parse_float(key: str, value: str) -> float:
+    """Parse a float env var.
+
+    Accepts anything ``float()`` accepts after stripping whitespace — decimals,
+    scientific notation (``1e-3``) and ``inf``/``-inf``. ``nan`` is rejected:
+    it is never an intentional config value and it silently poisons every
+    comparison it flows into.
+    """
+    normalized = value.strip()
+    try:
+        parsed = float(normalized)
+    except ValueError as e:
+        msg = f"Cannot parse env var {key}={value!r} as float."
+        raise ValueError(msg) from e
+    if parsed != parsed:  # NaN
+        msg = f"Cannot parse env var {key}={value!r} as float: NaN is not a valid config value."
+        raise ValueError(msg)
+    return parsed
+
+
 T = TypeVar("T")
-ParseTypes = bool | int | str | list[str] | Path | list[Path] | dict[str, Any]
+ParseTypes = bool | int | float | str | list[str] | list[int] | list[float] | Path | list[Path] | dict[str, Any]
 
 
 class UnsetType:
@@ -66,6 +96,10 @@ def get_env(key: str, default: int, type_hint: UnsetType = _UNSET) -> Callable[[
 
 
 @overload
+def get_env(key: str, default: float, type_hint: UnsetType = _UNSET) -> Callable[[], float]: ...
+
+
+@overload
 def get_env(key: str, default: str, type_hint: UnsetType = _UNSET) -> Callable[[], str]: ...
 
 
@@ -79,6 +113,14 @@ def get_env(key: str, default: list[Path], type_hint: UnsetType = _UNSET) -> Cal
 
 @overload
 def get_env(key: str, default: list[str], type_hint: UnsetType = _UNSET) -> Callable[[], list[str]]: ...
+
+
+@overload
+def get_env(key: str, default: list[int], type_hint: UnsetType = _UNSET) -> Callable[[], list[int]]: ...
+
+
+@overload
+def get_env(key: str, default: list[float], type_hint: UnsetType = _UNSET) -> Callable[[], list[float]]: ...
 
 
 @overload
@@ -108,6 +150,10 @@ def get_config_val(key: str, default: int, type_hint: UnsetType = _UNSET) -> int
 
 
 @overload
+def get_config_val(key: str, default: float, type_hint: UnsetType = _UNSET) -> float: ...
+
+
+@overload
 def get_config_val(key: str, default: str, type_hint: UnsetType = _UNSET) -> str: ...
 
 
@@ -121,6 +167,14 @@ def get_config_val(key: str, default: list[Path], type_hint: UnsetType = _UNSET)
 
 @overload
 def get_config_val(key: str, default: list[str], type_hint: UnsetType = _UNSET) -> list[str]: ...
+
+
+@overload
+def get_config_val(key: str, default: list[int], type_hint: UnsetType = _UNSET) -> list[int]: ...
+
+
+@overload
+def get_config_val(key: str, default: list[float], type_hint: UnsetType = _UNSET) -> list[float]: ...
 
 
 @overload
@@ -139,7 +193,9 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
     key: str, default: ParseTypes | None, type_hint: type[T] | UnsetType = _UNSET
 ) -> ParseTypes | T | None:
     """Parse environment variables, prioritizing explicit type hint over default's type.
-    Now supports dict and TypedDict with both JSON and comma-separated formats.
+
+    Supports bool, int, float, str, Path, lists of those scalars, and dict/TypedDict
+    (both JSON and comma-separated formats).
 
     Args:
         key: Environment variable key
@@ -156,6 +212,10 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
     Note:
         If the default is an empty list and no type hint is provided, the function will return list[str] (not list[Path]).
         To get list[Path] in this case, provide a type hint (e.g., type_hint=list[Path]).
+
+        A float default parses the env var as float; an int default keeps int parsing, so
+        ``get_env('X', 5)`` rejects ``X=5.5``. Declare the default as ``5.0`` (or pass
+        ``type_hint=float``) when fractional values are allowed.
     """
     str_value = os.getenv(key)
 
@@ -179,6 +239,10 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
             item_type_arg = args[0]
             if item_type_arg is str:
                 item_constructor = str
+            elif item_type_arg is int:
+                item_constructor = int
+            elif item_type_arg is float:
+                item_constructor = float
             elif isinstance(item_type_arg, type) and issubclass(item_type_arg, Path):
                 item_constructor = item_type_arg
             else:
@@ -199,6 +263,10 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
             parse_as_list = True
             if default and all(isinstance(x, Path) for x in default):
                 item_constructor = Path
+            elif default and all(type(x) is int for x in default):
+                item_constructor = int
+            elif default and all(type(x) in (int, float) for x in default):
+                item_constructor = float
             elif default and all(isinstance(x, str) for x in default):
                 item_constructor = str
             else:
@@ -211,7 +279,7 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
         raise RuntimeError(msg)
 
     if parse_as_list and item_constructor:
-        if item_constructor is Path:
+        if item_constructor in (Path, int, float):
             return _parse_list(key, value, item_constructor)
         return cast("list[str]", _parse_list(key, value, item_constructor))
     if parse_as_dict:
@@ -219,7 +287,9 @@ def get_config_val(  # noqa: C901, PLR0911, PLR0915
     if final_type is str:
         return value
     if final_type is int:
-        return int(value)
+        return _parse_int(key, value)
+    if final_type is float:
+        return _parse_float(key, value)
     if final_type is bool:
         return _parse_bool(key, value)
     if final_type is Path:

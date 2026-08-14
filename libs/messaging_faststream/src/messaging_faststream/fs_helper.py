@@ -75,7 +75,7 @@ class FastStreamHelper:
 
         result: dict[str, str] = {}
         for key, value in message.headers.items():
-            str_key = key if isinstance(key, str) else str(key)
+            str_key = key if isinstance(key, str) else str(key) # type: ignore
             if isinstance(value, bytes):
                 result[str_key] = value.decode('utf-8', errors='replace')
             else:
@@ -103,5 +103,5 @@ class FastStreamHelper:
         if traceparent:
             headers['traceparent'] = traceparent
         if extra:
-            headers.update({k: v for k, v in extra.items() if v is not None})
+            headers.update({k: v for k, v in extra.items() if v is not None}) # type: ignore
         return headers

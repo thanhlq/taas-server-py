@@ -1,14 +1,14 @@
 """core service types"""
+
 import logging
 from logging import Logger
 
 from foundation.facade.cache import CacheServiceT
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.resiliant.types import ResiliantServiceFactoryT
 from foundation.state import get_service as registry_get_service
 
 # if TYPE_CHECKING:
-
 
 
 class BaseService:
@@ -36,13 +36,12 @@ class BaseService:
         return registry_get_service(CacheServiceT)
 
     @property
-    def messaging_service(self) -> IMessagingService:
-        return registry_get_service(IMessagingService)
+    def messaging_service(self) -> MessagingServiceT:
+        return registry_get_service(MessagingServiceT)
 
     @property
     def message_routing_service(self):
         return self.resiliant_factory.get_message_routing_service()
-
 
     @property
     def resiliant_factory(self) -> 'ResiliantServiceFactoryT':

@@ -81,44 +81,32 @@ Testing
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 
-from aiokafka.admin import AIOKafkaAdminClient, NewTopic
-from aiokafka.errors import TopicAlreadyExistsError
 from faststream.kafka import KafkaBroker, KafkaMessage
-from faststream.security import (
-    BaseSecurity,
-    SASLPlaintext,
-    SASLScram256,
-    SASLScram512,
-)
 from foundation.exceptions.report_error import report_error
 from foundation.messaging.events.event_processor import EventProcessor
-from foundation.messaging.kafka.base_messaging import BaseMessagingService
+from foundation.messaging.kafka.base_kafka_messaging import BaseKafkaMessagingService
 from foundation.messaging.types import (
     BaseEvent,
     BaseSendableMessage,
     DlqEvent,
-    IMessageEncoder,
-    IMessagingService,
     MessageHandler,
-    MessageServiceStats,
+    MessagingAdminServiceT,
     MessagingProvider,
+    MessagingServiceT,
 )
 from foundation.messaging.utils.msg_encoder import MsgDecoderError
 from foundation.utils.icons import Icons
 from foundation.utils.singleton import singleton
+from messaging_kafka.kafka_admin_service import KafkaAdminService
 
-from .helper import FastStreamHelper
+from messaging_faststream.fs_security import build_faststream_broker_security
 
-# SASL mechanism name (as configured for Kafka) → FastStream security class.
-_SASL_MECHANISMS = {
-    'PLAIN': SASLPlaintext,
-    'SCRAM-SHA-256': SASLScram256,
-    'SCRAM-SHA-512': SASLScram512,
-}
+from .fs_helper import FastStreamHelper
 
 # ---------------------------------------------------------------------------
 # Internal data structures
@@ -133,7 +121,7 @@ class _SubscriptionInfo:
     topic: str
     consumer_group: str
     from_beginning: bool
-    # The FastStream subscriber object — kept for ``unsubscribe()`` cleanup
+    # i.e. FastStream subscriber object — kept for ``unsubscribe()`` cleanup
     subscriber: Any = field(default=None, repr=False)
 
 
@@ -143,7 +131,10 @@ class _SubscriptionInfo:
 
 
 @singleton
-class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
+class FastStreamKafkaMessagingService(
+    BaseKafkaMessagingService[KafkaBroker, KafkaBroker, KafkaMessage],
+    MessagingServiceT[KafkaBroker, KafkaBroker, KafkaMessage],
+):
     """
     Kafka messaging service built on FastStream 0.6.x.
 
@@ -161,10 +152,10 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
     def __init__(
         self,
-        *,
-        avro_schemas: Optional[dict[str, dict]] = None,
+        *args,
+        **kwargs,
     ) -> None:
-        super().__init__(avro_schemas=avro_schemas)
+        super().__init__(*args, **kwargs)
 
         # ------------------------------------------------------------------
         # FastStream broker — created eagerly so subscribers can be
@@ -172,15 +163,9 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         # ------------------------------------------------------------------
         # Pass the parsed list: a comma-separated string is treated by aiokafka
         # as a single host, which breaks multi-broker bootstrap.
-        self._broker = KafkaBroker(
-            bootstrap_servers=self._config.kafka_bootstrap_servers_list,
-            security=self._broker_security(),
-        )
-        self._broker_started: bool = False
 
         # aiokafka admin client for topic management (create / delete / list).
         # Initialised in start_producer().
-        self._admin_client: Optional[AIOKafkaAdminClient] = None
 
         # ------------------------------------------------------------------
         # Subscription state
@@ -191,74 +176,66 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         # EventProcessorFast, *not* this table.
         self._subscriptions: dict[str, _SubscriptionInfo] = {}
 
-
         # FastStream subscriber objects for main-loop topics (one per topic).
         self._main_subscribers: dict[str, Any] = {}
 
-        # ------------------------------------------------------------------
-        # Stats & processors
-        # ------------------------------------------------------------------
-        self.stats = MessageServiceStats(
-            uptime_seconds=0,
-            requests_handled=0,
-            errors_occurred=0,
-            messages_published=0,
-            messages_processed=0,
-            messages_failed=0,
-            messages_retried=0,
-            messages_dlq=0,
-        )
-        self.event_processor = EventProcessor(stats=self.stats)
-        self.running: bool = False
+        self.event_processor = EventProcessor(stats=self.stats)  # type: ignore
 
         self.logger.info(
             f'{Icons.FASTSTREAM} ⚙️ FastStreamMessagingService initialised | '
             f'encoder={self.msg_encoder} | '
             f'driver={str(self.get_provider())} | '
-            f'subs_auto_offset_reset={self.subs_auto_offset_reset} | '
-            f'schema_registry={"enabled" if self.schema_registry_config else "disabled"}'
+            f'subs_auto_offset_reset={self.auto_offset_reset} | '
+            f'schema_registry={"enabled" if self.schema_registry_enabled else "disabled"}'
         )
 
-    # -----------------------------------------------------------------------
-    # IMessagingService — introspection
-    # -----------------------------------------------------------------------
+    @property
+    def consumer(self) -> KafkaBroker:
+        """Return the FastStream KafkaBroker consumer instance."""
+        return (
+            self.producer
+        )  # FastStream uses the same broker for both producer and consumer
 
-    def is_consumer_enabled(self) -> bool:
-        """Return True if the consumer is enabled and running."""
-        return self._config.kafka_consumer_enable and self.running
+    def create_producer(self) -> KafkaBroker:
+        """Create a new FastStream KafkaBroker producer instance."""
+        return KafkaBroker(
+            bootstrap_servers=self.kafka_bootstrap_servers,
+            security=build_faststream_broker_security(self.security_config),
+            # Ensure message durability across replicas
+            acks='all',
+            logger=self.logger,
+            log_level=logging.WARNING,
+            consumer_only=False,  # must be False for FastStream to create a real producer
+            # NOTE: consumer_only must stay False. This service uses ONE broker for
+            # both roles (see the `consumer` property), and FastStream skips creating
+            # the AIOKafkaProducer + admin client in consumer-only mode, leaving a
+            # FakeAioKafkaFastProducer whose publish() raises bare NotImplementedError.
+            # connect() still succeeds, so the failure only surfaces on first publish.
+        )
+
+    def create_consumer(self) -> KafkaBroker:
+        """Create a new FastStream KafkaBroker producer instance."""
+        return self.create_producer()
 
     def get_provider(self) -> MessagingProvider:
         """Return the messaging provider identifier."""
         return MessagingProvider.KAFKA_FASTSTREAM
 
-    def get_msg_encoder(self) -> IMessageEncoder:
-        """Return the synchronous message encoder (JSON / msgpack)."""
-        return self.msg_encoder
-
-    def get_broker(self) -> KafkaBroker:
-        """Expose the underlying ``KafkaBroker`` for testing.
-
-        Use with ``TestKafkaBroker``::
-
-            async with TestKafkaBroker(service.get_broker()) as tb:
-                await service.publish("topic", event)
-        """
-        return self._broker
-
     # -----------------------------------------------------------------------
     # Lifecycle
     # -----------------------------------------------------------------------
 
-    async def start(self):
-        """Start producer and optionally consumer depending on settings."""
-        await self.start_producer()
-        if self._config.kafka_consumer_enable:
-            await self.start_consumer()
-            self.logger.info('Kafka service started with PRODUCER and CONSUMER ➡️ ⬅️')
-        else:
-            self.logger.info('Kafka service started with PRODUCER only ➡️')
+    async def get_admin_client(self) -> MessagingAdminServiceT:
+        """Lazily create and return the KafkaAdminService singleton."""
+        if self._admin_client is None:
+            self._admin_client = KafkaAdminService(
+                config=self.config,
+                kafka_config=self.kafka_config,
+                kafka_security_config=self.security_config,
+            )
+            await self._admin_client.start()
 
-        return self
+        return self._admin_client
 
     async def start_producer(self) -> None:
         """
@@ -271,27 +248,24 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         Also starts the aiokafka admin client used by
         ``create_channel`` / ``delete_channel`` / ``list_channels``.
         """
+
+        if self._producer_started:
+            self.logger.warning('Producer already started — ignoring start_producer()')
+            return
+
         try:
+            self._producer = self.create_producer()
             self.logger.info(
-                f'🌊 ➡️  Connecting FastStream broker: {self._config.kafka_bootstrap_servers}'
+                f'🌊 ➡️  Connecting FastStream broker: {self.kafka_bootstrap_servers}'
             )
-            await self._broker.connect()
-
-            self._admin_client = AIOKafkaAdminClient(
-                bootstrap_servers=self._config.kafka_bootstrap_servers_list,
-                # The admin client is raw aiokafka, so it takes the kwargs form
-                # rather than FastStream's ``security=`` object.
-                **self._config.build_kafka_client_kwargs(),
-            )
-            await self._admin_client.start()
-
-            self.running = True
+            await self.producer.connect()
+            self._producer_started = True
             self.logger.info('🌊 ➡️ 🟢  FastStream broker connected — producer ready')
         except Exception as exc:
             report_error(
                 exc, title='FastStream Producer Start Error', logger=self.logger
             )
-            raise
+            raise exc
 
     async def start_consumer(self) -> None:
         """
@@ -300,11 +274,11 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         But in fact, we don't need to start here, we wait for start_consuming() to start the consumer,
         because we need to register the subscribers first before starting the consumer.
         """
-
-        pass
+        self._consumer_started = True
 
     async def start_consuming(self) -> None:
         """
+        Connect broker to Kafka and startup all subscribers.
         Register concurrent main-loop subscribers and run until stopped.
 
         Registers one FastStream subscriber per configured topic using
@@ -315,7 +289,12 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
         Must be called after ``start_producer()`` and ``start_consumer()``.
         """
-        await self._run_consuming(max_workers=self._config.max_concurrent_tasks)
+
+        self._consumer_running = True
+
+        await self._run_consuming(
+            max_workers=self.kafka_config.KAFKA_CONSUMER_MAX_WORKERS
+        )
 
     async def start_consuming_sequential(self) -> None:
         """
@@ -325,12 +304,16 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         messages are processed strictly one at a time.  Use when event
         ordering is critical.
         """
+        self._consumer_running = True
         await self._run_consuming(max_workers=1)
 
     async def _run_consuming(self, max_workers: int) -> None:
         """Internal: register main-loop subscribers, start broker, keep alive."""
-        if not self._broker:
-            raise RuntimeError('Call start_producer() first.')
+        if not self._producer_started or not self._consumer_started:
+            raise RuntimeError('Call start_producer() and start_consumer() first.')
+
+        if not self.is_consumer_enabled():
+            raise RuntimeError('Consumer is disabled in configuration.')
 
         # Register one FastStream subscriber per configured topic.
         for topic in self._subscribed_channels:
@@ -339,13 +322,16 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         try:
             # broker.start() launches subscriber background tasks.
             # It is idempotent if broker.connect() was already called.
-            await self._broker.start()
+            """Connect broker to Kafka and startup all subscribers."""
+            await self.consumer.start()
             self._broker_started = True
 
-            self.logger.info(f'🌊 ⬅️  🟢  FastStream consumer started, channels={list(self._subscribed_channels)}, workers={max_workers}')
+            self.logger.info(
+                f'🌊 ⬅️  🟢  FastStream consumer started, channels={list(self._subscribed_channels)}, workers={max_workers}'
+            )
 
             # Keep the coroutine alive — FastStream handles consumption internally.
-            while self.running:
+            while self._consumer_running:
                 await asyncio.sleep(0.5)
 
         except asyncio.CancelledError:
@@ -364,19 +350,19 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
     async def _do_stop(self) -> None:
         self.logger.info('Stopping FastStream Kafka service …')
-        self.running = False
+        self._consumer_running = False
 
         # Wait for EventProcessor to drain in-flight tasks.
         if self.event_processor:
             try:
                 await asyncio.wait_for(
                     self.event_processor.cleanup(),
-                    timeout=self._config.graceful_shutdown_timeout,
+                    timeout=self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT,
                 )
             except TimeoutError:
                 self.logger.warning(
                     f'EventProcessor.cleanup() timed out after '
-                    f'{self._config.graceful_shutdown_timeout}s'
+                    f'{self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT}s'
                 )
             except Exception as exc:
                 report_error(
@@ -387,7 +373,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
         # Stop admin client.
         if self._admin_client:
-            await self._admin_client.close()
+            await self._admin_client.stop()
             self._admin_client = None
 
         # Close the broker (stops all subscribers + producer).
@@ -396,19 +382,19 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         # is slow or unreachable during shutdown.
         try:
             self.logger.warning(
-                f'Stopping FastStream broker with a timeout of {self._config.graceful_shutdown_timeout}s...'
+                f'Stopping FastStream broker with a timeout of {self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT}s...'
             )
             await asyncio.wait_for(
-                self._broker.stop(),
-                timeout=self._config.graceful_shutdown_timeout,
+                self.producer.stop(),
+                timeout=self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT,
             )
-            self._broker_started = False
+            self.broker_started = False
         except TimeoutError:
             self.logger.warning(
-                f'Broker stop timed out after {self._config.graceful_shutdown_timeout}s '
+                f'Broker stop timed out after {self.kafka_config.KAFKA_GRACEFUL_SHUTDOWN_TIMEOUT}s '
                 f'(LeaveGroup requests may not have completed — safe to ignore)'
             )
-            self._broker_started = False
+            self.broker_started = False
         except Exception as exc:
             report_error(exc, title='FastStream Broker Close Error', logger=self.logger)
 
@@ -459,11 +445,12 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             f'correlation_id={correlation_id}'
         )
 
-
         # In case of publish from outbbox, the correlation_id may be passed in headers instead of kwargs, so we pop it from headers if not found in kwargs.
-        correlation_id = (
-            correlation_id or headers.pop('correlation_id') if headers else None
-        )
+        # `A or B if headers else None` binds as `(A or B) if headers else None`, which both
+        # dropped an explicit correlation_id when no headers were passed and raised KeyError
+        # when headers carried no 'correlation_id' — hence the explicit form below.
+        if not correlation_id and headers:
+            correlation_id = headers.pop('correlation_id', None)
         if not correlation_id:
             correlation_id = kwargs.get('correlation_id')
         traceparent = (
@@ -473,7 +460,6 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             traceparent = kwargs.get('traceparent')
 
         try:
-
             _msg_data = message.as_dict() if isinstance(message, BaseEvent) else message
 
             # Build trace + custom headers
@@ -495,7 +481,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                 # so kafka does try to decode it as JSON, we set content-type to application/octet-stream
                 publish_headers['content-type'] = 'application/octet-stream'
 
-            await self._broker.publish(
+            await self.producer.publish(
                 _msg_data_encoded,
                 topic=channel,
                 headers=publish_headers,
@@ -505,7 +491,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
 
             self.stats.messages_published += 1
 
-            if self._debug:
+            if self.debug:
                 if isinstance(message, BaseEvent):
                     self.logger.debug(
                         f'{Icons.FASTSTREAM} ➡️  Published event [BaseEvent]: topic={channel} '
@@ -513,7 +499,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                         f'correlation_id={correlation_id}'
                     )
                 elif isinstance(message, dict):
-                     self.logger.debug(
+                    self.logger.debug(
                         f'{Icons.FASTSTREAM} ➡️  Published message [dict]: topic={channel} '
                         f'correlation_id={correlation_id} payload={message}'
                     )
@@ -539,7 +525,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         channel: str,
         handler: MessageHandler,
         consumer_group: Optional[str] = None,
-        from_beginning: bool = False,
+        from_beginning: bool | None = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -565,8 +551,10 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             A unique subscription ID.  Pass it to ``unsubscribe()`` to cancel.
         """
         sub_id = str(uuid.uuid4())
-        group_id = consumer_group or self._config.consumer_group_id
-        auto_offset = 'earliest' if from_beginning else self.subs_auto_offset_reset
+        group_id = consumer_group or self.get_consumer_group_id()
+        if from_beginning is None:
+            from_beginning = False
+        auto_offset = 'earliest' if from_beginning else self.auto_offset_reset
 
         # Why this func is not invoked?
         async def _direct_handler(raw: bytes, message: KafkaMessage) -> None:
@@ -591,7 +579,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                 )
 
         # Create the FastStream subscriber with a unique consumer group.
-        subscriber = self._broker.subscriber(
+        subscriber = self.consumer.subscriber(
             channel,
             group_id=group_id,
             auto_offset_reset=auto_offset,
@@ -618,7 +606,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         self._subscriptions[sub_id] = sub_info
         self.stats.active_subscriptions = len(self._subscriptions)
         self.logger.info(
-            f'⬅️  Subscribed: topic={channel} sub_id={sub_id} group_id={group_id}'
+            f'⬅️  Subscribed: channel={channel} sub_id={sub_id} group_id={group_id}, auto_offset_reset={auto_offset}'
         )
         return sub_id
 
@@ -642,7 +630,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         self.stats.active_subscriptions = len(self._subscriptions)
 
         subscriber = sub_info.subscriber
-        if subscriber is not None and self._broker_started:
+        if subscriber is not None and self._consumer_started:
             try:
                 await subscriber.close()
             except Exception as exc:
@@ -651,151 +639,12 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                 )
 
         self.logger.info(
-            f'⬅️  Unsubscribed: topic={sub_info.topic} sub_id={subscription_id}'
+            f'⬅️ 📢 Unsubscribed: topic={sub_info.topic} sub_id={subscription_id}'
         )
-
-    # -----------------------------------------------------------------------
-    # Channel management (topic admin)
-    # -----------------------------------------------------------------------
-
-    async def create_channel(
-        self,
-        channel: str,
-        num_partitions: int = 1,
-        *,
-        replication_factor: int = 1,
-        retention_hours: int = 168,  # 7 days default,
-        fifo: bool = False,  # Only applicable for queues: if True, create FIFO queue with ordering guarantees.
-        **kwargs,
-    ) -> bool:
-        """
-        Create a Kafka topic (channel).
-
-        Uses the aiokafka admin client.  Returns ``True`` on success and
-        ``True`` when the topic already exists (idempotent).
-
-        Args:
-            channel: Topic name.
-            num_partitions: Number of partitions (default 1).
-            replication_factor: Replication factor (default 1).
-
-        Returns:
-            ``True`` if the topic exists or was created; ``False`` on error.
-        """
-        if not self._admin_client:
-            raise RuntimeError('Call start_producer() first.')
-        try:
-            topic = NewTopic(
-                name=channel,
-                num_partitions=num_partitions,
-                replication_factor=replication_factor,
-            )
-            await self._admin_client.create_topics([topic])
-            self.logger.info(f'📋 Created topic: {channel}')
-            return True
-        except TopicAlreadyExistsError:
-            self.logger.debug(f'Topic already exists: {channel}')
-            return True
-        except Exception as exc:
-            report_error(
-                exc,
-                title='FastStream Create Topic Error',
-                extra_context={'topic': channel},
-                logger=self.logger,
-            )
-            return False
-
-    async def delete_channel(self, channel: str, **kwargs: Any) -> bool:
-        """
-        Delete a Kafka topic (channel).
-
-        Args:
-            channel: Topic name to delete.
-
-        Returns:
-            ``True`` on success, ``False`` on failure.
-        """
-        if not self._admin_client:
-            raise RuntimeError('Call start_producer() first.')
-        try:
-            await self._admin_client.delete_topics([channel])
-            self.logger.info(f'🗑️  Deleted topic: {channel}')
-            return True
-        except Exception as exc:
-            report_error(
-                exc,
-                title='FastStream Delete Topic Error',
-                extra_context={'topic': channel},
-                logger=self.logger,
-            )
-            return False
-
-    async def list_channels(self, **kwargs: Any) -> list[str]:
-        """
-        List all available Kafka topics.
-
-        Returns:
-            List of topic names, excluding internal Kafka topics
-            (those starting with ``_``).
-        """
-        if not self._admin_client:
-            raise RuntimeError('Call start_producer() first.')
-        try:
-            metadata = await self._admin_client.list_topics()
-            return [t for t in metadata if not t.startswith('_')]
-        except Exception as exc:
-            report_error(
-                exc,
-                title='FastStream List Topics Error',
-                logger=self.logger,
-            )
-            return []
-
-    # -----------------------------------------------------------------------
-    # Stats
-    # -----------------------------------------------------------------------
-
-    def get_stats(self) -> MessageServiceStats:
-        """Return a snapshot of current service statistics."""
-        self.stats.running = self.running
-        self.stats.active_subscriptions = len(self._subscriptions)
-        return self.stats
 
     # -----------------------------------------------------------------------
     # Internal helpers
     # -----------------------------------------------------------------------
-
-    def _broker_security(self) -> Optional[BaseSecurity]:
-        """
-        Translate the messaging config into a FastStream security object.
-
-        FastStream wraps SASL/TLS in a ``BaseSecurity`` subclass instead of the
-        raw aiokafka kwargs; ``None`` means an unauthenticated PLAINTEXT broker.
-        """
-        cfg = self._config
-        protocol = (cfg.kafka_security_protocol or 'PLAINTEXT').upper()
-        if protocol == 'PLAINTEXT':
-            return None
-
-        ssl_context = cfg.build_kafka_ssl_context()
-        use_ssl = protocol.endswith('SSL')
-
-        if not protocol.startswith('SASL'):
-            return BaseSecurity(ssl_context=ssl_context, use_ssl=use_ssl)
-
-        mechanism = (cfg.kafka_sasl_mechanism or 'PLAIN').upper()
-        sasl_class = _SASL_MECHANISMS.get(mechanism)
-        if sasl_class is None:
-            raise ValueError(
-                f'Unsupported KAFKA_SASL_MECHANISM={mechanism!r} for the '
-                f'FastStream provider; supported: {sorted(_SASL_MECHANISMS)}'
-            )
-        return sasl_class(
-            username=cfg.kafka_sasl_username or '',
-            password=cfg.kafka_sasl_password or '',
-            ssl_context=ssl_context,
-            use_ssl=use_ssl,
-        )
 
     async def _encode_message(
         self, topic: str, message: BaseSendableMessage
@@ -849,10 +698,14 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         #     filtered = {k: v for k, v in all_data.items() if k in valid_fields}
         #     return event_cls(**filtered)
 
-        return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self._schema_registry_encoder)  # type: ignore
+        return await self.msg_encoder.decode_msg(
+            raw, channel=topic, sr_encoder=self._schema_registry_encoder
+        )  # type: ignore
 
     async def _decode_dlq_message(self, topic: str, raw: bytes) -> DlqEvent:
-        return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self._schema_registry_encoder)  # type: ignore
+        return await self.msg_encoder.decode_msg(
+            raw, channel=topic, sr_encoder=self._schema_registry_encoder
+        )  # type: ignore
 
     def _register_main_subscriber(self, topic: str, max_workers: int) -> None:
         """Register a FastStream subscriber for the main EventProcessor loop.
@@ -885,13 +738,14 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                     logger=self.logger,
                 )
 
-        subscriber = self._broker.subscriber(
+        group_id = self.get_consumer_group_id()
+        subscriber = self.consumer.subscriber(
             topic,
-            group_id=self._config.consumer_group_id,
-            auto_offset_reset=self._config.kafka_auto_offset_reset,
+            group_id=group_id,
+            auto_offset_reset=self.auto_offset_reset,
             # This option is deprecated and will be removed in 0.7.0 release
             # auto_commit=self.messaging_config.kafka_enable_auto_commit,
-            # max_workers=max_workers,
+            max_workers=max_workers,
         )
         subscriber(_main_handler)
         self._main_subscribers[topic] = subscriber
@@ -930,7 +784,7 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
             if isinstance(raw, bytes):
                 event = await self._decode_message(topic, raw)
                 # print(f"▶▶▶▶▶▶▶▶▶ Received BYTES message on topic {topic}: {raw}")
-            elif isinstance(raw, dict): # type: ignore
+            elif isinstance(raw, dict):  # type: ignore
                 # If set the kafka header content-type to application/octet-stream, FastStream will not try to decode the message as JSON and pass it as dict to the handler.
                 # So this code will not be reached / but still keep it here just in case
                 # print(f"▶▶▶▶▶▶▶▶▶ Received DICT message on topic {topic}: {raw}")
@@ -961,9 +815,9 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
                 f'topic={topic} '
                 f'processing_time_ms={getattr(result, "processing_time_ms", "n/a")}'
             )
-        elif self._config.dlq_enabled:
+        elif self.dlq_enabled:
             self.stats.messages_failed += 1
-            if getattr(event, 'retry_count', 0) >= self._config.max_retries:
+            if getattr(event, 'retry_count', 0) >= self.config.RETRY_MAX_RETRIES:
                 await self.send_to_dlq(event, result.error, traceparent)
                 self.stats.messages_dlq += 1
             else:
@@ -985,14 +839,14 @@ class FastStreamKafkaMessagingService(BaseMessagingService, IMessagingService):
         correlation_id: Optional[str] = None,
         headers: Optional[dict[str, str]] = None,
     ):
-        encoded = await self._encode_message(self._config.dlq_topic, dlq_event)
+        encoded = await self._encode_message(self.dlq_topic, dlq_event)
         dlq_headers: dict[str, str] = FastStreamHelper.build_publish_headers(
             traceparent=traceparent,
             extra=headers,
         )
-        await self._broker.publish(
+        await self.producer.publish(
             encoded,
-            topic=self._config.dlq_topic,
+            topic=self.dlq_topic,
             headers=dlq_headers,
             correlation_id=correlation_id,
         )

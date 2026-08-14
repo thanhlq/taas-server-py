@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Optional
 
 from db.models.resiliant import ScheduledJobTable
-from foundation.messaging.types import IMessagingService
+from foundation.messaging.types import MessagingServiceT
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.schedule import ScheduleConfig
 from foundation.state import get_service
@@ -43,7 +43,7 @@ class SchedulerPoller:
         self,
         config: ScheduleConfig,
         session_factory: Callable[[], AsyncSession],
-        publisher: Optional[IMessagingService] = None,
+        publisher: Optional[MessagingServiceT] = None,
         repository: Optional[ScheduleRepository] = None,
     ) -> None:
         self.config = config
@@ -61,9 +61,9 @@ class SchedulerPoller:
         self._wake_event = asyncio.Event()
 
     @property
-    def publisher(self) -> IMessagingService:
+    def publisher(self) -> MessagingServiceT:
         if self._publisher is None:
-            self._publisher = get_service(IMessagingService)
+            self._publisher = get_service(MessagingServiceT)
         return self._publisher
 
     def register(self, job_name: str, callback: JobCallback) -> None:

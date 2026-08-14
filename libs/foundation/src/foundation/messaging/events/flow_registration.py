@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import msgspec
 
-from ..types import BaseEvent, IMessagingService
+from ..types import BaseEvent, MessagingServiceT
 from .event_handler import EventStep, HandlerRegistry, handlerRegistry
 
 if TYPE_CHECKING:
@@ -163,7 +163,7 @@ def topic_to_schema_event(
 
 
 def register_schema_registry_schemas(
-    msg_service: IMessagingService,
+    msg_service: MessagingServiceT,
     *,
     flows: FlowMap,
     topic_for_event: TopicForEvent,
@@ -172,7 +172,7 @@ def register_schema_registry_schemas(
     for topic, event_cls in topic_to_schema_event(flows, topic_for_event).items():
         msg_service.register_schema(topic, event_cls)
 
-def register_event_handlers_for_app_module(*, app: ApiApplicationModuleT, msg_service: IMessagingService) -> None:
+def register_event_handlers_for_app_module(*, app: ApiApplicationModuleT, msg_service: MessagingServiceT) -> None:
     """Register handlers for an application module's flows.
 
     This is a convenience wrapper around :func:`register_handlers_from_flows`
@@ -194,7 +194,7 @@ def register_event_handlers_for_app_module(*, app: ApiApplicationModuleT, msg_se
 def register_handlers_from_flows(
     *,
     flows: FlowMap,
-    msg_service: IMessagingService,
+    msg_service: MessagingServiceT,
     topic_for_event: TopicForEvent,
     registry: HandlerRegistry = handlerRegistry,
     domain_label: str = 'event',

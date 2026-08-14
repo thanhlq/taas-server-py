@@ -15,7 +15,7 @@ from typing import Literal, Optional
 
 from foundation.config import Settings, get_settings
 from foundation.config.log import LogSettings
-from foundation.config.tracing import TracingSettings
+from foundation.config.instrument_settings import InstrumentSettings
 from foundation.observability.types import Logging, Tracing
 from foundation.utils.encoding import to_base64
 from foundation.utils.singleton import singleton
@@ -31,6 +31,10 @@ class OtelConfig:
     _instance: Optional['OtelConfig'] = None
 
     service_name: str
+    host_name: Optional[str] = None
+    """ Important since Grafana Cloud charges based on the host name. """
+
+    sampling_rate: float = 1.0  # Default to 100% sampling
     auth_user: Optional[str] = None
     auth_password: Optional[str] = None
     is_development: bool = False
@@ -49,9 +53,9 @@ class OtelConfig:
         return settings.log
 
     @property
-    def tracing_settings(self) -> TracingSettings:
+    def tracing_settings(self) -> InstrumentSettings:
         settings = get_settings()
-        return settings.trace
+        return settings.instrument
 
     @property
     def log_level(self) -> int:
@@ -139,10 +143,12 @@ class OtelConfig:
 
     def validate_config(self):
         settings: Settings = get_settings()
-        self.service_name = settings.trace.TRACING_SERVICE_NAME or settings.app.NAME
+        self.service_name = settings.instrument.TRACING_SERVICE_NAME or settings.app.NAME
+        self.host_name = settings.instrument.HOST_NAME
         self.is_development = settings.environment == 'development'
-        self.auth_user = settings.trace.OTEL_AUTH_USER
-        self.auth_password = settings.trace.OTEL_AUTH_PASSWORD
+        self.auth_user = settings.instrument.OTEL_AUTH_USER
+        self.auth_password = settings.instrument.OTEL_AUTH_PASSWORD
+        self.sampling_rate = settings.instrument.SAMPLING_RATE
 
         # LOGGING
 
@@ -156,8 +162,8 @@ class OtelConfig:
 
         if self.get_auth_type() == 'basic':
             if (
-                not settings.trace.OTEL_AUTH_USER
-                or not settings.trace.OTEL_AUTH_PASSWORD
+                not settings.instrument.OTEL_AUTH_USER
+                or not settings.instrument.OTEL_AUTH_PASSWORD
             ):
                 raise ValueError(
                     'OTEL_AUTH_USER and OTEL_AUTH_PASSWORD must be set for Basic authentication'
@@ -193,8 +199,8 @@ class OtelConfig:
 
         # TRACING
         if (
-            Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.trace.TRACING_ADAPTERS
-            and Tracing.TRACING_ADAPTER_OTLP_GRPC in settings.trace.TRACING_ADAPTERS
+            Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.instrument.TRACING_ADAPTERS
+            and Tracing.TRACING_ADAPTER_OTLP_GRPC in settings.instrument.TRACING_ADAPTERS
         ):
             raise ValueError(
                 'Cannot use both OTLP HTTP and OTLP gRPC logging adapters simultaneously.'
@@ -202,7 +208,7 @@ class OtelConfig:
 
         self.trace_exporter_protocol = (
             'http'
-            if Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.trace.TRACING_ADAPTERS
+            if Tracing.TRACING_ADAPTER_OTLP_HTTP in settings.instrument.TRACING_ADAPTERS
             else 'grpc'
         )
 
