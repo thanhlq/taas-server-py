@@ -36,7 +36,7 @@ class MessagingSettings:
         default_factory=get_env('CONSUMER_ENABLED', True, bool)
     )
     CONSUMER_GROUP_ID: str = field(
-        default_factory=get_env('CONSUMER_GROUP_ID', 'messaging-service')
+        default_factory=get_env('CONSUMER_GROUP_ID', 'eworksuite-worker-group')
     )
 
     # outbox

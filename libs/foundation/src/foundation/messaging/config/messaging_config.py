@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from ..kafka.sr import SchemaRegistryConfig
 
 
-
-
 KAFKA_SECURITY_PROTOCOLS = frozenset({'PLAINTEXT', 'SSL', 'SASL_PLAINTEXT', 'SASL_SSL'})
 """The four protocol names Kafka accepts in ``listener.security.protocol.map``."""
 
@@ -27,7 +25,6 @@ KAFKA_SASL_MECHANISMS = frozenset(
 
 KAFKA_SASL_PASSWORD_MECHANISMS = frozenset({'PLAIN', 'SCRAM-SHA-256', 'SCRAM-SHA-512'})
 """Subset of :data:`KAFKA_SASL_MECHANISMS` that authenticates with user/password."""
-
 
 
 @lru_cache(maxsize=8)
@@ -123,7 +120,7 @@ class MessagingConfig:
     kafka_consumer_enable: bool = False
     """True in worker processes, False in API-only processes."""
 
-    consumer_group_id: str = 'eworksuite-worker-group'
+    consumer_group_id: str | None = None
     """
     Kafka consumer group ID — shared by all instances of a worker.
     Same group id means multiple instances will share the topic partitions and load-balance
@@ -144,8 +141,6 @@ class MessagingConfig:
 
     kafka_heartbeat_interval_ms: int = 3_000
     """Background heartbeat cadence; must be < ``kafka_session_timeout_ms / 3``."""
-
-    
 
     kafka_security_protocol: Optional[str] = None
     """

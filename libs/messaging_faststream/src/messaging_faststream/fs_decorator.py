@@ -149,15 +149,15 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
                     )
 
             # resolved_group_id= group_id or f'{service.messaging_config.consumer_group_id}_agent_{agent_name}'
-            resolved_group_id = group_id or service.config.consumer_group_id
-            resolved_subs_auto_offset_reset = (
-                auto_offset_reset or service.config.kafka_auto_offset_reset
+            resolved_group_id = group_id or service.config.CONSUMER_GROUP_ID
+            resolved_auto_offset_reset = (
+                auto_offset_reset or ('earliest' if service.kafka_config.KAFKA_MESSAGE_CONSUMING_FROM_BEGINING else 'latest')
             )
             LogFactory().get_logger().debug(
                 f'📨 RESOLVED group_id for agent={agent_name} on topic={channel}: {resolved_group_id}'
             )
 
-            subscriber = service.broker.subscriber(  # type: ignore[reportPrivateUsage]
+            subscriber = service.consumer.subscriber(  # type: ignore[reportPrivateUsage]
                 channel,
                 # Default to a per-handler consumer group so each
                 # `@subscriber` registration is an independent logical
@@ -167,7 +167,7 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
                 # ONE handler ever sees a given record. Mirrors the
                 # aiokafka backend's default of `{base}_agent_{name}`.
                 group_id=resolved_group_id,
-                auto_offset_reset=resolved_subs_auto_offset_reset,
+                auto_offset_reset=resolved_auto_offset_reset,
             )
             subscriber(func=_agent_handler)
 
@@ -181,7 +181,7 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
             # for every decorated topic.
 
             service.logger.info(
-                f'🤖 Registered agent: channel={channel} agent={agent_name}, group={resolved_group_id}, auto_offset_reset={resolved_subs_auto_offset_reset}'
+                f'🤖 Registered agent: channel={channel} agent={agent_name}, group={resolved_group_id}, auto_offset_reset={resolved_auto_offset_reset}'
             )
             return func
 

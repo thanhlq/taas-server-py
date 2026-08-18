@@ -256,11 +256,11 @@ class FastStreamKafkaMessagingService(
         try:
             self._producer = self.create_producer()
             self.logger.info(
-                f'🌊 ➡️  Connecting FastStream broker: {self.kafka_bootstrap_servers}'
+                f'🌊 ➡️  Connecting FastStream producer: {self.kafka_bootstrap_servers}'
             )
             await self.producer.connect()
             self._producer_started = True
-            self.logger.info('🌊 ➡️ 🟢  FastStream broker connected — producer ready')
+            self.logger.info(f'🌊 ➡️ 🟢 FastStream producer connected — PRODUCER ready, [{self.get_consumer_group_id()}]')
         except Exception as exc:
             report_error(
                 exc, title='FastStream Producer Start Error', logger=self.logger
