@@ -44,6 +44,7 @@ members = [
     "apps/ews_api_litestar",
     "apps/ews_worker",
     "apps/outbox_worker",
+    "libs/messaging_nats",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -59,6 +60,7 @@ ews_api_litestar = { workspace = true }
 ews_worker = { workspace = true }
 messaging_kafka = { workspace = true }
 messaging_faststream = { workspace = true }
+messaging_nats = { workspace = true }
 store_redis = { workspace = true }
 store_memcached = { workspace = true }
 slowapi_advanced = { workspace = true }

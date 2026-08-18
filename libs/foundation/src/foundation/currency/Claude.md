@@ -1,0 +1,3 @@
+# foundation/currency
+
+Contain core definition for currency - the purpose is to support all kind of currencies as realworld currencies (fiat), crypto currency,...

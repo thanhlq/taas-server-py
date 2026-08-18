@@ -1,0 +1,18 @@
+[project]
+name = "messaging-nats"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "EMSA Technology", email = "dev@emsa-technology.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+  # Workspace modules
+  "foundation",
+  "nats-py==2.15.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"

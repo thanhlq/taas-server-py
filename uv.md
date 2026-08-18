@@ -13,6 +13,7 @@ uv sync --all-packages
 ```bash
 # To add a python lib
 uv init --lib libs/db
+uv init --lib libs/messaging_nats
 
 # To add an application
 uv init --package apps/ews_api
