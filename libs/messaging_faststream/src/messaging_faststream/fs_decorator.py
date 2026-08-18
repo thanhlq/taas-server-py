@@ -149,7 +149,7 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
                     )
 
             # resolved_group_id= group_id or f'{service.messaging_config.consumer_group_id}_agent_{agent_name}'
-            resolved_group_id = group_id or service.config.CONSUMER_GROUP_ID
+            resolved_group_id = group_id or service.kafka_config.KAFKA_CONSUMER_GROUP_ID
             resolved_auto_offset_reset = (
                 auto_offset_reset or ('earliest' if service.kafka_config.KAFKA_MESSAGE_CONSUMING_FROM_BEGINING else 'latest')
             )

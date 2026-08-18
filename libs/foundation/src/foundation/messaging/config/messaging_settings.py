@@ -35,12 +35,15 @@ class MessagingSettings:
     CONSUMER_ENABLED: bool = field(
         default_factory=get_env('CONSUMER_ENABLED', True, bool)
     )
-    CONSUMER_GROUP_ID: str = field(
-        default_factory=get_env('CONSUMER_GROUP_ID', 'eworksuite-worker-group')
-    )
+    # CONSUMER_GROUP_ID: str = field(
+    #     default_factory=get_env('CONSUMER_GROUP_ID', 'eworksuite-worker-group')
+    # )
 
     # outbox
     OUTBOX_ENABLE: bool = field(default_factory=get_env('OUTBOX_ENABLE', False, bool))
     OUTBOX_POLLER_ENABLE: bool = field(
         default_factory=get_env('OUTBOX_POLLER_ENABLE', False, bool)
     )
+
+    def __post_init__(self):
+        pass

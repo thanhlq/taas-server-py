@@ -48,7 +48,7 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
     def get_consumer_group_id(self) -> str:
         """Return the consumer group ID from the configuration."""
         return (
-            self.kafka_config.KAFKA_CONSUMER_GROUP_ID or self.config.CONSUMER_GROUP_ID
+            self.kafka_config.KAFKA_CONSUMER_GROUP_ID
         )
 
     @property
