@@ -29,6 +29,7 @@ Schema Registry REST API reference:
 """
 
 from __future__ import annotations
+from foundation import BaseService
 
 import io
 import json
@@ -75,7 +76,7 @@ class SchemaNotFoundError(_ISchemaNotFoundError, SchemaRegistryError):
 # ---------------------------------------------------------------------------
 
 
-class SchemaRegistryClient(ISchemaRegistryClient):
+class SchemaRegistryClient(ISchemaRegistryClient, BaseService):
     """
     Async Confluent Schema Registry HTTP client.
 
@@ -123,6 +124,14 @@ class SchemaRegistryClient(ISchemaRegistryClient):
         }
         if self._config.auth:
             kwargs['auth'] = self._config.auth
+            self.logger.debug(
+                'Schema Registry client configured with basic auth for user %r',
+                self._config.username,
+            )
+        else:
+            self.logger.warning(
+                'Schema Registry client is configured without authentication.'
+            )
         return httpx.AsyncClient(**kwargs)
 
     async def _request(
@@ -138,7 +147,12 @@ class SchemaRegistryClient(ISchemaRegistryClient):
             SchemaRegistryError: On any non-2xx response.
         """
         async with self._build_client() as client:
-            response = await client.request(method, path, json=json_body)
+            try:
+                response = await client.request(method, path, json=json_body)
+            except httpx.RequestError as exc:
+                raise SchemaRegistryError(
+                    f'HTTP request failed: {exc}', status_code=0
+                ) from exc
 
         if not response.is_success:
             try:
@@ -186,6 +200,9 @@ class SchemaRegistryClient(ISchemaRegistryClient):
         # Populate caches eagerly
         self._schema_by_id[schema_id] = schema
         self._id_by_subject[cache_key] = schema_id
+
+        self.logger.info(f'📚 [OK] Registered schema for subject "{subject}" with ID {schema_id}')
+
         return schema_id
 
     async def get_schema_by_id(self, schema_id: int) -> dict:

@@ -7,6 +7,7 @@ from foundation.messaging.kafka.kafka_security import (
     get_kafka_security_config,
 )
 from foundation.messaging.kafka.kafka_settings import KafkaSettings
+from foundation.observability.log_throttle import install_aiokafka_log_throttle
 from foundation.messaging.kafka.sr.sr_config import build_schema_registry_config
 from foundation.messaging.types import MessagingServiceT
 
@@ -30,6 +31,28 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._install_client_log_throttle()
+
+    def _install_client_log_throttle(self) -> None:
+        """
+        Throttle the aiokafka client's per-retry ERROR logging.
+
+        aiokafka logs one ERROR for every failed connection and every failed
+        metadata refresh. While a broker is down its retry loops keep firing,
+        so a single outage renders as thousands of identical lines that bury
+        everything else in the log. Collapsing them keeps the fault visible
+        (first few lines, then a periodic summary) without the flood.
+
+        Idempotent — safe on every service construction.
+        """
+        cfg = self.kafka_config
+        if not cfg.KAFKA_LOG_THROTTLE_ENABLED:
+            return
+
+        install_aiokafka_log_throttle(
+            burst=cfg.KAFKA_LOG_THROTTLE_BURST,
+            interval_seconds=cfg.KAFKA_LOG_THROTTLE_INTERVAL_S,
+        )
 
     @property
     def kafka_config(self) -> KafkaSettings:
@@ -114,9 +137,6 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
                 Schema Registry configuration.
         """
 
-        if self.is_consumer_enabled() is False:
-            return False
-
         self.logger.info(f'registering channel={channel}, schema_cls={schema.__name__}')
         _serialization_format = self.get_message_serialization_format()
 
@@ -136,7 +156,8 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
                 channel, schema_cls_to_avro_schema(schema)
             )
 
-        if channel not in self._subscribed_channels:
+        # If the consumer is enabled, track the channel as subscribed so that we can
+        if self.is_consumer_enabled() and channel not in self._subscribed_channels:
             self._subscribed_channels.add(channel)
             self.logger.info(
                 f'🧬 Channel [{channel}] registered with schema [{schema.__name__}]'

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     # Messaging & Serialization
+    # "fastavro>=1.12.2",
     "fastavro>=1.9.0",
     "msgspec==0.21.1",
     # Legacy / for testing only

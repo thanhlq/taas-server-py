@@ -38,6 +38,43 @@ class KafkaSettings:
         default_factory=get_env('KAFKA_HEARTBEAT_INTERVAL_MS', 3_000)
     )
 
+    # kafka reconnect / retry pacing
+    #
+    # aiokafka retries a failed metadata refresh or connection as fast as this
+    # backoff allows, logging one ERROR per attempt. Its own default of 100ms
+    # produces thousands of lines a minute while a broker is down, so the
+    # default here is deliberately far slower.
+    KAFKA_RETRY_BACKOFF_MS: int = field(
+        default_factory=get_env('KAFKA_RETRY_BACKOFF_MS', 1_000)
+    )
+    """Backoff between connection/metadata retry attempts (aiokafka default: 100)."""
+
+    KAFKA_METADATA_MAX_AGE_MS: int = field(
+        default_factory=get_env('KAFKA_METADATA_MAX_AGE_MS', 300_000)
+    )
+    """Forced metadata refresh interval even when no fault is detected."""
+
+    KAFKA_REQUEST_TIMEOUT_MS: int = field(
+        default_factory=get_env('KAFKA_REQUEST_TIMEOUT_MS', 40_000)
+    )
+    """Per-request timeout handed to the aiokafka client."""
+
+    # kafka client log throttling
+    KAFKA_LOG_THROTTLE_ENABLED: bool = field(
+        default_factory=get_env('KAFKA_LOG_THROTTLE_ENABLED', True, bool)
+    )
+    """Collapse repeated aiokafka retry ERRORs into a periodic summary line."""
+
+    KAFKA_LOG_THROTTLE_BURST: int = field(
+        default_factory=get_env('KAFKA_LOG_THROTTLE_BURST', 1)
+    )
+    """Identical aiokafka records to emit before suppression starts (per message)."""
+
+    KAFKA_LOG_THROTTLE_INTERVAL_S: int = field(
+        default_factory=get_env('KAFKA_LOG_THROTTLE_INTERVAL_S', 60)
+    )
+    """Seconds between suppressed-summary lines while a fault persists."""
+
     # kafka security
     #
     # PROTOCOL sets the transport (is it TLS? is anyone authenticated?);

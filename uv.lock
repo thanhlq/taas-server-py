@@ -952,16 +952,16 @@ wheels = [
 
 [[package]]
 name = "faststream"
-version = "0.7.1"
+version = "0.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "fast-depends", extra = ["pydantic"] },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/92/7f5edc7e1945968331c185ee197b690b413da861649d5859e3f377348acd/faststream-0.7.1.tar.gz", hash = "sha256:11816dd4ca678f6b173159c456619993b09684b684abe4010366d6a0c8059c58", size = 329453, upload-time = "2026-06-04T05:18:10.145Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/7b/bba48f21d1283a56e420ea4b72a44a9dacafdb20a29665c028f0cc615301/faststream-0.7.4.tar.gz", hash = "sha256:1700b8729cca4ebd5873da675495639826737bb4a4e64eae50dbaefae657bf13", size = 335422, upload-time = "2026-08-07T13:35:36.559Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/2e/73d58856a305a73ac31d3d950f9b96a2ef4c1a6071e38b339d1b0b466418/faststream-0.7.1-py3-none-any.whl", hash = "sha256:d4f971f6ba7621a05a67a8fcb4436fdcf89b5f21b33eb107f193b1c9553738a0", size = 556454, upload-time = "2026-06-04T05:18:08.897Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/b6/979dfdd970e6a4606680698c05de199e597261175b53963e11907c0eb7d2/faststream-0.7.4-py3-none-any.whl", hash = "sha256:57fe079ff32efd90b5ff5d56b71a4c47cae12544b2e1b791751e30031f8f3bad", size = 563184, upload-time = "2026-08-07T13:35:34.938Z" },
 ]
 
 [package.optional-dependencies]
@@ -1583,7 +1583,6 @@ version = "0.1.0"
 source = { editable = "libs/messaging_faststream" }
 dependencies = [
     { name = "aiokafka" },
-    { name = "fastavro" },
     { name = "faststream", extra = ["kafka"] },
     { name = "foundation" },
     { name = "httpx" },
@@ -1604,8 +1603,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", specifier = "==0.14.0" },
-    { name = "fastavro", specifier = ">=1.9.0" },
-    { name = "faststream", extras = ["kafka"], specifier = "==0.7.1" },
+    { name = "faststream", extras = ["kafka"], specifier = "==0.7.4" },
     { name = "foundation", editable = "libs/foundation" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "pydantic", specifier = "==2.13.4" },

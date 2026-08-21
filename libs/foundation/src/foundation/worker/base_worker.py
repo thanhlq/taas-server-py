@@ -416,7 +416,7 @@ class BaseWorker:
 
                 info = self.info()
                 info.update(htop())
-                cli.info_table('Worker Health Check', info)
+                cli.info_table('🩺 Worker Health Check', info)
 
             except Exception as e:
                 report_error(

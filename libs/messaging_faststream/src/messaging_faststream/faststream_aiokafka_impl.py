@@ -198,6 +198,7 @@ class FastStreamKafkaMessagingService(
 
     def create_producer(self) -> KafkaBroker:
         """Create a new FastStream KafkaBroker producer instance."""
+        cfg = self.kafka_config
         return KafkaBroker(
             bootstrap_servers=self.kafka_bootstrap_servers,
             security=build_faststream_broker_security(self.security_config),
@@ -205,6 +206,14 @@ class FastStreamKafkaMessagingService(
             acks='all',
             logger=self.logger,
             log_level=logging.WARNING,
+            # Reconnect pacing. aiokafka defaults retry_backoff_ms to 100, so a
+            # broker outage spins its metadata/connection retry loops ~10x a
+            # second, each attempt logging an ERROR. Slowing the backoff cuts
+            # the churn at the source; install_aiokafka_log_throttle() (below)
+            # then collapses whatever noise remains.
+            retry_backoff_ms=cfg.KAFKA_RETRY_BACKOFF_MS,
+            metadata_max_age_ms=cfg.KAFKA_METADATA_MAX_AGE_MS,
+            request_timeout_ms=cfg.KAFKA_REQUEST_TIMEOUT_MS,
             consumer_only=False,  # must be False for FastStream to create a real producer
             # NOTE: consumer_only must stay False. This service uses ONE broker for
             # both roles (see the `consumer` property), and FastStream skips creating
@@ -654,18 +663,8 @@ class FastStreamKafkaMessagingService(
         Uses ``AsyncSchemaRegistryEncoder`` when Schema Registry is configured,
         otherwise falls back to the synchronous ``MsgEncoder``.
         """
-        # msg_dict = message.as_dict()
-
-        # if self._schema_registry_encoder is not None:
-        #     return await self._schema_registry_encoder.encode_event(topic, msg_dict)
-
-        # encoded = self.msg_encoder.encode_msg(msg_dict)
-        # if isinstance(encoded, str):
-        #     return encoded.encode('utf-8')
-        # return encoded
-
         return await self.msg_encoder.encode_msg(
-            message, channel=topic, sr_encoder=self._schema_registry_encoder
+            message, channel=topic, sr_encoder=self.schema_registry_encoder
         )
 
     async def _decode_message(self, topic: str, raw: bytes) -> BaseEvent:
@@ -674,37 +673,13 @@ class FastStreamKafkaMessagingService(
         Uses ``AsyncSchemaRegistryEncoder`` when Schema Registry is configured,
         otherwise falls back to the synchronous ``MsgEncoder``.
         """
-        # if self._schema_registry_encoder is not None:
-        #     import dataclasses as _dc
-        #     data: dict[str, Any] = await self._schema_registry_encoder.decode(
-        #         topic, raw
-        #     )
-        #     # Only decode bytes fields further (e.g. msgpack-encoded sub-objects
-        #     # like `payload` or `tenant`).  Plain string fields decoded by Avro
-        #     # (event_type, email, username, …) must NOT be passed to
-        #     # decode_payload — that would call msgpack.unpackb() on a plain
-        #     # Python string and raise a TypeError.
-        #     all_data: dict[str, Any] = {
-        #         k: (
-        #             self.msg_encoder.decode_payload(v)
-        #             if isinstance(v, bytes)
-        #             else v
-        #         )
-        #         for k, v in data.items()
-        #     }
-        #     event_type: str = all_data.get('event_type', '')
-        #     event_cls = self._event_type_registry.get(event_type, BaseEvent)
-        #     valid_fields = {f.name for f in _dc.fields(event_cls)}
-        #     filtered = {k: v for k, v in all_data.items() if k in valid_fields}
-        #     return event_cls(**filtered)
-
         return await self.msg_encoder.decode_msg(
-            raw, channel=topic, sr_encoder=self._schema_registry_encoder
+            raw, channel=topic, sr_encoder=self.schema_registry_encoder
         )  # type: ignore
 
     async def _decode_dlq_message(self, topic: str, raw: bytes) -> DlqEvent:
         return await self.msg_encoder.decode_msg(
-            raw, channel=topic, sr_encoder=self._schema_registry_encoder
+            raw, channel=topic, sr_encoder=self.schema_registry_encoder
         )  # type: ignore
 
     def _register_main_subscriber(self, topic: str, max_workers: int) -> None:

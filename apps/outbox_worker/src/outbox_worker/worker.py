@@ -18,6 +18,8 @@ Start command::
 """
 
 from __future__ import annotations
+from iam.iam_factory import IamFactory
+from iam_keycloak import IamServiceFactory
 
 import asyncio
 import os
@@ -66,6 +68,7 @@ class OutboxWorker(BaseWorker):
             messaging_service=await initialize_messaging_service(),
             decorator=messaging,
         )
+        IamFactory.initialize_iam(IamServiceFactory())
 
     # ----------------------------------------------------------- task wiring
     async def initialize_worker_tasks(self) -> 'BaseWorker':
