@@ -414,9 +414,9 @@ class BaseWorker:
                     f'Worker [{self.name}] health check - uptime_seconds: {uptime} '
                 )
 
-                info = self.info()
-                info.update(htop())
-                cli.info_table('🩺 Worker Health Check', info)
+                # info = self.info()
+                # info.update(htop())
+                # cli.info_table('🩺 Worker Health Check', info)
 
             except Exception as e:
                 report_error(
