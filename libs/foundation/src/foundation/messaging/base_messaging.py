@@ -1,3 +1,4 @@
+from foundation.serialization import SerializationFormat
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -88,22 +89,16 @@ class BaseMessagingService[ProducerT, ConsumerT, MessageT](
         """Return True if the consumer is enabled and running."""
         return self.config.CONSUMER_ENABLED
 
-    def get_consumer_group_id(self) -> str:
-        """Return the consumer group ID from the configuration."""
-        return self.config.CONSUMER_GROUP_ID
-
     @property
     def msg_encoder(self) -> MsgEncoder:
         if self._msg_encoder is None:
             self._msg_encoder = MsgEncoder(config=self._config)
         return self._msg_encoder
 
-    def get_msg_encoder(self) -> MessageEncoderT:
-        return self.msg_encoder
 
-    def get_messaging_encoding_type(self) -> str:
+    def get_message_serialization_format(self) -> SerializationFormat:
         """Return the configured message encoding type (e.g., json, msgpack, avro)."""
-        return self.msg_encoder.msg_encoding()
+        return self.msg_encoder.serialization_format
 
     def get_stats(self) -> MessageServiceStats:
         """Return the current in-memory stats snapshot."""

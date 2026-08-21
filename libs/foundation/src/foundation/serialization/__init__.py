@@ -7,8 +7,10 @@ from ._msgspec_model import (
     BaseModel,
     PagingQueryParam,
 )
+from .types import SerializationFormat
 
 __all__ = [
+    'SerializationFormat',
     'BaseEntity',
     'BaseModel',
     'ApiRequest',

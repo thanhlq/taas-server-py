@@ -1,9 +1,8 @@
 from typing import Any
 
 import msgspec
-from foundation.serialization import BaseEvent
 from foundation.utils.predicates import is_dataclass_class
-
+from ...types import BaseEvent
 
 def schema_cls_to_avro_schema(
     schema_cls: type[BaseEvent | msgspec.Struct | Any],

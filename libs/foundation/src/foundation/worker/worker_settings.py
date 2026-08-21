@@ -23,7 +23,7 @@ class WorkerConfig:
     health_check_server_port: int = 7000
     """Port for the worker health check HTTP server."""
 
-    health_check_interval_seconds: int = 10
+    health_check_interval_seconds: int = 15
     """Interval (seconds) between health check log emissions."""
 
     outbox_poller_enabled: bool = True
@@ -36,6 +36,8 @@ class WorkerConfig:
 
     instrumentation: ServiceInstrumentConfig | None = field(default=None)
 
+    debug: bool = False
+
     def get_instrumentation_settings(self) -> ServiceInstrumentConfig:
         """Return the instrumentation settings for the application.
 
@@ -45,6 +47,18 @@ class WorkerConfig:
         if self.instrumentation is None:
             self.instrumentation = ServiceInstrumentConfig()
         return self.instrumentation
+
+    def __post_init__(self):
+        """Validate the configuration after initialization."""
+        self.health_check_interval_seconds = self.health_check_interval_seconds or 15
+        if (
+            self.health_check_enabled
+            and self.health_check_server_port < 1
+            or self.health_check_server_port > 65535
+        ):
+            raise ValueError(
+                f'Invalid health check server port: {self.health_check_server_port}'
+            )
 
 @dataclass
 class WorkerSettings:
@@ -65,7 +79,7 @@ class WorkerSettings:
     """Port for the worker health check HTTP server."""
 
     HEALTH_CHECK_INTERVAL: int = field(
-        default_factory=get_env('HEALTH_CHECK_INTERVAL', 10, int)
+        default_factory=get_env('HEALTH_CHECK_INTERVAL', None, int)
     )
     """Interval (seconds) between health check log emissions."""
 
@@ -80,9 +94,15 @@ class WorkerSettings:
         Returns:
             The worker configuration.
         """
+
+        import foundation.logger.debug as debug
+
+        self.debug = debug.is_debug_mode()
+
         return WorkerConfig(
             health_check_enabled=self.HEALTH_CHECK_ENABLE,
             health_check_server_port=self.WORKER_LISTEN_PORT,
             health_check_interval_seconds=self.HEALTH_CHECK_INTERVAL,
             outbox_poller_enabled=self.OUTBOX_POLLER_ENABLE,
+            debug=self.debug,
         )

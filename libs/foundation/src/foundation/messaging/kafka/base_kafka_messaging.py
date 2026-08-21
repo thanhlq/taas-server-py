@@ -53,11 +53,16 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
 
     @property
     def schema_registry_enabled(self) -> bool:
-        return self.msg_encoder.msg_encoding == MessageEncodingType.SCHEMA_REGISTRY_AVRO
+        return self.msg_encoder.serialization_format == MessageEncodingType.SCHEMA_REGISTRY_AVRO
 
     @property
-    def schema_registry_encoder(self) -> Optional[SchemaRegistryEncoder]:
-        if self._schema_registry_encoder is None and self.schema_registry_enabled:
+    def schema_registry_encoder(self) -> SchemaRegistryEncoder:
+        if not self.schema_registry_enabled:
+            raise RuntimeError(
+                f'Schema registry is not enabled (current end={self.msg_encoder.serialization_format}). Set MESSAGE_ENCODING=schema-registry-avro in your environment to enable it.'
+            )
+
+        if self._schema_registry_encoder is None:
             cfg = build_schema_registry_config(self.kafka_config)
             if cfg.username is None or cfg.password is None:
                 self.logger.warning(
@@ -113,26 +118,21 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
             return False
 
         self.logger.info(f'registering channel={channel}, schema_cls={schema.__name__}')
+        _serialization_format = self.get_message_serialization_format()
 
         if (
-            self.get_messaging_encoding_type()
+            _serialization_format
             != MessageEncodingType.SCHEMA_REGISTRY_AVRO
         ):
             # Do nothing
             self.logger.debug(
                 f'Ignoring register_schema for channel={channel}: '
-                f'messaging encoding is {self.get_messaging_encoding_type()}'
+                f'messaging encoding is {_serialization_format}'
             )
         else:
-            if self._schema_registry_encoder is None:
-                raise RuntimeError(
-                    'Cannot register Avro schema: service was initialised without '
-                    'a SchemaRegistryConfig. Pass schema_registry_config= to the '
-                    'constructor.'
-                )
             from .sr.serializer import schema_cls_to_avro_schema
 
-            self._schema_registry_encoder.register_topic_schema(
+            self.schema_registry_encoder.register_topic_schema(
                 channel, schema_cls_to_avro_schema(schema)
             )
 

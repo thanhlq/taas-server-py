@@ -25,7 +25,7 @@ from typing import (
 import msgspec
 from foundation.db.types import DBAsyncScopedSession, DBAsyncSession
 from foundation.resiliant.outbox import IOutboxService, OutboxConfig, RoutingStrategy
-from foundation.serialization import BaseEventPayload, BaseModel
+from foundation.serialization import BaseEventPayload, BaseModel, SerializationFormat
 from foundation.utils import now_in_utc
 from foundation.utils.id import generate_id
 from foundation.utils.serialization import from_json
@@ -345,7 +345,6 @@ class MessageEncodingType:
     AVRO_BINARY: str = 'avro-binary'
     SCHEMA_REGISTRY_AVRO: str = 'schema-registry-avro'
 
-
 @dataclass(frozen=True)
 class MessageFieldEncodingType:
     NA: str = 'n/a'  # No additional encoding, the field will be stored as a JSON string in the Avro message
@@ -493,8 +492,8 @@ class MessageEncoderT(Protocol):
 
     def __init__(
         self,
-        msg_encoding: str | None = None,
-        field_encoding: str | None = None,
+        fmt: str | None = None,
+        field_fmt: str | None = None,
         *,
         config: Any = None,
     ): ...
@@ -583,7 +582,7 @@ class MessagingServiceT[ProducerT, ConsumerT, MessageT](ABC):
         ...
 
     @abstractmethod
-    def get_messaging_encoding_type(self) -> str:
+    def get_message_serialization_format(self) -> SerializationFormat:
         """Return the configured message encoding type (e.g., json, msgpack, avro)."""
         ...
 
@@ -591,11 +590,6 @@ class MessagingServiceT[ProducerT, ConsumerT, MessageT](ABC):
     def is_consumer_enabled(self) -> bool:
         """Return True if the consumer is enabled and running."""
         ...
-
-    @abstractmethod
-    def get_msg_encoder(self) -> MessageEncoderT:
-        """Get the message encoder used for serialization."""
-        pass
 
     @abstractmethod
     def get_stats(self) -> MessageServiceStats | dict:

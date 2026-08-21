@@ -86,12 +86,19 @@ class BaseWorker:
         self._config: WorkerConfig = config or WorkerSettings().get_config()
         self._health_check_task: Optional[asyncio.Task] = None
 
-        cli.info_table('Worker Info', self.info())
+        if self.config.debug:
+            self.logger.info(f'Worker [{self.name}] running in debug mode')
+        cli.debug_table('Worker Info', self.info())
 
     @property
     def config(self) -> WorkerConfig:
         """Return the worker configuration."""
         return self._config
+
+    @property
+    def debug(self) -> bool:
+        """Return True if the worker is running in debug mode."""
+        return self.config.debug
 
     @property
     def messaging_service(self) -> MessagingServiceT:
@@ -414,6 +421,6 @@ class BaseWorker:
             except Exception as e:
                 report_error(
                     e,
-                    title='Worker Health Check Error',
+                    title='🩺 Worker Health Check Error',
                     logger=self.logger,
                 )

@@ -1,3 +1,4 @@
+from foundation.serialization import SerializationFormat
 import dataclasses
 import datetime
 import json
@@ -39,8 +40,8 @@ class MsgEncoder(MessageEncoderT):
     The encoding format can be specified via the constructor or will default to the setting defined in App
     """
 
-    _msg_encoding: str
-    _field_encoding: str
+    _fmt: SerializationFormat
+    _field_fmt: str
     _logger: Logger | None = None
     _event_type_registry: dict[str, type[BaseEvent]] = {}
 
@@ -50,8 +51,8 @@ class MsgEncoder(MessageEncoderT):
 
     def __init__(
         self,
-        msg_encoding: str | None = None,
-        field_encoding: str | None = None,
+        fmt: str | None = None,
+        field_fmt: str | None = None,
         *,
         config: MessagingSettings | None = None,
     ):
@@ -61,19 +62,19 @@ class MsgEncoder(MessageEncoderT):
         cfg_msg = _config.MESSAGE_ENCODING
         cfg_field = _config.MESSAGE_FIELD_ENCODING
         self._field_types_cache = {}
-        self._msg_encoding = msg_encoding or cfg_msg or 'json'
+        self._fmt = fmt or cfg_msg or 'json'
 
-        if self._msg_encoding == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
-            self._field_encoding = field_encoding or cfg_field or 'json'
-            if self._field_encoding not in (
+        if self._fmt == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+            self._field_fmt = field_fmt or cfg_field or 'json'
+            if self._field_fmt not in (
                 MessageEncodingType.MSGPACK,
                 MessageEncodingType.JSON,
             ):
                 raise ValueError(
-                    f'Unsupported field encoding "{self._field_encoding}" for Avro message encoding. Supported field encodings are: msgpack, json.'
+                    f'Unsupported field encoding "{self._field_fmt}" for Avro message encoding. Supported field encodings are: msgpack, json.'
                 )
         else:
-            self._field_encoding = (
+            self._field_fmt = (
                 MessageFieldEncodingType.NA
             )  # Not applicable for non-Avro encodings
 
@@ -88,12 +89,20 @@ class MsgEncoder(MessageEncoderT):
 
     def info(self) -> dict[str, Any]:
         return {
-            'msg_encoding': self._msg_encoding,
-            'field_encoding': self._field_encoding,
+            'fmt': self._fmt,
+            'field_fmt': self._field_fmt,
             'event_type_registry': {
                 k: v.__name__ for k, v in self._event_type_registry.items()
             },
         }
+
+    @property
+    def serialization_format(self) -> SerializationFormat:
+        return self._fmt
+
+    @property
+    def field_serialization_format(self) -> str:
+        return self._field_fmt
 
     def msgpack_pack(self, data: Any) -> bytes:
         return msgspec.msgpack.encode(data)
@@ -121,7 +130,7 @@ class MsgEncoder(MessageEncoderT):
         name = serializer or self.get_serializer_name(cls)
         self._event_type_registry[name] = cls
         self.logger.debug(
-            f'🎯 ▶ Registered event clss serializer: "{name}" → {cls.__name__}'
+            f'🎯 ▶ Registered event class serializer: "{name}" → {cls.__name__}'
         )
         return self
 
@@ -193,13 +202,14 @@ class MsgEncoder(MessageEncoderT):
         return event_cls(**filtered)
 
     def __str__(self) -> str:
-        return f'MsgEncoder(encoding={self._msg_encoding}, field_encoding={self._field_encoding})'
+        return f'MsgEncoder(encoding={self._fmt}, field_encoding={self._field_fmt})'
 
-    def msg_encoding(self) -> str:
-        return self._msg_encoding
+    @property
+    def serialization_format(self) -> str:
+        return self._fmt
 
     def field_encoding(self) -> str:
-        return self._field_encoding
+        return self._field_fmt
 
     async def encode_msg(
         self,
@@ -232,11 +242,11 @@ class MsgEncoder(MessageEncoderT):
         else:
             _msg_data = msg
 
-        if self._msg_encoding == MessageEncodingType.MSGPACK:
+        if self._fmt == MessageEncodingType.MSGPACK:
             return self.msgpack_pack(_msg_data)
-        elif self._msg_encoding == MessageEncodingType.PROTOBUF:
+        elif self._fmt == MessageEncodingType.PROTOBUF:
             raise NotImplementedError('Protobuf encoding is not implemented yet.')
-        elif self._msg_encoding == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+        elif self._fmt == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
             if not sr_encoder or not channel:
                 raise ValueError(
                     'AsyncSchemaRegistryEncoder and channel are required for Avro encoding'
@@ -254,12 +264,12 @@ class MsgEncoder(MessageEncoderT):
                 pass
 
             return await sr_encoder.encode_event(channel, _msg_data)
-        elif self._msg_encoding == MessageEncodingType.JSON:
+        elif self._fmt == MessageEncodingType.JSON:
             # JSON: return bytes for parity with msgpack/Avro and so brokers
             # (which expect bytes) don't need a separate encoding step.
             return self.json_encode(_msg_data)
         else:
-            raise ValueError(f'Unsupported message encoding: {self._msg_encoding}')
+            raise ValueError(f'Unsupported message encoding: {self._fmt}')
 
     async def decode_msg(
         self,
@@ -267,7 +277,7 @@ class MsgEncoder(MessageEncoderT):
         channel: str | None = None,
         sr_encoder: 'SchemaRegistryEncoder | None' = None,
     ) -> BaseSendableMessage:
-        if self._msg_encoding == MessageEncodingType.MSGPACK:
+        if self._fmt == MessageEncodingType.MSGPACK:
             try:
                 all_data = self.msgpack_unpack(val)
                 # all_data = _normalise_wire_data(unpacked_data)
@@ -277,9 +287,9 @@ class MsgEncoder(MessageEncoderT):
                     f'Failed to decode msgpack data: {e}',
                     error_code='MSGPACK_DECODE_ERROR',
                 )
-        elif self._msg_encoding == MessageEncodingType.PROTOBUF:
+        elif self._fmt == MessageEncodingType.PROTOBUF:
             raise NotImplementedError('Protobuf decoding is not implemented yet.')
-        elif self._msg_encoding == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+        elif self._fmt == MessageEncodingType.SCHEMA_REGISTRY_AVRO:
             if not sr_encoder or not channel:
                 raise ValueError(
                     'AsyncSchemaRegistryEncoder and channel are required for Avro decoding'
@@ -289,7 +299,7 @@ class MsgEncoder(MessageEncoderT):
                 _payload = _decoded_dict.get(EVENT_PAYLOAD_FIELD, None)
                 if (
                     _payload is not None
-                ) and self._field_encoding == MessageEncodingType.MSGPACK:
+                ) and self._field_fmt == MessageEncodingType.MSGPACK:
                     # If the payload is bytes and field encoding is msgpack, deserialize it back to dict after Avro decoding
                     if isinstance(_payload, bytes):
                         _decoded_dict[EVENT_PAYLOAD_FIELD] = self.msgpack_unpack(
@@ -313,7 +323,7 @@ class MsgEncoder(MessageEncoderT):
                             _decoded_dict[EVENT_PAYLOAD_FIELD] = _payload
                 elif (
                     _payload is not None
-                ) and self._field_encoding == MessageEncodingType.JSON:
+                ) and self._field_fmt == MessageEncodingType.JSON:
                     # If the payload is a string and field encoding is json, deserialize it back to dict after Avro decoding
                     if isinstance(_payload, str):
                         _decoded_dict[EVENT_PAYLOAD_FIELD] = json.loads(_payload)
@@ -329,7 +339,7 @@ class MsgEncoder(MessageEncoderT):
                 elif _payload is not None:
                     # Payload can be supported formats
                     raise ValueError(
-                        f'Unsupported field encoding "{self._field_encoding}" for Avro message encoding. Supported field encodings are: msgpack, json.'
+                        f'Unsupported field encoding "{self._field_fmt}" for Avro message encoding. Supported field encodings are: msgpack, json.'
                     )
 
                 # all_data = self.deserialize_bytes_fields_to_dict(decoded_dict)
@@ -338,7 +348,7 @@ class MsgEncoder(MessageEncoderT):
                 raise MsgDecoderError(
                     f'Failed to decode Avro data: {e}', error_code='AVRO_DECODE_ERROR'
                 )
-        elif self._msg_encoding == MessageEncodingType.JSON:
+        elif self._fmt == MessageEncodingType.JSON:
             # Default to JSON decoding
             try:
                 if isinstance(val, bytes):
@@ -358,12 +368,12 @@ class MsgEncoder(MessageEncoderT):
                     f'Failed to decode JSON data: {e}', error_code='JSON_DECODE_ERROR'
                 )
         else:
-            raise ValueError(f'Unsupported message encoding: {self._msg_encoding}')
+            raise ValueError(f'Unsupported message encoding: {self._fmt}')
 
     def encode_field(self, payload: BaseSendableMessage) -> Union[bytes, str, Any]:
-        if self._msg_encoding != MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+        if self._fmt != MessageEncodingType.SCHEMA_REGISTRY_AVRO:
             raise ValueError(
-                f'Field encoding is only applicable for Avro message encoding. Current message encoding: {self._msg_encoding}'
+                f'Field encoding is only applicable for Avro message encoding. Current message encoding: {self._fmt}'
             )
 
         _field_data = payload
@@ -374,26 +384,26 @@ class MsgEncoder(MessageEncoderT):
             else:
                 _field_data = dataclasses.asdict(payload)  # type: ignore
 
-        if self._field_encoding == MessageFieldEncodingType.JSON:
+        if self._field_fmt == MessageFieldEncodingType.JSON:
             return self.json_encode(_field_data)
-        elif self._field_encoding == MessageFieldEncodingType.MSGPACK:
+        elif self._field_fmt == MessageFieldEncodingType.MSGPACK:
             return self.msgpack_pack(_field_data)
         else:
             raise ValueError(
-                f'Unsupported field encoding "{self._field_encoding}" for Avro message encoding. Supported field encodings are: msgpack, json.'
+                f'Unsupported field encoding "{self._field_fmt}" for Avro message encoding. Supported field encodings are: msgpack, json.'
             )
 
     def decode_field(self, val: Any) -> dict:
-        if self._msg_encoding != MessageEncodingType.SCHEMA_REGISTRY_AVRO:
+        if self._fmt != MessageEncodingType.SCHEMA_REGISTRY_AVRO:
             raise ValueError(
-                f'Field decoding is only applicable for Avro message encoding. Current message encoding: {self._msg_encoding}'
+                f'Field decoding is only applicable for Avro message encoding. Current message encoding: {self._fmt}'
             )
 
-        if self._field_encoding == MessageFieldEncodingType.JSON:
+        if self._field_fmt == MessageFieldEncodingType.JSON:
             return self.json_decode(val)
-        elif self._field_encoding == MessageFieldEncodingType.MSGPACK:
+        elif self._field_fmt == MessageFieldEncodingType.MSGPACK:
             return self.msgpack_unpack(val)
         else:
             raise ValueError(
-                f'Unsupported field encoding "{self._field_encoding}" for Avro message encoding. Supported field encodings are: msgpack, json.'
+                f'Unsupported field encoding "{self._field_fmt}" for Avro message encoding. Supported field encodings are: msgpack, json.'
             )
