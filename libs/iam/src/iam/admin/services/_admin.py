@@ -7,7 +7,7 @@ from foundation.db.advanced_db_manager import MainDatabase, db_context_session
 from foundation.db.types import DBAsyncSession
 from iam.auth.types import DirectoryTenant, DirectoryUser
 from iam.common.base import BaseIamService
-from iam.iam_constants import IamTopics, TestMode
+from iam.iam_constants import IamEvents, TestMode, get_iam_topic_for_event
 from sqlalchemy import ColumnElement
 
 from ..helpers.admin_helper import IamDataHelper
@@ -77,19 +77,27 @@ class AdminService(BaseIamService):
         )
 
         await self.message_routing_service.publish_event(
-            _e_user_registered, channel=IamTopics.IAM_USER_REGISTER, session=session
+            _e_user_registered,
+            channel=get_iam_topic_for_event(IamEvents.USER_REGISTERED),
+            session=session,
         )
 
         #
-        # 3. Publish the TenantCreatedEvent to the IAM_AUTH topic
+        # 3. Publish the TenantCreatedEvent to its own topic
         #
-
+        # Route via get_iam_topic_for_event rather than a hard-coded topic. Avro
+        # registers exactly ONE schema per topic (see topic_to_schema_event), so
+        # publishing an event to a topic other than its mapped one silently
+        # encodes it with a sibling's schema and drops the fields they don't
+        # share — TenantCreatedEvent lost tenant_id and root_account_id that way.
         _e_tenant_created = IamDataHelper.build_tenant_created_event(
             new_user, new_tenant, directory_user, directory_tenant
         )
 
         await self.message_routing_service.publish_event(
-            _e_tenant_created, channel=IamTopics.IAM_USER_REGISTER, session=session
+            _e_tenant_created,
+            channel=get_iam_topic_for_event(IamEvents.TENANT_CREATED),
+            session=session,
         )
 
         return new_user

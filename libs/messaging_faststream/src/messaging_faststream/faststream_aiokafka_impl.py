@@ -664,7 +664,7 @@ class FastStreamKafkaMessagingService(
         otherwise falls back to the synchronous ``MsgEncoder``.
         """
         return await self.msg_encoder.encode_msg(
-            message, channel=topic, sr_encoder=self.schema_registry_encoder
+            message, channel=topic, sr_encoder=self.schema_registry_encoder_or_none
         )
 
     async def _decode_message(self, topic: str, raw: bytes) -> BaseEvent:
@@ -674,12 +674,12 @@ class FastStreamKafkaMessagingService(
         otherwise falls back to the synchronous ``MsgEncoder``.
         """
         return await self.msg_encoder.decode_msg(
-            raw, channel=topic, sr_encoder=self.schema_registry_encoder
+            raw, channel=topic, sr_encoder=self.schema_registry_encoder_or_none
         )  # type: ignore
 
     async def _decode_dlq_message(self, topic: str, raw: bytes) -> DlqEvent:
         return await self.msg_encoder.decode_msg(
-            raw, channel=topic, sr_encoder=self.schema_registry_encoder
+            raw, channel=topic, sr_encoder=self.schema_registry_encoder_or_none
         )  # type: ignore
 
     def _register_main_subscriber(self, topic: str, max_workers: int) -> None:

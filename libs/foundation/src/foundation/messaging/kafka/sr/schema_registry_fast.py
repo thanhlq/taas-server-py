@@ -341,21 +341,35 @@ class FastavroSerializer(ISchemaSerializer):
         default_factory=dict, init=False, repr=False
     )
 
-    async def serialize(self, topic: str, data: dict, schema: dict) -> bytes:
+    async def serialize(
+        self,
+        topic: str,
+        data: dict,
+        schema: dict,
+        *,
+        record_name: str | None = None,
+    ) -> bytes:
         """Serialize *data* to Avro bytes with the Confluent wire-format header.
 
         Registers the schema with the registry on first call for a given
-        ``(topic, schema)`` pair; subsequent calls use the cached ID.
+        ``(subject, schema)`` pair; subsequent calls use the cached ID.
 
         Args:
             topic: Kafka topic name (used to derive the subject).
             data: Python dict to serialise.
             schema: Avro schema as a Python dict.
+            record_name: Avro record name. When given, the subject follows
+                Confluent's *TopicRecordNameStrategy* (``<topic>-<RecordName>``),
+                which is what allows several event types to share one topic —
+                each keeps its own schema and its own evolution history.
+                When omitted, the legacy *TopicNameStrategy*
+                (``<topic>-value``) is used.
 
         Returns:
             Wire-format bytes (magic byte + schema_id + avro payload).
         """
-        subject = f'{topic}-{self.subject_suffix}'
+        suffix = record_name or self.subject_suffix
+        subject = f'{topic}-{suffix}'
         schema_id = await self._get_or_register(subject, schema)
 
         parsed = fastavro.parse_schema(schema)
@@ -399,6 +413,49 @@ def _parse_iso_datetime(value: str) -> datetime:
     """Parse an ISO-8601 datetime string to an aware ``datetime`` object."""
     # Python 3.11+ fromisoformat handles 'Z' suffix; for older versions replace it.
     return datetime.fromisoformat(value.replace('Z', '+00:00'))
+
+
+class AvroFieldLossError(SchemaRegistryError):
+    """Raised when the data carries fields the Avro schema cannot represent.
+
+    ``fastavro.schemaless_writer`` ignores dict keys that are absent from the
+    schema, so an event encoded against the wrong schema is published
+    successfully with those fields silently missing. For value-bearing events
+    that is worse than a hard failure: the producer reports success, the
+    consumer sees ``undefined``, and nothing in between records that data was
+    dropped. This turns that class of bug into a loud error at encode time.
+    """
+
+
+def _assert_no_field_loss(
+    data: dict,
+    schema: dict,
+    *,
+    topic: str,
+    event_type: str | None,
+) -> None:
+    """Fail if *data* has fields that *schema* would silently discard.
+
+    Only *extra* data fields are an error. Fields present in the schema but
+    missing from the data are fine — Avro fills them from their declared
+    default, which is the normal forward-compatible read path.
+    """
+    if not isinstance(data, dict):
+        return
+
+    schema_fields = {f['name'] for f in schema.get('fields', [])}
+    dropped = sorted(set(data) - schema_fields)
+    if not dropped:
+        return
+
+    raise AvroFieldLossError(
+        f'Refusing to encode {event_type or "event"} for topic {topic!r} with '
+        f'schema {schema.get("name")!r}: field(s) {dropped} are not in the '
+        f'schema and would be silently dropped. Register the schema for this '
+        f'event type (register_schema(topic, event_cls)) or publish the event '
+        f'to the topic its own schema is registered under.',
+        status_code=0,
+    )
 
 
 def _prepare_for_avro(data: dict, schema: dict) -> dict:
@@ -481,7 +538,15 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
     ) -> None:
         self._client = SchemaRegistryClient(registry_config)
         self._serializer = FastavroSerializer(self._client)
+        # topic → schema. The fallback for topics whose events were registered
+        # without an event_type, and the shape the public API has always had.
         self._avro_schemas: dict[str, dict] = avro_schemas or {}
+        # (topic, event_type) → schema. Several event types legitimately share a
+        # topic (7 on iam.user.registered, 9 on iam.auth), and a single
+        # schema-per-topic would encode all but one of them with a sibling's
+        # schema — silently dropping every field the two do not share. Keying by
+        # event type keeps each one exact.
+        self._schemas_by_event: dict[tuple[str, str], dict] = {}
 
     @property
     def logger(self):
@@ -500,9 +565,13 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         Raises:
             KeyError: When no Avro schema is registered for *topic*.
         """
-        schema = self._get_schema(topic)
-        prepared = _prepare_for_avro(data, schema) # type: ignore
-        return await self._serializer.serialize(topic, prepared, schema)
+        event_type = data.get('event_type') if isinstance(data, dict) else None
+        schema = self._get_schema(topic, event_type)
+        _assert_no_field_loss(data, schema, topic=topic, event_type=event_type)  # type: ignore[arg-type]
+        prepared = _prepare_for_avro(data, schema)  # type: ignore
+        return await self._serializer.serialize(
+            topic, prepared, schema, record_name=schema.get('name')
+        )
 
     async def decode(self, topic: str, data: bytes) -> dict:
         """Deserialize Avro wire-format bytes to a Python dict.
@@ -520,7 +589,9 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         """
         return await self._serializer.deserialize(data)
 
-    def register_topic_schema(self, topic: str, schema: dict) -> bool:
+    def register_topic_schema(
+        self, topic: str, schema: dict, event_type: str | None = None
+    ) -> bool:
         """Register an Avro schema for *topic* at runtime.
 
         Useful when schemas are loaded dynamically from files or a config store.
@@ -528,10 +599,23 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         Args:
             topic: Kafka topic name.
             schema: Avro schema dict.
+            event_type: The ``event_type`` this schema describes. Supply it
+                whenever the topic carries more than one event type, so encode
+                can pick the exact schema instead of a sibling's. Omitting it
+                registers a topic-wide fallback.
         """
-        self._avro_schemas[topic] = schema
+        if event_type:
+            self._schemas_by_event[(topic, event_type)] = schema
+        # Keep the topic-level entry populated: it is the fallback for events
+        # published without a registered event_type, and preserves the old API.
+        self._avro_schemas.setdefault(topic, schema)
 
-        self.logger.info(f'📚 Registered schema for channel "{topic}"')
+        self.logger.info(
+            '📚 Registered schema for channel "%s"%s as record "%s"',
+            topic,
+            f' event_type="{event_type}"' if event_type else '',
+            schema.get('name'),
+        )
 
         # Later should also register with the registry and cache the schema ID, but for now
         return True
@@ -542,8 +626,18 @@ class SchemaRegistryEncoder(ISchemaRegistryEncoder):
         """Read-only view of the registered topic → Avro schema mapping."""
         return self._avro_schemas
 
-    def _get_schema(self, topic: str) -> dict:
-        """Return the Avro schema for *topic* or raise ``ValueError``."""
+    def _get_schema(self, topic: str, event_type: str | None = None) -> dict:
+        """Return the Avro schema for *topic* / *event_type*, or raise.
+
+        Prefers the exact ``(topic, event_type)`` schema and falls back to the
+        topic-wide one, so topics carrying a single event type keep working
+        without any registration change.
+        """
+        if event_type is not None:
+            exact = self._schemas_by_event.get((topic, event_type))
+            if exact is not None:
+                return exact
+
         if topic not in self._avro_schemas:
             raise ValueError(
                 f"No Avro schema registered for topic '{topic}': "

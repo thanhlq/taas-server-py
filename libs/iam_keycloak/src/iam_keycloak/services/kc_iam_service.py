@@ -19,7 +19,7 @@ from iam.auth.types import (
     IamDirectorySignupServiceT,
     SessionInfo,
 )
-from iam.iam_constants import IamTopics
+from iam.iam_constants import IamEvents, get_iam_topic_for_event
 from iam.types import IIamServiceFactory
 from iam.utils.saas_utils import generate_saas_subdomain, get_keycloak_subdomain
 from keycloak import (
@@ -348,7 +348,8 @@ class KeycloakIamService(
 
             try:
                 await self.message_routing_service.publish_event(
-                    e_user_directory_created, IamTopics.IAM_USER_REGISTER
+                    e_user_directory_created,
+                    get_iam_topic_for_event(IamEvents.USER_DIRECTORY_CREATED),
                 )
             except Exception as publish_exc:
                 # TODO:

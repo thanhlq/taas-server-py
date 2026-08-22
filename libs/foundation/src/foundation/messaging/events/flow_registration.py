@@ -131,31 +131,54 @@ def iter_flow_steps(flows: FlowMap) -> Iterable[EventStep]:
         yield from steps
 
 
-def topic_to_schema_event(
+def iter_flow_event_classes(flows: FlowMap) -> Iterable[type[BaseEvent]]:
+    """Yield every event class referenced by ``flows``, de-duplicated."""
+    seen: set[type[BaseEvent]] = set()
+    for step in iter_flow_steps(flows):
+        for event_cls in (step.event, *step.emits):
+            if event_cls not in seen:
+                seen.add(event_cls)
+                yield event_cls
+
+
+def topic_event_schema_pairs(
     flows: FlowMap,
     topic_for_event: TopicForEvent,
-) -> dict[str, type[BaseEvent]]:
-    """Map ``topic → event class`` to register with the schema registry.
+) -> list[tuple[str, type[BaseEvent]]]:
+    """Return every ``(topic, event class)`` pair that needs a schema.
 
-    Multiple event classes may map to the same topic (e.g. both
-    ``UserDirectoryCreatedEvent`` and ``UserRegisteredEvent`` use
-    ``iam.user.registered``). We register **one** schema per topic, picking
-    the most-general (least-derived) event class so subclasses remain
-    wire-compatible.
+    One entry per *event class*, not per topic. Topics routinely carry several
+    event types (7 map to ``iam.user.registered``, 9 to ``iam.auth``), and they
+    are siblings rather than a subclass chain — so no single schema can stand in
+    for the rest. Each class is registered under its own subject, following
+    Confluent's TopicRecordNameStrategy.
     """
-    by_topic: dict[str, type[BaseEvent]] = {}
-    candidates: list[type[BaseEvent]] = []
-    for step in iter_flow_steps(flows):
-        candidates.append(step.event)
-        candidates.extend(step.emits)
-
-    for event_cls in candidates:
+    pairs: list[tuple[str, type[BaseEvent]]] = []
+    for event_cls in iter_flow_event_classes(flows):
         topic = topic_for_event(event_cls)
-        if topic is None: # type: ignore[unreachable]  # mypy doesn't know TopicForEvent is non-None
+        if topic is None:  # type: ignore[unreachable]  # mypy doesn't know TopicForEvent is non-None
             raise ValueError(
                 f"Event class {event_cls.__name__} is not routable: "
                 "topic_for_event returned None. All events in flows must be routable."
             )
+        pairs.append((topic, event_cls))
+    return pairs
+
+
+def topic_to_schema_event(
+    flows: FlowMap,
+    topic_for_event: TopicForEvent,
+) -> dict[str, type[BaseEvent]]:
+    """Map ``topic → one event class``.
+
+    .. deprecated::
+        Retained for callers that only need a representative class per topic.
+        Registration must use :func:`topic_event_schema_pairs` instead — keeping
+        one schema per topic silently drops the fields that sibling event types
+        on the same topic do not share.
+    """
+    by_topic: dict[str, type[BaseEvent]] = {}
+    for topic, event_cls in topic_event_schema_pairs(flows, topic_for_event):
         current = by_topic.get(topic)
         if current is None or issubclass(current, event_cls):
             by_topic[topic] = event_cls
@@ -168,8 +191,8 @@ def register_schema_registry_schemas(
     flows: FlowMap,
     topic_for_event: TopicForEvent,
 ) -> None:
-    """Register Avro schemas for every topic referenced by ``flows``."""
-    for topic, event_cls in topic_to_schema_event(flows, topic_for_event).items():
+    """Register Avro schemas for every event class referenced by ``flows``."""
+    for topic, event_cls in topic_event_schema_pairs(flows, topic_for_event):
         msg_service.register_schema(topic, event_cls)
 
 def register_event_handlers_for_app_module(*, app: ApiApplicationModuleT, msg_service: MessagingServiceT) -> None:

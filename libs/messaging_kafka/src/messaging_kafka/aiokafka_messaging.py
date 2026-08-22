@@ -798,9 +798,9 @@ class AiokafkaMessagingService(BaseKafkaMessagingService[AIOKafkaProducer, AIOKa
     ) -> Any:
         """Encode an event/dict to wire bytes (or Avro record)."""
         return await self.msg_encoder.encode_msg(
-            message, channel=topic, sr_encoder=self.schema_registry_encoder
+            message, channel=topic, sr_encoder=self.schema_registry_encoder_or_none
         )
 
     async def _decode_message(self, topic: str, raw: bytes) -> BaseEvent:
         """Decode raw Kafka bytes back into a ``BaseEvent``."""
-        return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self.schema_registry_encoder)  # type: ignore
+        return await self.msg_encoder.decode_msg(raw, channel=topic, sr_encoder=self.schema_registry_encoder_or_none)  # type: ignore

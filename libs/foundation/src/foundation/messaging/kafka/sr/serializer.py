@@ -1,6 +1,9 @@
 import datetime as _dt
+import decimal as _decimal
+import logging
 import types as _types
 import typing
+import uuid as _uuid
 from typing import Any, Union
 
 import msgspec
@@ -82,9 +85,23 @@ _LOGICAL_AVRO_TYPES: dict[Any, Any] = {
     _dt.time: {'type': 'long', 'logicalType': 'time-micros'},
 }
 
+# Types carrying exact values that a numeric Avro type would corrupt.
+# ``Decimal`` is the important one: Avro's decimal logical type needs a fixed
+# precision/scale, which a bare ``Decimal`` annotation does not carry, and
+# mapping it to 'double' would silently round money/crypto amounts. The exact
+# decimal string round-trips losslessly, so that is what we emit.
+_EXACT_STRING_TYPES: dict[Any, Any] = {
+    _decimal.Decimal: 'string',
+    _uuid.UUID: 'string',
+}
+
 _FALLBACK_AVRO_TYPE = 'string'
 """Used for annotations we cannot map. Lenient by design — an unmappable field
-should not stop the other fields from being published."""
+should not stop the other fields from being published. Every use is logged at
+WARNING: a silent coercion to string is how a value-bearing field turns into
+something the consumer cannot interpret."""
+
+logger = logging.getLogger(__name__)
 
 
 def _record_schema(
@@ -133,6 +150,9 @@ def _avro_type_for(annotation: Any, *, defined: dict[type, str]) -> Any:
     if annotation in _SCALAR_AVRO_TYPES:
         return _SCALAR_AVRO_TYPES[annotation]
 
+    if annotation in _EXACT_STRING_TYPES:
+        return _EXACT_STRING_TYPES[annotation]
+
     origin = typing.get_origin(annotation)
 
     if origin in (list, set, frozenset, tuple):
@@ -170,6 +190,13 @@ def _avro_type_for(annotation: Any, *, defined: dict[type, str]) -> Any:
             'symbols': [member.name for member in annotation],  # type: ignore[union-attr]
         }
 
+    logger.warning(
+        'No Avro mapping for annotation %r; falling back to %r. Values of this '
+        'type will be written as whatever str() produces — add an explicit '
+        'mapping if the field carries a value that must round-trip exactly.',
+        annotation,
+        _FALLBACK_AVRO_TYPE,
+    )
     return _FALLBACK_AVRO_TYPE
 
 

@@ -79,6 +79,20 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
         return self.msg_encoder.serialization_format == MessageEncodingType.SCHEMA_REGISTRY_AVRO
 
     @property
+    def schema_registry_encoder_or_none(self) -> 'SchemaRegistryEncoder | None':
+        """Return the Schema Registry encoder, or ``None`` when it is not enabled.
+
+        Use this wherever the encoder is passed *through* to a codec that only
+        needs it for Avro. ``schema_registry_encoder`` raises when Avro is not
+        the configured encoding, and Python evaluates call arguments eagerly —
+        so ``encode(..., sr_encoder=self.schema_registry_encoder)`` blows up on
+        msgpack and json even though the argument is never used.
+        """
+        if not self.schema_registry_enabled:
+            return None
+        return self.schema_registry_encoder
+
+    @property
     def schema_registry_encoder(self) -> SchemaRegistryEncoder:
         if not self.schema_registry_enabled:
             raise RuntimeError(
@@ -150,10 +164,19 @@ class BaseKafkaMessagingService[ProducerT, ConsumerT, MessageT](
                 f'messaging encoding is {_serialization_format}'
             )
         else:
+            from foundation.messaging.events.flow_registration import (
+                event_type_value,
+            )
+
             from .sr.serializer import schema_cls_to_avro_schema
 
+            # Register under the event type, not just the topic: a topic may
+            # carry many event types, and each needs its own schema so none is
+            # encoded with a sibling's (see AvroFieldLossError).
             self.schema_registry_encoder.register_topic_schema(
-                channel, schema_cls_to_avro_schema(schema)
+                channel,
+                schema_cls_to_avro_schema(schema),
+                event_type=event_type_value(schema),
             )
 
         # If the consumer is enabled, track the channel as subscribed so that we can
