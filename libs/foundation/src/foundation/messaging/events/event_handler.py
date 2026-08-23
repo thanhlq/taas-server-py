@@ -1,5 +1,5 @@
 """
-🎯 Event Handlers
+🌀 Event Handlers
 
 Handler registry and base classes for event processing.
 """
@@ -169,7 +169,7 @@ class HandlerRegistry:
     ) -> None:
         self._handlers[event_type] = handler
         self.logger.debug(
-            f'🎯 Registered handler [even={event_type}, handler={handler.__class__.__name__}]'
+            f'🌀 Registered EVENT handler [event={event_type}, handler={handler.__class__.__name__}]'
         )
 
     def unregister(self, event_type: str) -> None:

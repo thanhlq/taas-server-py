@@ -249,13 +249,6 @@ class FastStreamKafkaMessagingService(
     async def start_producer(self) -> None:
         """
         Establish the broker connection for publishing.
-
-        Calls ``broker.connect()`` which creates the underlying aiokafka
-        producer and makes ``broker.publish()`` available.  Does **not**
-        start subscriber consumer tasks — call ``start_consuming()`` for that.
-
-        Also starts the aiokafka admin client used by
-        ``create_channel`` / ``delete_channel`` / ``list_channels``.
         """
 
         if self._producer_started:
@@ -336,7 +329,7 @@ class FastStreamKafkaMessagingService(
             self._broker_started = True
 
             self.logger.info(
-                f'🌊 ⬅️  🟢  FastStream consumer started, channels={list(self._subscribed_channels)}, workers={max_workers}'
+                f'🌊 ⬅️  🟢  FastStream CONSUMER started, channels={list(self._subscribed_channels)}, workers={max_workers}'
             )
 
             # Keep the coroutine alive — FastStream handles consumption internally.
@@ -347,7 +340,7 @@ class FastStreamKafkaMessagingService(
             self.logger.info('Consumption task cancelled')
         except Exception as exc:
             report_error(exc, title='FastStream Consumption Error', logger=self.logger)
-            raise
+            raise exc
 
     async def stop(self) -> None:
         """Gracefully shut down all broker connections and clean up resources."""
@@ -615,7 +608,7 @@ class FastStreamKafkaMessagingService(
         self._subscriptions[sub_id] = sub_info
         self.stats.active_subscriptions = len(self._subscriptions)
         self.logger.info(
-            f'⬅️  Subscribed: channel={channel} sub_id={sub_id} group_id={group_id}, auto_offset_reset={auto_offset}'
+            f'⬅️ 🌀 Subscribed: channel={channel} sub_id={sub_id} group_id={group_id}, auto_offset_reset={auto_offset}'
         )
         return sub_id
 

@@ -25,6 +25,22 @@ class KafkaSettings:
     KAFKA_MESSAGE_CONSUMING_FROM_BEGINING: bool = field(
         default_factory=get_env('KAFKA_MESSAGE_CONSUMING_FROM_BEGINING', False, bool)
     )
+    """
+    only triggers when a consumer group has no committed offset (e.g., a new consumer group starting for the first time)
+    or when its committed offset has expired/been deleted due to log retention policies.
+      - True: consume messages from the beginning of the topic (earliest offset), when use:
+        + Core transaction processing
+        + Financial ledgers & auditing
+        + Event-sourcing architectures
+        + ETL & Data warehousing
+      - False: consume messages from the latest offset (default)
+        + Real-time telemetry/metrics,
+        + Live dashboards
+        + Instant alert notifications
+        + Ephemeral cache warmups
+
+    """
+
     KAFKA_ENABLE_AUTO_COMMIT: bool = field(
         default_factory=get_env('KAFKA_ENABLE_AUTO_COMMIT', False, bool)
     )
