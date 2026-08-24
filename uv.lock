@@ -759,8 +759,11 @@ dependencies = [
     { name = "foundation" },
     { name = "http-litestar" },
     { name = "iam" },
+    { name = "iam-keycloak" },
     { name = "litestar" },
+    { name = "messaging-faststream" },
     { name = "redis" },
+    { name = "resiliant" },
     { name = "store-redis" },
     { name = "uvicorn" },
 ]
@@ -773,8 +776,11 @@ requires-dist = [
     { name = "foundation", editable = "libs/foundation" },
     { name = "http-litestar", editable = "libs/http_litestar" },
     { name = "iam", editable = "libs/iam" },
+    { name = "iam-keycloak", editable = "libs/iam_keycloak" },
     { name = "litestar", specifier = "==2.22.0" },
+    { name = "messaging-faststream", editable = "libs/messaging_faststream" },
     { name = "redis", specifier = "==7.4.0" },
+    { name = "resiliant", editable = "libs/resiliant" },
     { name = "store-redis", editable = "libs/store_redis" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]

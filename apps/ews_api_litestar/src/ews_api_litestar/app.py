@@ -14,14 +14,16 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 import socketio
+from db.check_db import a_check_db_consistency
 from ews import get_ews_controllers
 from foundation.cli import cli_print_info
 from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
-from foundation.facade.cache import CacheServiceT
+from foundation.factory import FoundationFactory
 from foundation.http._websocket_redis_manager import build_websocket_redis_manager
 from foundation.app.base_app import BaseApiApplication
-from foundation.state.service_registry import register_service
+from foundation.messaging.factory import MessagingFactory
+from foundation.utils.icons import Icons
 from http_litestar.adapters import (
     build_router_for_controller,
     create_socketio_asgi_app,
@@ -29,10 +31,14 @@ from http_litestar.adapters import (
 from http_litestar.create_app import build_app
 from http_litestar.middewares.request_context import RequestContextMiddleware
 from iam import get_iam_controllers
+from iam.iam_factory import IamFactory
+from iam_keycloak import IamServiceFactory
 from litestar import Litestar
 from litestar.response import Response
 from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
-from store_redis import RedisStore, create_redis_client
+from messaging_faststream import initialize_messaging_service, messaging
+from resiliant import ResiliantServiceFactory
+from store_redis import RedisCacheServiceFactory
 
 from .bootstrap import root_path, settings
 
@@ -69,9 +75,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
         async def lifespan(_app: Litestar):
             cli_print_info('Starting up the application...')
 
-            _cache_config = settings.app.get_cache_config()
-            _redis_client = create_redis_client(_cache_config.get_redis_config())
-            register_service(CacheServiceT, RedisStore(_redis_client))
+            await self._init_services()
 
             if self.config.websocket_config and self.config.websocket_config.debug:
                 cli_print_info('🐛 WebSocket debug mode is enabled.')
@@ -121,6 +125,43 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
             )
 
         return litestar_app
+
+    def _init_cache_service(self) -> None:
+        """Register the shared Redis cache service (mirrors ``ews_api``)."""
+        cache_config = settings.app.get_cache_config()
+        if cache_config.enabled:
+            RedisCacheServiceFactory.create(cache_config)
+            self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
+        else:
+            self.logger.info(
+                f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration'
+            )
+
+    async def _init_database_service(self) -> None:
+        if settings.app.check_database_consistency():
+            cli_print_info('Checking database consistency...')
+            if len(await a_check_db_consistency()) > 0:
+                raise RuntimeError(
+                    'Database consistency check failed. Please check the logs for details.'
+                )
+
+    async def _init_services(self) -> None:
+        """Composition root: register every backend service the request
+        handlers resolve from the service registry.
+
+        Kept in lock-step with ``ews_api.app.EwsApplication._init_services`` so
+        the FastAPI and Litestar variants expose identical runtime behaviour.
+        """
+        await self._init_database_service()
+
+        FoundationFactory.init_default_services()
+        self._init_cache_service()
+        FoundationFactory.use_resiliant(ResiliantServiceFactory())
+        MessagingFactory.init_factory(
+            messaging_service=await initialize_messaging_service(),
+            decorator=messaging,
+        )
+        IamFactory.initialize_iam(IamServiceFactory())
 
     def _get_enabled_app_controllers(self) -> list[Any]:
         return [*get_iam_controllers(), *get_ews_controllers()]
