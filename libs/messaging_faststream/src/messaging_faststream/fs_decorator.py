@@ -42,6 +42,8 @@ Implementation notes
 """
 
 from __future__ import annotations
+from foundation.messaging.kafka.kafka_settings import KafkaSettings
+from faststream import AckPolicy
 
 from typing import TYPE_CHECKING, Awaitable, Callable, Literal, Optional
 
@@ -156,6 +158,7 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
             LogFactory().get_logger().debug(
                 f'📨 RESOLVED group_id for agent={agent_name} on topic={channel}: {resolved_group_id}'
             )
+            config: KafkaSettings = service.kafka_config
 
             subscriber = service.consumer.subscriber(  # type: ignore[reportPrivateUsage]
                 channel,
@@ -168,6 +171,12 @@ class _FaststreamMessagingDecorator(MessagingDecoratorT):
                 # aiokafka backend's default of `{base}_agent_{name}`.
                 group_id=resolved_group_id,
                 auto_offset_reset=resolved_auto_offset_reset,
+                # Cause: number of workers per topic is limited to the number of partitions in that topic. If you have 10 partitions, you can have 10 workers max. If you have 1 partition, you can only have 1 worker max. If you have 0 partitions, you can have 0 workers max.
+                max_workers=config.KAFKA_CONSUMER_MAX_WORKERS,
+                ack_policy=AckPolicy.NACK_ON_ERROR,
+                session_timeout_ms=config.KAFKA_SESSION_TIMEOUT_MS,
+                max_poll_interval_ms=config.KAFKA_MAX_POLL_INTERVAL_MS,
+                heartbeat_interval_ms=config.KAFKA_HEARTBEAT_INTERVAL_MS,
             )
             subscriber(func=_agent_handler)
 
