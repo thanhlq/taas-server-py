@@ -119,7 +119,7 @@ class KafkaSettings:
     """Forced metadata refresh interval even when no fault is detected."""
 
     KAFKA_REQUEST_TIMEOUT_MS: int = field(
-        default_factory=get_env('KAFKA_REQUEST_TIMEOUT_MS', 40_000)
+        default_factory=get_env('KAFKA_REQUEST_TIMEOUT_MS', 40_000) # default 40s
     )
     """Per-request timeout handed to the aiokafka client."""
 
