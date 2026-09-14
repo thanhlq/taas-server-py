@@ -10,11 +10,18 @@ RUN mkdir /app
 WORKDIR /app
 
 #############################
-# Install other dependencies
+# Build toolchain
 #############################
-# RUN --mount=type=cache,target=/var/cache/apt/ \
-#     --mount=type=cache,target=/var/lib/apt/lists/ \
-#     apt-get update && apt-get install -y --no-install-recommends nano curl g++ libpq-dev fontconfig libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libpangocairo-1.0-0
+# Python 3.14 is new enough that several dependencies still ship only sdists;
+# they compile from source at install time and need a C toolchain (cc) plus a
+# Rust toolchain (pydantic-core, rpds-py, etc.). curl/git are handy for dev.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential curl git pkg-config libssl-dev libpq-dev \
+    && rm -rf /var/log/* /tmp/*
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 #############################
 # nvm environment variables
@@ -49,7 +56,7 @@ WORKDIR /app
 ENV UV_PYTHON_DOWNLOADS=false
 ENV UV_LINK_MODE=copy
 ENV UV_SYSTEM_PYTHON=true
-ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+ENV UV_PROJECT_ENVIRONMENT="/usr/local"
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
@@ -59,7 +66,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN pip install --no-cache-dir uv
 
-# Install the project's dependencies using the lockfile and settings
+# Install the THIRD-PARTY dependency closure into the system interpreter.
+#
+# We export a requirements file from the lockfile (workspace members excluded)
+# and `uv pip install --system` it. This deterministically lands the packages in
+# /usr/local's site-packages, independent of any host `.venv` that may later be
+# bind-mounted over /app at runtime. Workspace packages (libs/*, apps/*) are made
+# importable at runtime via PYTHONPATH from the bind-mounted source, so no
+# `uv run`/`uv sync` is needed when the container starts.
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -75,5 +89,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=apps/ews_api/pyproject.toml,target=apps/ews_api/pyproject.toml \
     --mount=type=bind,source=apps/ews_api_litestar/pyproject.toml,target=apps/ews_api_litestar/pyproject.toml \
     --mount=type=bind,source=apps/ews_worker/pyproject.toml,target=apps/ews_worker/pyproject.toml \
-    uv sync --frozen --no-install-workspace
+    --mount=type=bind,source=apps/outbox_worker/pyproject.toml,target=apps/outbox_worker/pyproject.toml \
+    uv export --frozen --all-packages --no-dev --no-emit-workspace --format requirements-txt -o /tmp/requirements.txt \
+    && uv pip install --system --no-cache -r /tmp/requirements.txt \
+    && uv pip install --system --no-cache debugpy
 ############

@@ -114,6 +114,16 @@ async def define_maintenance_jobs() -> None:
         _logger.info('Resiliant maintenance disabled; skipping job definition')
         return
 
+    # The libs/db baseline ships the outbox as a plain table without the
+    # partition functions. Scheduling the job anyway would only produce a
+    # FAILED row on every start-up, so probe first and skip when absent.
+    if not await get_outbox_partition_maintainer().is_available():
+        _logger.warning(
+            'Outbox partition functions not present in the database; '
+            'skipping outbox_maintenance job definition'
+        )
+        return
+
     schedule: IScheduleService = ResiliantServiceFactory().get_schedule_service()
     db: AdvancedDBManager = MainDatabase.get_instance()
     cron = maintenance_cron()
