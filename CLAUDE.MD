@@ -32,6 +32,10 @@ The is the uv workspace which include the following libraries, applications and 
 | apps/ews_api_litestar | The ews api deployed using Litestar (adapter: libs/http_litestar) |
 | apps/ews_worker | Background worker for ews |
 
+## Rules
+
+
+
 ## Conventions
 
 - In each implementation, if there is factory.py then this file should be the entry point for building of the implemented services in this folder.
