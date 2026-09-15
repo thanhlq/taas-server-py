@@ -1,3 +1,12 @@
+from foundation.http import BaseController
+
+from .controllers import CrmAccountController
 from .repos import RepoFactory
 
-__all__ = ['RepoFactory']
+
+def get_crm_controllers() -> list[BaseController]:
+    """Get the list of CRM controllers."""
+    return [CrmAccountController()]
+
+
+__all__ = ['RepoFactory', 'get_crm_controllers', 'CrmAccountController']

@@ -3,6 +3,7 @@ Containing app configuration for FastAPI.
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from foundation.http import AppConfig
 
@@ -18,6 +19,21 @@ def configure_app(app: FastAPI, config: AppConfig, **kwargs) -> FastAPI:
     # Middlewares
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=7)
+
+    # CORS — the Litestar adapter consumes ``cors_config`` natively; FastAPI needs
+    # its own CORSMiddleware, else browser (cross-origin) clients are blocked.
+    cors = getattr(config, 'cors_config', None)
+    if cors is not None:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors.allow_origins,
+            allow_origin_regex=cors.allow_origin_regex,
+            allow_methods=cors.allow_methods,
+            allow_headers=cors.allow_headers,
+            allow_credentials=cors.allow_credentials,
+            expose_headers=cors.expose_headers,
+            max_age=cors.max_age,
+        )
 
     # 4. Add a simple root endpoint for testing
     app.add_api_route(
