@@ -46,3 +46,20 @@ There are two scripts to start the api service in fastapi and litestar framework
 
 - start_fastapi_ews_api.sh: start the api service under fastapi framework
 - start_litestar_ews_api.sh: start the api service under litestar framework
+
+### Local run gotchas (FastAPI EWS API — binds :8191)
+
+- **Rate limiter Redis**: `RateLimitConfig.redis_host` defaults to `redis` (a docker-network
+  name, unreachable from the host) and is wrapped as `redis://<host>:6379/0`, so it needs a
+  BARE host. Locally run with `TAAS_RATE_LIMIT_REDIS_HOST=localhost bash start_fastapi_ews_api.sh`,
+  otherwise every route returns `503 "Rate limit storage backend is unreachable"`.
+- **CORS**: the FastAPI adapter installs `CORSMiddleware` in
+  `libs/http_fastapi/.../configuration.py:configure_app` from `config.cors_config`. Allowed
+  origins come from `.env` `ALLOWED_CORS_ORIGINS` and MUST include the scheme
+  (`http://localhost:7101`). Browser SPA clients (web app-web-vite) need this; Next server-side
+  fetches do not.
+- **EWS controllers** are registered in `libs/ews/src/ews/__init__.py:get_ews_controllers`
+  (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `PlatformController`). CRM
+  accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
+  advanced_alchemy `SlugKey` → set a unique `slug` on create.
+
