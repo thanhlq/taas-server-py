@@ -95,7 +95,6 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         cache_config = settings.app.get_cache_config()
         if cache_config.enabled:
             RedisCacheServiceFactory.create(cache_config)
-            self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
         else:
             self.logger.info(
                 f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration'
@@ -145,7 +144,7 @@ def _setup_fastapi_app(logger: Logger, app_config: AppConfig, **kwargs) -> FastA
 
         setup_fastapi_rate_limiting(app, app_config.ratelimit_config)
     else:
-        logger.warning('Rate limiting is disabled.')
+        logger.warning('⚠️ The rate limiting is disabled.')
 
     return app
 

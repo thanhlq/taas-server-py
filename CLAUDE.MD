@@ -56,7 +56,7 @@ There are two scripts to start the api service in fastapi and litestar framework
 - **CORS**: the FastAPI adapter installs `CORSMiddleware` in
   `libs/http_fastapi/.../configuration.py:configure_app` from `config.cors_config`. Allowed
   origins come from `.env` `ALLOWED_CORS_ORIGINS` and MUST include the scheme
-  (`http://localhost:7101`). Browser SPA clients (web app-web-vite) need this; Next server-side
+  (`http://localhost:7101`). Browser SPA clients (web web-vite) need this; Next server-side
   fetches do not.
 - **EWS controllers** are registered in `libs/ews/src/ews/__init__.py:get_ews_controllers`
   (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `PlatformController`). CRM

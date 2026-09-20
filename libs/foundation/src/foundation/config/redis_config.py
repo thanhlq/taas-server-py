@@ -32,6 +32,16 @@ class RedisConfig:
     decode_responses: bool = True
 
     def __post_init__(self):
+        # Also detect if the host string contains multiple hosts, which implies sentinel mode.
+        # Examples:
+        #   "host1:26379,host2:26379" -> sentinel mode
+        #   "host:6379" -> single mode
+        self.host = self.host.strip() if self.host else ''
+        if ',' not in self.host and ':' in self.host:
+            # single host with port specified
+            self.mode = 'single'
+            self.host, port = self.host.split(':')
+            self.port = int(port)
 
         if ',' in self.host:
             # does not support cluster yet
@@ -45,6 +55,15 @@ class RedisConfig:
 
     def get_host(self) -> str:
         return self.host or REDIS_HOST_DEFAULT
+
+    # Return host for logging without exposing the password
+    # Also handle the case embedded password in the host string (e.g., redis://:password@host:port)
+    def get_host_info(self) -> str:
+        host_info = f'{self.get_host()}:{self.get_port()}'
+        if self.password:
+            host_info = f'{self.get_host()}:{self.get_port()} (password=***)'
+        return host_info
+
 
     def get_port(self) -> int:
         return self.port or REDIS_PORT_DEFAULT

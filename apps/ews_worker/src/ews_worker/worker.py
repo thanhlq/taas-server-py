@@ -51,7 +51,6 @@ class EwsWorker(BaseWorker):
         cache_config = settings.app.get_cache_config()
         if cache_config.enabled:
             RedisCacheServiceFactory.create(cache_config)
-            self.logger.info(f'{Icons.REDIS} Redis cache service initialised')
         else:
             self.logger.info(
                 f'{Icons.REDIS} {Icons.OFF} Cache disabled by configuration'

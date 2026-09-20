@@ -1,3 +1,5 @@
+from foundation.utils.icons import Icons
+from foundation.observability.log_factory import LogFactory
 from foundation.config.cache import CacheConfig
 from foundation.facade.cache import CacheServiceT
 from foundation.state import register_service
@@ -15,4 +17,5 @@ class RedisCacheServiceFactory:
         _redis_client = create_redis_client(_cache_config.get_redis_config())
         _redis_store = RedisStore(_redis_client)
         register_service(CacheServiceT, _redis_store)
+        LogFactory().get_logger().info(f'{Icons.REDIS} Redis cache service initialised with url {_cache_config.get_redis_config().get_host_info()}')
         return _redis_store
