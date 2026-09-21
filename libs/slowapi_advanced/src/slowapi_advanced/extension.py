@@ -82,6 +82,7 @@ def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Re
     Build a simple JSON response that includes the details of the rate limit
     that was hit. If no limit is hit, the countdown is added to headers.
     """
+    print(exc, type(exc))
 
     if type(exc).__name__ in ['ConnectionError']:
         # This means the storage backend is down. We return a 503 to indicate a server error, but we also include
