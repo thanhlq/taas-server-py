@@ -53,6 +53,9 @@ def _to_list_item(a: ews_models.CrmAccount) -> CrmAccountListItem:
         starred=a.starred,
         color=a.color,
         avatar_url=a.avatar_url,
+        user_id=a.user_id,
+        description=a.description,
+        notes=a.notes,
         created_at=getattr(a, 'created_at', None),
         updated_at=getattr(a, 'updated_at', None),
     )
@@ -73,11 +76,12 @@ def _to_response(a: ews_models.CrmAccount) -> CrmAccountResponse:
         starred=a.starred,
         color=a.color,
         avatar_url=a.avatar_url,
+        user_id=a.user_id,
+        description=a.description,
+        notes=a.notes,
         created_at=getattr(a, 'created_at', None),
         updated_at=getattr(a, 'updated_at', None),
         commercial_name=a.commercial_name,
-        description=a.description,
-        notes=a.notes,
         industry_id=a.industry_id,
         employees=a.employees,
         annual_revenue=a.annual_revenue,
@@ -142,6 +146,7 @@ class CrmAccountController(BaseController):
             color=data.color,
             avatar_url=data.avatar_url,
             org_id=data.org_id,
+            user_id=data.user_id,
         )
         created = await repo.add(account)
         return _to_response(created)

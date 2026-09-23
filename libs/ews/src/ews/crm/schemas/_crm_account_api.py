@@ -33,6 +33,8 @@ class CrmAccountCreateRequest(ApiRequest):
     color: Optional[str] = None
     avatar_url: Optional[str] = None
     org_id: Optional[str] = None
+    # Account owner: the user who manages this account (``CrmAccount.user_id``).
+    user_id: Optional[str] = None
 
 
 class CrmAccountUpdateRequest(ApiRequest):
@@ -56,6 +58,8 @@ class CrmAccountUpdateRequest(ApiRequest):
     starred: Optional[bool] = None
     color: Optional[str] = None
     avatar_url: Optional[str] = None
+    # Account owner: the user who manages this account (``CrmAccount.user_id``).
+    user_id: Optional[str] = None
 
 
 class CrmAccountListItem(ApiResponse):
@@ -74,6 +78,11 @@ class CrmAccountListItem(ApiResponse):
     starred: Optional[bool] = None
     color: Optional[str] = None
     avatar_url: Optional[str] = None
+    # Account owner (user id) — shown on cards/rows and used for permissions.
+    user_id: Optional[str] = None
+    # Key notes shown in the middle section of the account card.
+    description: Optional[str] = None
+    notes: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -82,8 +91,6 @@ class CrmAccountResponse(CrmAccountListItem):
     """Full account detail."""
 
     commercial_name: Optional[str] = None
-    description: Optional[str] = None
-    notes: Optional[str] = None
     industry_id: Optional[str] = None
     employees: Optional[int] = None
     annual_revenue: Optional[str] = None
