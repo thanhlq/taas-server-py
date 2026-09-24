@@ -9,7 +9,7 @@ lsof -i tcp:[8192]
 
 kill -9 $(sudo lsof -t -i:8191)
 kill -9 $(sudo lsof -t -i:9192)
-kill -9 $(sudo lsof -t -i:7002)
+kill -9 $(sudo lsof -t -i:7102)
 ```
 
 ## delete all .env files

@@ -27,6 +27,8 @@ class ProjectCreateRequest(ApiRequest):
     default_view: Optional[str] = None
     org_id: Optional[str] = None
     client_id: Optional[str] = None
+    # Main responsible user (id / email until IAM users exist).
+    user_id: Optional[str] = None
     # When set, the project's workflow is seeded from this template
     # (a ``WorkItemCategory``/methodology id, e.g. ``technology.scrum``).
     template_id: Optional[str] = None
@@ -46,6 +48,8 @@ class ProjectUpdateRequest(ApiRequest):
     default_view: Optional[str] = None
     starred: Optional[bool] = None
     pinned: Optional[bool] = None
+    user_id: Optional[str] = None
+    client_id: Optional[str] = None
 
 
 class ProjectListItem(ApiResponse):
@@ -64,14 +68,23 @@ class ProjectListItem(ApiResponse):
     due_date: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    description: Optional[str] = None
+    avatar_url: Optional[str] = None
+    # Main responsible user and client (CRM account id).
+    user_id: Optional[str] = None
+    client_id: Optional[str] = None
+    # Last change to the project or one of its tasks.
+    last_activity_at: Optional[datetime] = None
+    # Task progress: ``done_task_count`` / ``task_count`` as a 0-100 percentage.
+    task_count: Optional[int] = None
+    done_task_count: Optional[int] = None
+    progress: Optional[int] = None
 
 
 class ProjectResponse(ProjectListItem):
     """Full project detail."""
 
-    description: Optional[str] = None
     org_id: Optional[str] = None
-    client_id: Optional[str] = None
     workflow: Optional[dict[str, Any]] = None
     settings: Optional[dict[str, Any]] = None
     properties: Optional[dict[str, Any]] = None

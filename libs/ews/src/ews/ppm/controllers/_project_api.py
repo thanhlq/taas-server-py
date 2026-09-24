@@ -7,15 +7,17 @@ with or without a workflow template; tasks are placed on the board by
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any, Optional
 from uuid import UUID
 
 import db.models.ews as ews_models
-from advanced_alchemy.filters import LimitOffset, OrderBy
+from advanced_alchemy.filters import LimitOffset, OrderBy, SearchFilter, StatementFilter
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.http import BaseController, delete, get, patch, post, status
 from foundation.http.response import PaginatedResponse, create_paginated_response
+from sqlalchemy import func, or_, select, update
 
 from ..repos import ProjectRepository, RepoFactory, TaskRepository
 from ..schemas._project_api import (
@@ -51,45 +53,93 @@ def _seed_workflow(template_id: str, category: Optional[str]) -> dict[str, Any]:
     }
 
 
-def _project_to_response(p: ews_models.Project) -> ProjectResponse:
+def _project_fields(p: ews_models.Project) -> dict[str, Any]:
+    """Fields shared by the list item and the detail response."""
+    return {
+        'id': str(p.id),
+        'name': p.name,
+        'code': p.code,
+        'status': p.status,
+        'color': p.color,
+        'icon_name': p.icon_name,
+        'default_view': p.default_view,
+        'starred': p.starred,
+        'pinned': p.pinned,
+        'start_date': p.start_date,
+        'due_date': p.due_date,
+        'created_at': getattr(p, 'created_at', None),
+        'updated_at': getattr(p, 'updated_at', None),
+        'description': p.description,
+        'avatar_url': p.avatar_url,
+        'user_id': p.user_id,
+        'client_id': p.client_id,
+        'last_activity_at': p.last_activity_at,
+    }
+
+
+def _with_progress(
+    fields: dict[str, Any], stats: Optional[tuple[int, int]]
+) -> dict[str, Any]:
+    total, done = stats or (0, 0)
+    return {
+        **fields,
+        'task_count': total,
+        'done_task_count': done,
+        'progress': round(done * 100 / total) if total else 0,
+    }
+
+
+def _project_to_response(
+    p: ews_models.Project, stats: Optional[tuple[int, int]] = None
+) -> ProjectResponse:
     return ProjectResponse(
-        id=str(p.id),
-        name=p.name,
-        code=p.code,
-        status=p.status,
-        color=p.color,
-        icon_name=p.icon_name,
-        default_view=p.default_view,
-        starred=p.starred,
-        pinned=p.pinned,
-        start_date=p.start_date,
-        due_date=p.due_date,
-        created_at=getattr(p, 'created_at', None),
-        updated_at=getattr(p, 'updated_at', None),
-        description=p.description,
+        **_with_progress(_project_fields(p), stats),
         org_id=p.org_id,
-        client_id=p.client_id,
         workflow=p.workflow,
         settings=p.settings,
         properties=p.properties,
     )
 
 
-def _project_to_list_item(p: ews_models.Project) -> ProjectListItem:
-    return ProjectListItem(
-        id=str(p.id),
-        name=p.name,
-        code=p.code,
-        status=p.status,
-        color=p.color,
-        icon_name=p.icon_name,
-        default_view=p.default_view,
-        starred=p.starred,
-        pinned=p.pinned,
-        start_date=p.start_date,
-        due_date=p.due_date,
-        created_at=getattr(p, 'created_at', None),
-        updated_at=getattr(p, 'updated_at', None),
+def _project_to_list_item(
+    p: ews_models.Project, stats: Optional[tuple[int, int]] = None
+) -> ProjectListItem:
+    return ProjectListItem(**_with_progress(_project_fields(p), stats))
+
+
+def _now() -> datetime:
+    """Naive UTC timestamp (``last_activity_at`` is a plain TIMESTAMP column)."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _task_stats(
+    session: DBAsyncScopedSession, project_ids: list[UUID]
+) -> dict[UUID, tuple[int, int]]:
+    """``{project_id: (tasks, done tasks)}``; a task is done in the ``done`` stage or once completed."""
+    if not project_ids:
+        return {}
+    task = ews_models.Task
+    done = func.count(task.id).filter(
+        or_(task.stage_type == 'done', task.completed_at.is_not(None))
+    )
+    result = await session.execute(
+        select(task.project_id, func.count(task.id), done)
+        .where(task.project_id.in_(project_ids), task.deleted_at.is_(None))
+        .group_by(task.project_id)
+    )
+    return {row[0]: (int(row[1]), int(row[2])) for row in result.all()}
+
+
+async def _touch_project(
+    session: DBAsyncScopedSession, project_id: Optional[UUID]
+) -> None:
+    """Record activity on a project (a task in it changed)."""
+    if project_id is None:
+        return
+    await session.execute(
+        update(ews_models.Project)
+        .where(ews_models.Project.id == project_id)
+        .values(last_activity_at=_now())
     )
 
 
@@ -121,15 +171,30 @@ class ProjectController(BaseController):
     @get('/')
     @db_context_session
     async def list_projects(
-        self, session: DBAsyncScopedSession, limit: int = 50, offset: int = 0
+        self,
+        session: DBAsyncScopedSession,
+        limit: int = 50,
+        offset: int = 0,
+        q: Optional[str] = None,
     ) -> PaginatedResponse[ProjectListItem]:
+        """List projects; ``q`` searches name, code and description (case-insensitive)."""
         repo = RepoFactory.get_repo(ProjectRepository, session)
-        rows, total = await repo.list_and_count(
+        filters: list[StatementFilter] = [
             LimitOffset(limit=limit, offset=offset),
             OrderBy(field_name='id', sort_order='desc'),
-        )
+        ]
+        if q and q.strip():
+            filters.append(
+                SearchFilter(
+                    field_name={'name', 'code', 'description'},
+                    value=q.strip(),
+                    ignore_case=True,
+                )
+            )
+        rows, total = await repo.list_and_count(*filters)
+        stats = await _task_stats(session, [p.id for p in rows])
         return create_paginated_response(
-            [_project_to_list_item(p) for p in rows], total=total
+            [_project_to_list_item(p, stats.get(p.id)) for p in rows], total=total
         )
 
     @get('/{project_id}')
@@ -139,7 +204,8 @@ class ProjectController(BaseController):
     ) -> ProjectResponse:
         repo = RepoFactory.get_repo(ProjectRepository, session)
         p = await repo.get(_to_uuid(project_id))
-        return _project_to_response(p)
+        stats = await _task_stats(session, [p.id])
+        return _project_to_response(p, stats.get(p.id))
 
     @post('/', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
@@ -159,6 +225,8 @@ class ProjectController(BaseController):
             default_view=data.default_view,
             org_id=data.org_id,
             client_id=data.client_id,
+            user_id=data.user_id,
+            last_activity_at=_now(),
         )
         if data.template_id:
             project.workflow = _seed_workflow(data.template_id, data.category)
@@ -177,8 +245,10 @@ class ProjectController(BaseController):
         p = await repo.get(_to_uuid(project_id))
         for field, value in data.as_dict().items():
             setattr(p, field, value)
+        p.last_activity_at = _now()
         updated = await repo.update(p)
-        return _project_to_response(updated)
+        stats = await _task_stats(session, [updated.id])
+        return _project_to_response(updated, stats.get(updated.id))
 
     @delete('/{project_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session(auto_commit=True)
@@ -198,11 +268,24 @@ class TaskController(BaseController):
     @get('/')
     @db_context_session
     async def list_tasks(
-        self, session: DBAsyncScopedSession, project_id: str, limit: int = 200, offset: int = 0
+        self,
+        session: DBAsyncScopedSession,
+        project_id: str,
+        limit: int = 200,
+        offset: int = 0,
+        q: Optional[str] = None,
     ) -> PaginatedResponse[TaskResponse]:
+        """List a project's tasks; ``q`` searches name and description (case-insensitive)."""
         repo = RepoFactory.get_repo(TaskRepository, session)
+        filters: list[StatementFilter] = [LimitOffset(limit=limit, offset=offset)]
+        if q and q.strip():
+            filters.append(
+                SearchFilter(
+                    field_name={'name', 'description'}, value=q.strip(), ignore_case=True
+                )
+            )
         rows, total = await repo.list_and_count(
-            LimitOffset(limit=limit, offset=offset),
+            *filters,
             project_id=_to_uuid(project_id),
         )
         return create_paginated_response(
@@ -234,6 +317,7 @@ class TaskController(BaseController):
             progress=data.progress or 0,
         )
         created = await repo.add(task)
+        await _touch_project(session, created.project_id)
         return _task_to_response(created)
 
     @patch('/{task_id}')
@@ -246,10 +330,12 @@ class TaskController(BaseController):
         for field, value in data.as_dict().items():
             setattr(t, field, value)
         updated = await repo.update(t)
+        await _touch_project(session, updated.project_id)
         return _task_to_response(updated)
 
     @delete('/{task_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session(auto_commit=True)
     async def delete_task(self, task_id: str, session: DBAsyncScopedSession) -> None:
         repo = RepoFactory.get_repo(TaskRepository, session)
-        await repo.delete(_to_uuid(task_id))
+        deleted = await repo.delete(_to_uuid(task_id))
+        await _touch_project(session, deleted.project_id)

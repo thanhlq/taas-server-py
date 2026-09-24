@@ -11,7 +11,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 import db.models.ews as ews_models
-from advanced_alchemy.filters import LimitOffset, OrderBy
+from advanced_alchemy.filters import LimitOffset, OrderBy, SearchFilter, StatementFilter
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.http import BaseController, delete, get, patch, post, status
@@ -100,13 +100,27 @@ class CrmAccountController(BaseController):
     @get('/')
     @db_context_session
     async def list_accounts(
-        self, session: DBAsyncScopedSession, limit: int = 50, offset: int = 0
+        self,
+        session: DBAsyncScopedSession,
+        limit: int = 50,
+        offset: int = 0,
+        q: Optional[str] = None,
     ) -> PaginatedResponse[CrmAccountListItem]:
+        """List accounts; ``q`` searches name, display name, code and email (case-insensitive)."""
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        rows, total = await repo.list_and_count(
+        filters: list[StatementFilter] = [
             LimitOffset(limit=limit, offset=offset),
             OrderBy(field_name='id', sort_order='desc'),
-        )
+        ]
+        if q and q.strip():
+            filters.append(
+                SearchFilter(
+                    field_name={'name', 'display_name', 'code', 'email'},
+                    value=q.strip(),
+                    ignore_case=True,
+                )
+            )
+        rows, total = await repo.list_and_count(*filters)
         return create_paginated_response(
             [_to_list_item(a) for a in rows], total=total
         )
