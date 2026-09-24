@@ -22,6 +22,7 @@ from foundation.http.response import (
     create_success_response,
 )
 from foundation.observability.factory import instrument
+from db.models.ews.ews_enums import ProjectStatus
 from foundation.utils import now_in_utc
 from foundation.utils.validation import ValidationError
 
@@ -34,13 +35,13 @@ def _project_room(project_id: int) -> str:
 
 
 samples_project: list[Project] = [
-    Project(id=1, name='Sample Project', created_at=now_in_utc()),
-    Project(id=2, name='Another Project', created_at=now_in_utc()),
+    Project(id=1, name='Sample Project', status=ProjectStatus.NEW, created_at=now_in_utc()),
+    Project(id=2, name='Another Project', status=ProjectStatus.NEW, created_at=now_in_utc()),
 ]
 
 samples_project2: list[ProjectEntityPy] = [
-    ProjectEntityPy(id=1, name='Sample Project', created_at=now_in_utc()),
-    ProjectEntityPy(id=2, name='Another Project', created_at=now_in_utc()),
+    ProjectEntityPy(id=1, name='Sample Project', status=ProjectStatus.NEW, created_at=now_in_utc()),
+    ProjectEntityPy(id=2, name='Another Project', status=ProjectStatus.NEW, created_at=now_in_utc()),
 ]
 
 async def get_sample_projects() -> list[Project]:

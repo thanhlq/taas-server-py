@@ -12,6 +12,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 import db.models.ews as ews_models
+from db.models.ews.ews_enums import ProjectStatus
 from advanced_alchemy.filters import LimitOffset, OrderBy, SearchFilter, StatementFilter
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
@@ -19,11 +20,13 @@ from foundation.http import BaseController, delete, get, patch, post, status
 from foundation.http.response import PaginatedResponse, create_paginated_response
 from sqlalchemy import func, or_, select, update
 
+from .._project_status import PROJECT_STATUS_CATALOG, project_status_color
 from ..repos import ProjectRepository, RepoFactory, TaskRepository
 from ..schemas._project_api import (
     ProjectCreateRequest,
     ProjectListItem,
     ProjectResponse,
+    ProjectStatusOption,
     ProjectUpdateRequest,
 )
 from ..schemas._task_api import TaskCreateRequest, TaskResponse, TaskUpdateRequest
@@ -53,6 +56,21 @@ def _seed_workflow(template_id: str, category: Optional[str]) -> dict[str, Any]:
     }
 
 
+def _labels(p: ews_models.Project) -> list[str]:
+    """Project labels, stored as ``tags = {'labels': [...]}``."""
+    tags = p.tags if isinstance(p.tags, dict) else {}
+    labels = tags.get('labels')
+    return [str(label) for label in labels] if isinstance(labels, list) else []
+
+
+def _with_labels(p: ews_models.Project, labels: Optional[list[str]]) -> None:
+    """Store labels (trimmed, de-duplicated, order kept) in ``tags.labels``."""
+    if labels is None:
+        return
+    clean = list(dict.fromkeys(label.strip() for label in labels if label.strip()))
+    p.tags = {**(p.tags if isinstance(p.tags, dict) else {}), 'labels': clean}
+
+
 def _project_fields(p: ews_models.Project) -> dict[str, Any]:
     """Fields shared by the list item and the detail response."""
     return {
@@ -60,6 +78,8 @@ def _project_fields(p: ews_models.Project) -> dict[str, Any]:
         'name': p.name,
         'code': p.code,
         'status': p.status,
+        'status_color': project_status_color(p.status),
+        'labels': _labels(p),
         'color': p.color,
         'icon_name': p.icon_name,
         'default_view': p.default_view,
@@ -197,6 +217,14 @@ class ProjectController(BaseController):
             [_project_to_list_item(p, stats.get(p.id)) for p in rows], total=total
         )
 
+    @get('/statuses')
+    async def list_project_statuses(self) -> list[ProjectStatusOption]:
+        """The project status catalog: every status with its badge colour and group."""
+        return [
+            ProjectStatusOption(value=status.value, color=color.value, group=group.value)
+            for status, (color, group) in PROJECT_STATUS_CATALOG.items()
+        ]
+
     @get('/{project_id}')
     @db_context_session
     async def get_project(
@@ -217,7 +245,7 @@ class ProjectController(BaseController):
             name=data.name,
             description=data.description,
             code=data.code,
-            status=data.status or 'New',
+            status=data.status or ProjectStatus.NEW,
             start_date=data.start_date,
             due_date=data.due_date,
             color=data.color,
@@ -228,6 +256,7 @@ class ProjectController(BaseController):
             user_id=data.user_id,
             last_activity_at=_now(),
         )
+        _with_labels(project, data.labels)
         if data.template_id:
             project.workflow = _seed_workflow(data.template_id, data.category)
             project.default_view = data.default_view or 'kanban'
@@ -243,7 +272,9 @@ class ProjectController(BaseController):
     ) -> ProjectResponse:
         repo = RepoFactory.get_repo(ProjectRepository, session)
         p = await repo.get(_to_uuid(project_id))
-        for field, value in data.as_dict().items():
+        fields = data.as_dict()
+        _with_labels(p, fields.pop('labels', None))
+        for field, value in fields.items():
             setattr(p, field, value)
         p.last_activity_at = _now()
         updated = await repo.update(p)

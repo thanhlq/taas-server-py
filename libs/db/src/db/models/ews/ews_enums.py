@@ -25,6 +25,7 @@ class ProjectStatus(StrEnum):
 
     Lifecycle Statuses:
     - NEW: Initial state when project is created
+    - ACTIVE: Project is running (default working state)
     - PLANNED: Project is planned but not yet started
     - IN_PROGRESS: Project is actively being worked on
     - ON_HOLD: Project is temporarily paused
@@ -58,6 +59,7 @@ class ProjectStatus(StrEnum):
 
     # Lifecycle statuses, which represent the overall stage of the project in its lifecycle
     NEW = 'New'
+    ACTIVE = 'Active'
     DRAFT = 'Draft'
     PLANNED = 'Planned'
     IN_PROGRESS = 'In Progress'
