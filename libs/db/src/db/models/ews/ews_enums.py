@@ -89,3 +89,21 @@ class ProjectStatus(StrEnum):
     # Special statuses, which represent specific conditions or types of projects
     TEMPLATE = 'Template'
     INACTIVE = 'Inactive'
+
+
+class CrmAccountStatus(StrEnum):
+    """
+    Account phase in the customer lifecycle.
+
+    - TARGET: Account we want to win (not contacted yet)
+    - PROSPECT: In conversation / evaluation
+    - ACTIVE_CUSTOMER: Paying customer
+    - CHURNED: Former customer
+    - INACTIVE: Kept for history, not worked on
+    """
+
+    TARGET = 'Target'
+    PROSPECT = 'Prospect'
+    ACTIVE_CUSTOMER = 'Active Customer'
+    CHURNED = 'Churned'
+    INACTIVE = 'Inactive'

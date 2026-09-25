@@ -1,7 +1,7 @@
 """Project status catalog: the colour and group of every ``ProjectStatus``.
 
-The colour is a semantic tone (not a CSS value) so each client maps it to its own
-palette — the web renders the status as a badge tinted with this tone.
+The colour is a semantic tone (``StatusColor``) — the web renders the status as a
+badge tinted with it.
 """
 
 from __future__ import annotations
@@ -11,18 +11,7 @@ from typing import Optional
 
 from db.models.ews.ews_enums import ProjectStatus
 
-
-class StatusColor(StrEnum):
-    """Semantic badge tones shared by all status catalogs."""
-
-    GRAY = 'gray'
-    BLUE = 'blue'
-    GREEN = 'green'
-    YELLOW = 'yellow'
-    ORANGE = 'orange'
-    RED = 'red'
-    PURPLE = 'purple'
-    TEAL = 'teal'
+from .._status_color import StatusColor
 
 
 class StatusGroup(StrEnum):
