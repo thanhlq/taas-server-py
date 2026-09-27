@@ -18,6 +18,7 @@ from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.http import BaseController, delete, get, patch, post, status
 from foundation.http.response import PaginatedResponse, create_paginated_response
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, or_, select, update
 
 from .._project_status import PROJECT_STATUS_CATALOG, project_status_color
@@ -30,6 +31,14 @@ from ..schemas._project_api import (
     ProjectUpdateRequest,
 )
 from ..schemas._task_api import TaskCreateRequest, TaskResponse, TaskUpdateRequest
+from ._task_support import (
+    TASK_COMMENT_OBJECT_TYPE,
+    apply_task_update,
+    clamp_priority,
+    clean_list,
+    next_task_code,
+    task_to_response,
+)
 
 # Default board seeded when a project is created from a template but the template
 # does not specify its own stages. Grouping on the board is by ``stage_type``.
@@ -163,25 +172,6 @@ async def _touch_project(
     )
 
 
-def _task_to_response(t: ews_models.Task) -> TaskResponse:
-    return TaskResponse(
-        id=str(t.id),
-        project_id=str(t.project_id) if t.project_id else None,
-        name=t.name,
-        description=t.description,
-        code=t.code,
-        stage_id=str(t.stage_id) if t.stage_id else None,
-        stage_type=t.stage_type,
-        work_item_type=t.work_item_type,
-        parent_id=str(t.parent_id) if t.parent_id else None,
-        requested_user_id=t.requested_user_id,
-        progress=t.progress,
-        completed_at=t.completed_at,
-        created_at=getattr(t, 'created_at', None),
-        updated_at=getattr(t, 'updated_at', None),
-    )
-
-
 class ProjectController(BaseController):
     """Projects: create (with/without template), list, detail, update, delete."""
 
@@ -287,7 +277,22 @@ class ProjectController(BaseController):
         self, project_id: str, session: DBAsyncScopedSession
     ) -> None:
         repo = RepoFactory.get_repo(ProjectRepository, session)
-        await repo.delete(_to_uuid(project_id))
+        pid = _to_uuid(project_id)
+        # Detach tasks from the project's task lists / iterations, then drop those.
+        await session.execute(
+            update(ews_models.Task)
+            .where(ews_models.Task.project_id == pid)
+            .values(task_list_id=None, iteration_id=None)
+        )
+        await session.execute(
+            sql_delete(ews_models.TaskList).where(ews_models.TaskList.project_id == pid)
+        )
+        await session.execute(
+            sql_delete(ews_models.ProjectIteration).where(
+                ews_models.ProjectIteration.project_id == pid
+            )
+        )
+        await repo.delete(pid)
 
 
 class TaskController(BaseController):
@@ -306,13 +311,18 @@ class TaskController(BaseController):
         offset: int = 0,
         q: Optional[str] = None,
     ) -> PaginatedResponse[TaskResponse]:
-        """List a project's tasks; ``q`` searches name and description (case-insensitive)."""
+        """List a project's tasks (oldest first); ``q`` searches name, code and description (case-insensitive)."""
         repo = RepoFactory.get_repo(TaskRepository, session)
-        filters: list[StatementFilter] = [LimitOffset(limit=limit, offset=offset)]
+        filters: list[StatementFilter] = [
+            LimitOffset(limit=limit, offset=offset),
+            OrderBy(field_name='id', sort_order='asc'),
+        ]
         if q and q.strip():
             filters.append(
                 SearchFilter(
-                    field_name={'name', 'description'}, value=q.strip(), ignore_case=True
+                    field_name={'name', 'code', 'description'},
+                    value=q.strip(),
+                    ignore_case=True,
                 )
             )
         rows, total = await repo.list_and_count(
@@ -320,7 +330,7 @@ class TaskController(BaseController):
             project_id=_to_uuid(project_id),
         )
         return create_paginated_response(
-            [_task_to_response(t) for t in rows], total=total
+            [task_to_response(t) for t in rows], total=total
         )
 
     @get('/{task_id}')
@@ -328,7 +338,7 @@ class TaskController(BaseController):
     async def get_task(self, task_id: str, session: DBAsyncScopedSession) -> TaskResponse:
         repo = RepoFactory.get_repo(TaskRepository, session)
         t = await repo.get(_to_uuid(task_id))
-        return _task_to_response(t)
+        return task_to_response(t)
 
     @post('/', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
@@ -336,20 +346,34 @@ class TaskController(BaseController):
         self, data: TaskCreateRequest, session: DBAsyncScopedSession
     ) -> TaskResponse:
         repo = RepoFactory.get_repo(TaskRepository, session)
+        project_id = _to_uuid(data.project_id)
+        sequence_id, code = await next_task_code(session, project_id)
         task = ews_models.Task(
-            project_id=_to_uuid(data.project_id),
+            project_id=project_id,
             name=data.name,
             description=data.description,
+            html_text=data.description_html,
+            content_type='html' if data.description_html else None,
+            code=code,
+            sequence_id=sequence_id,
             stage_id=_to_uuid(data.stage_id),
             stage_type=data.stage_type,
             work_item_type=data.work_item_type,
             parent_id=_to_uuid(data.parent_id),
             requested_user_id=data.requested_user_id,
+            user_id=data.user_id or None,
+            task_list_id=_to_uuid(data.task_list_id),
+            iteration_id=_to_uuid(data.iteration_id),
+            tags={'labels': clean_list(data.labels)} if data.labels else None,
+            priority=clamp_priority(data.priority),
+            start_date=data.start_date,
+            due_date=data.due_date,
+            estimated_minutes=data.estimated_minutes,
             progress=data.progress or 0,
         )
         created = await repo.add(task)
         await _touch_project(session, created.project_id)
-        return _task_to_response(created)
+        return task_to_response(created)
 
     @patch('/{task_id}')
     @db_context_session(auto_commit=True)
@@ -358,15 +382,25 @@ class TaskController(BaseController):
     ) -> TaskResponse:
         repo = RepoFactory.get_repo(TaskRepository, session)
         t = await repo.get(_to_uuid(task_id))
-        for field, value in data.as_dict().items():
-            setattr(t, field, value)
+        apply_task_update(t, data.as_dict())
         updated = await repo.update(t)
         await _touch_project(session, updated.project_id)
-        return _task_to_response(updated)
+        return task_to_response(updated)
 
     @delete('/{task_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session(auto_commit=True)
     async def delete_task(self, task_id: str, session: DBAsyncScopedSession) -> None:
         repo = RepoFactory.get_repo(TaskRepository, session)
-        deleted = await repo.delete(_to_uuid(task_id))
+        tid = _to_uuid(task_id)
+        # Time logs reference the task; comments are linked by id.
+        await session.execute(
+            sql_delete(ews_models.Timelog).where(ews_models.Timelog.task_id == tid)
+        )
+        await session.execute(
+            sql_delete(ews_models.ProjectComment).where(
+                ews_models.ProjectComment.object_type == TASK_COMMENT_OBJECT_TYPE,
+                ews_models.ProjectComment.object_id == str(tid),
+            )
+        )
+        deleted = await repo.delete(tid)
         await _touch_project(session, deleted.project_id)

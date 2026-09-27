@@ -19,7 +19,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
 from .constants import (
+    PROJECTS_ITERATIONS_TABLE,
     PROJECTS_TABLE,
+    TASKS_LISTS_TABLE,
     TASKS_TABLE,
     WORKFLOWS_STAGES_TABLE,
     WORKFLOWS_TABLE,
@@ -27,6 +29,8 @@ from .constants import (
 
 if TYPE_CHECKING:
     from ._project import Project
+    from ._project_iteration import ProjectIteration
+    from ._task_list import TaskList
     from ._timelog import Timelog
     from ._workflow import Workflow
     from ._workflow_stage import WorkflowStage
@@ -53,6 +57,14 @@ class Task(UUIDv7Base, SoftDeleteColumns):
 
     requested_user_id: Mapped[Optional[str]] = mapped_column(
         TEXT, nullable=True, index=True
+    )
+    # The single assignee (id / email until IAM users exist).
+    user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
+    task_list_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        ForeignKey(f'{TASKS_LISTS_TABLE}.id'), nullable=True, index=True
+    )
+    iteration_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        ForeignKey(f'{PROJECTS_ITERATIONS_TABLE}.id'), nullable=True, index=True
     )
 
     workflow_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
@@ -148,6 +160,10 @@ class Task(UUIDv7Base, SoftDeleteColumns):
     )
     workflow: Mapped[Optional['Workflow']] = relationship(foreign_keys=[workflow_id])
     stage: Mapped[Optional['WorkflowStage']] = relationship(foreign_keys=[stage_id])
+    task_list: Mapped[Optional['TaskList']] = relationship(foreign_keys=[task_list_id])
+    iteration: Mapped[Optional['ProjectIteration']] = relationship(
+        foreign_keys=[iteration_id]
+    )
     timelogs: Mapped[list['Timelog']] = relationship(
         back_populates='task', foreign_keys='Timelog.task_id'
     )

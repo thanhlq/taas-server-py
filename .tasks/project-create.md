@@ -11,6 +11,5 @@
 
 ## Tasks
 
-- help me to improve idempotency in taas-server-py/libs/resiliant by support both storages in redis or postgresql and configuratable
-- also make sure taas-server-py/libs/foundation/src/foundation/resiliant contain only types, definitions,.. all implementation - including settings should stay in this packages
-- finally a developer guide document in taas-server-py/libs/resiliant/docs/developer-guide.md with guiding steps for integration & usage - real world exampes
+This is to completely improve project create:
+- 

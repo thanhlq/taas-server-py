@@ -16,6 +16,7 @@ from ._payrun_repo import PayrunRepository
 from ._project_action_repo import ProjectActionRepository
 from ._project_audit_log_repo import ProjectAuditLogRepository
 from ._project_comment_repo import ProjectCommentRepository
+from ._project_iteration_repo import ProjectIterationRepository
 from ._project_repo import ProjectRepository
 from ._project_risk_repo import ProjectRiskRepository
 from ._project_team_repo import ProjectTeamRepository
@@ -24,6 +25,7 @@ from ._project_user_repo import ProjectUserRepository
 from ._project_workflow_assignment_repo import ProjectWorkflowAssignmentRepository
 from ._project_workflow_stage_item_repo import ProjectWorkflowStageItemRepository
 from ._task_checklist_item_repo import TaskChecklistItemRepository
+from ._task_list_repo import TaskListRepository
 from ._task_repo import TaskRepository
 from ._task_user_repo import TaskUserRepository
 from ._timelog_repo import TimelogRepository
@@ -51,6 +53,7 @@ ALL_REPOSITORIES = {
     'project_action': ProjectActionRepository,
     'project_audit_log': ProjectAuditLogRepository,
     'project_comment': ProjectCommentRepository,
+    'project_iteration': ProjectIterationRepository,
     'project_risk': ProjectRiskRepository,
     'project_team': ProjectTeamRepository,
     'project_update': ProjectUpdateRepository,
@@ -59,6 +62,7 @@ ALL_REPOSITORIES = {
     'project_workflow_stage_item': ProjectWorkflowStageItemRepository,
     'task': TaskRepository,
     'task_checklist_item': TaskChecklistItemRepository,
+    'task_list': TaskListRepository,
     'task_user': TaskUserRepository,
     'timelog': TimelogRepository,
     'workflow': WorkflowRepository,
@@ -81,6 +85,7 @@ MODEL_TO_REPOSITORY = {
     ews_models.ProjectAction: ProjectActionRepository,
     ews_models.ProjectAuditLog: ProjectAuditLogRepository,
     ews_models.ProjectComment: ProjectCommentRepository,
+    ews_models.ProjectIteration: ProjectIterationRepository,
     ews_models.ProjectRisk: ProjectRiskRepository,
     ews_models.ProjectTeam: ProjectTeamRepository,
     ews_models.ProjectUpdate: ProjectUpdateRepository,
@@ -89,6 +94,7 @@ MODEL_TO_REPOSITORY = {
     ews_models.ProjectWorkflowStageItem: ProjectWorkflowStageItemRepository,
     ews_models.Task: TaskRepository,
     ews_models.TaskChecklistItem: TaskChecklistItemRepository,
+    ews_models.TaskList: TaskListRepository,
     ews_models.TaskUser: TaskUserRepository,
     ews_models.Timelog: TimelogRepository,
     ews_models.Workflow: WorkflowRepository,
@@ -137,6 +143,7 @@ __all__ = [
     'ProjectActionRepository',
     'ProjectAuditLogRepository',
     'ProjectCommentRepository',
+    'ProjectIterationRepository',
     'ProjectRiskRepository',
     'ProjectTeamRepository',
     'ProjectUpdateRepository',
@@ -145,6 +152,7 @@ __all__ = [
     'ProjectWorkflowStageItemRepository',
     'TaskRepository',
     'TaskChecklistItemRepository',
+    'TaskListRepository',
     'TaskUserRepository',
     'TimelogRepository',
     'WorkflowRepository',

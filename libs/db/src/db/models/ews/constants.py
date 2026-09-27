@@ -26,6 +26,8 @@ PROJECTS_TEAMS_TABLE = f'{TABLE_PREFIX}projects_teams'
 # Task tables
 TASKS_TABLE = f'{TABLE_PREFIX}tasks'
 TASKS_USERS_TABLE = f'{TABLE_PREFIX}tasks_users'
+TASKS_LISTS_TABLE = f'{TABLE_PREFIX}tasks_lists'
+PROJECTS_ITERATIONS_TABLE = f'{TABLE_PREFIX}projects_iterations'
 
 # Checklist
 CHECKLIST_TEMPLATES_TABLE = f'{TABLE_PREFIX}checklist_templates'

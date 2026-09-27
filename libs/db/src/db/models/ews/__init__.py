@@ -13,6 +13,7 @@ from ._project import Project
 from ._project_action import ProjectAction
 from ._project_audit_log import ProjectAuditLog
 from ._project_comment import ProjectComment
+from ._project_iteration import ProjectIteration
 from ._project_risk import ProjectRisk
 from ._project_team import ProjectTeam
 from ._project_update import ProjectUpdate
@@ -21,6 +22,7 @@ from ._project_workflow_assignment import ProjectWorkflowAssignment
 from ._project_workflow_stage_item import ProjectWorkflowStageItem
 from ._task import Task
 from ._task_checklist_item import TaskChecklistItem
+from ._task_list import TaskList
 from ._task_user import TaskUser
 from ._timelog import Timelog
 from ._workflow import Workflow
@@ -41,6 +43,7 @@ __all__ = [
     'Project',
     'ProjectAction',
     'ProjectComment',
+    'ProjectIteration',
     'ProjectRisk',
     'ProjectTeam',
     'ProjectUpdate',
@@ -49,6 +52,7 @@ __all__ = [
     'ProjectWorkflowStageItem',
     'Task',
     'TaskChecklistItem',
+    'TaskList',
     'TaskUser',
     'Timelog',
     'Workflow',

@@ -1207,6 +1207,38 @@ def schema_upgrades() -> None:
     sa.ForeignKeyConstraint(['workflow_id'], ['taas_projects_workflows.id'], name=op.f('fk_taas_projects_workflows_stages_workflow_id_taas_projects_workflows')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_workflows_stages'))
     )
+    op.create_table('taas_tasks_lists',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('project_id', sa.GUID(length=16), nullable=True),
+    sa.Column('name', sa.TEXT(), nullable=True),
+    sa.Column('description', sa.TEXT(), nullable=True),
+    sa.Column('color', sa.TEXT(), nullable=True),
+    sa.Column('display_order', sa.Float(precision=6), server_default=sa.text('-1'), nullable=True),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_tasks_lists_project_id_taas_projects')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_tasks_lists'))
+    )
+    with op.batch_alter_table('taas_tasks_lists', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_tasks_lists_project_id'), ['project_id'], unique=False)
+
+    op.create_table('taas_projects_iterations',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('project_id', sa.GUID(length=16), nullable=True),
+    sa.Column('name', sa.TEXT(), nullable=True),
+    sa.Column('goal', sa.TEXT(), nullable=True),
+    sa.Column('status', sa.TEXT(), server_default=sa.text("'planned'"), nullable=True),
+    sa.Column('start_date', sa.TIMESTAMP(), nullable=True),
+    sa.Column('due_date', sa.TIMESTAMP(), nullable=True),
+    sa.Column('display_order', sa.Float(precision=6), server_default=sa.text('-1'), nullable=True),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_projects_iterations_project_id_taas_projects')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_iterations'))
+    )
+    with op.batch_alter_table('taas_projects_iterations', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_projects_iterations_project_id'), ['project_id'], unique=False)
+
     op.create_table('taas_tasks',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('name', sa.TEXT(), nullable=True),
@@ -1217,6 +1249,9 @@ def schema_upgrades() -> None:
     sa.Column('sequence_id', sa.Integer(), nullable=True),
     sa.Column('progress', sa.Integer(), server_default=sa.text('0'), nullable=True),
     sa.Column('requested_user_id', sa.TEXT(), nullable=True),
+    sa.Column('user_id', sa.TEXT(), nullable=True),
+    sa.Column('task_list_id', sa.GUID(length=16), nullable=True),
+    sa.Column('iteration_id', sa.GUID(length=16), nullable=True),
     sa.Column('workflow_id', sa.GUID(length=16), nullable=True),
     sa.Column('stage_id', sa.GUID(length=16), nullable=True),
     sa.Column('stage_type', sa.TEXT(), nullable=True),
@@ -1264,6 +1299,8 @@ def schema_upgrades() -> None:
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('deleted_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['taas_tasks.id'], name=op.f('fk_taas_tasks_parent_id_taas_tasks')),
+    sa.ForeignKeyConstraint(['iteration_id'], ['taas_projects_iterations.id'], name=op.f('fk_taas_tasks_iteration_id_taas_projects_iterations')),
+    sa.ForeignKeyConstraint(['task_list_id'], ['taas_tasks_lists.id'], name=op.f('fk_taas_tasks_task_list_id_taas_tasks_lists')),
     sa.ForeignKeyConstraint(['project_id'], ['taas_projects.id'], name=op.f('fk_taas_tasks_project_id_taas_projects')),
     sa.ForeignKeyConstraint(['stage_id'], ['taas_projects_workflows_stages.id'], name=op.f('fk_taas_tasks_stage_id_taas_projects_workflows_stages')),
     sa.ForeignKeyConstraint(['workflow_id'], ['taas_projects_workflows.id'], name=op.f('fk_taas_tasks_workflow_id_taas_projects_workflows')),
@@ -1274,6 +1311,7 @@ def schema_upgrades() -> None:
         batch_op.create_index(batch_op.f('ix_taas_tasks_completed_at'), ['completed_at'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_due_date'), ['due_date'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_is_recurrence'), ['is_recurrence'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_tasks_iteration_id'), ['iteration_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_milestone_id'), ['milestone_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_name'), ['name'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_parent_id'), ['parent_id'], unique=False)
@@ -1284,6 +1322,8 @@ def schema_upgrades() -> None:
         batch_op.create_index(batch_op.f('ix_taas_tasks_stage_id'), ['stage_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_stage_type'), ['stage_type'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_start_date'), ['start_date'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_tasks_task_list_id'), ['task_list_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_taas_tasks_user_id'), ['user_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_tasks_workflow_id'), ['workflow_id'], unique=False)
 
     op.create_table('taas_projects_workflows_stages_items',
@@ -1421,6 +1461,8 @@ def schema_downgrades() -> None:
     op.drop_table('taas_projects_workflows_stages_items')
     with op.batch_alter_table('taas_tasks', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_taas_tasks_workflow_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_tasks_user_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_tasks_task_list_id'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_start_date'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_stage_type'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_stage_id'))
@@ -1431,12 +1473,21 @@ def schema_downgrades() -> None:
         batch_op.drop_index(batch_op.f('ix_taas_tasks_parent_id'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_name'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_milestone_id'))
+        batch_op.drop_index(batch_op.f('ix_taas_tasks_iteration_id'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_is_recurrence'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_due_date'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_completed_at'))
         batch_op.drop_index(batch_op.f('ix_taas_tasks_code'))
 
     op.drop_table('taas_tasks')
+    with op.batch_alter_table('taas_projects_iterations', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_taas_projects_iterations_project_id'))
+
+    op.drop_table('taas_projects_iterations')
+    with op.batch_alter_table('taas_tasks_lists', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_taas_tasks_lists_project_id'))
+
+    op.drop_table('taas_tasks_lists')
     op.drop_table('taas_projects_workflows_stages')
     op.drop_table('taas_projects_workflows_assignments')
     op.drop_table('taas_checklist_items')
