@@ -33,9 +33,10 @@ uv run python -m db.migrations stamp head
 - **Config source**: `Settings.db.URL` (from `foundation.config.get_settings`),
   read from `taas-server-py/.env` via `DATABASE_URL`.
 - **Version table**: `Settings.db.MIGRATION_DDL_VERSION_TABLE` (default `ddl_version`).
-- **Models**: `db.models.__init__` is imported in `env.py`, so any class
-  registered with `advanced_alchemy.base.UUIDv7AuditBase` (or other AA bases) is
-  picked up by `--autogenerate` automatically. Add new models there.
+- **Models**: `db.models.__init__` and `resiliant.models` are imported in `env.py`,
+  so any class registered with `advanced_alchemy.base.UUIDv7AuditBase` (or other AA
+  bases) is picked up by `--autogenerate` automatically. Add platform models to
+  `db.models`; resiliant tables live in `libs/resiliant`.
 - **Driver**: URLs with bare `postgresql://` are normalised to
   `postgresql+psycopg://` (psycopg3 supports both sync and async with the same
   dialect name).

@@ -7,7 +7,7 @@ from foundation.messaging.config.messaging_settings import (
 from foundation.messaging.types import (
     MessagingServiceT,
 )
-from foundation.resiliant.retry import retry
+from resiliant.retry import retry
 
 from .aiokafka_messaging import AiokafkaMessagingService as KafkaMessagingService
 from .decorator import messaging

@@ -612,6 +612,7 @@ dependencies = [
     { name = "alembic" },
     { name = "foundation" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "resiliant" },
     { name = "sqlalchemy" },
 ]
 
@@ -628,6 +629,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.5" },
     { name = "foundation", editable = "libs/foundation" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "resiliant", editable = "libs/resiliant" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
 ]
 
@@ -1023,7 +1025,6 @@ dependencies = [
     { name = "rich" },
     { name = "sniffio" },
     { name = "sqlalchemy" },
-    { name = "tenacity" },
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
@@ -1071,7 +1072,6 @@ requires-dist = [
     { name = "rich", specifier = "==15.0.0" },
     { name = "sniffio", specifier = "==1.3.1" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
-    { name = "tenacity", specifier = ">=9.0.0" },
     { name = "typing-extensions", specifier = "==4.15.0" },
     { name = "uuid-utils", specifier = "==0.16.2" },
 ]
@@ -1635,6 +1635,7 @@ dependencies = [
     { name = "foundation" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "resiliant" },
 ]
 
 [package.dev-dependencies]
@@ -1651,6 +1652,7 @@ requires-dist = [
     { name = "foundation", editable = "libs/foundation" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "pydantic-settings", specifier = "==2.14.1" },
+    { name = "resiliant", editable = "libs/resiliant" },
 ]
 
 [package.metadata.requires-dev]
@@ -2712,8 +2714,9 @@ source = { editable = "libs/resiliant" }
 dependencies = [
     { name = "advanced-alchemy" },
     { name = "croniter" },
-    { name = "db" },
     { name = "foundation" },
+    { name = "store-redis" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -2727,8 +2730,9 @@ dev = [
 requires-dist = [
     { name = "advanced-alchemy" },
     { name = "croniter", specifier = ">=3.0.0" },
-    { name = "db", editable = "libs/db" },
     { name = "foundation", editable = "libs/foundation" },
+    { name = "store-redis", editable = "libs/store_redis" },
+    { name = "tenacity", specifier = ">=9.0.0" },
 ]
 
 [package.metadata.requires-dev]

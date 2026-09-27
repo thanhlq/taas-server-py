@@ -1,21 +1,21 @@
 # resiliant
 
-Database-backed resilience patterns — the pattern-stack equivalent of the
-Temporal.io feature set, built on Postgres + Kafka + the services this platform
-already runs. Definitions (configs, enums, protocols, executors) live in
-`foundation.resiliant`; the durable, Postgres-backed implementations live here;
-the SQLAlchemy models live in `db.models.resiliant`.
+Resilience patterns — the pattern-stack equivalent of the Temporal.io feature set,
+built on Postgres + Redis + Kafka. Definitions (configs, enums, errors, protocols) live
+in `foundation.resiliant`; **every implementation, settings loader and SQLAlchemy model**
+(`resiliant.models`) lives here.
 
 ## Capabilities
 
 | Capability | Temporal equivalent | Entry point |
 |---|---|---|
-| Transactional outbox + relay | reliable event emit | `OutboxService`, `OutboxPoller` |
-| Idempotency (`ON CONFLICT`) | exactly-once activity | `IdempotencyService.guard` |
+| Transactional outboxes + relay (one table per use case) | reliable event emit | `MessagingOutboxService`, `TransactionOutboxService`, `OutboxPoller` |
+| Idempotency — Postgres (`ON CONFLICT`) or Redis (`SET NX EX`), `IDEMPOTENCY_BACKEND` | exactly-once activity | `IdempotencyService.guard` |
 | Dead-letter queue | poison-message handling | `DLQService` |
-| Durable saga state | durable workflow, signals, queries, compensation | `SagaRepository` + `foundation…SagaService` |
+| Durable saga state | durable workflow, signals, queries, compensation | `SagaService` + `SagaRepository` |
 | Durable timers / schedules / cron | `workflow.sleep`, Schedules | `ScheduleService`, `SchedulerPoller` |
-| Composed guards | activity timeout / retry | `foundation…ResilientExecutor` |
+| Composed guards | activity timeout / retry | `ResilientExecutor` (bulkhead, circuit breaker, timeout, fallback) |
+| Retry policies | activity retry policy | `resiliant.retry` (`TenacityRetry`, `retry`) |
 | Visibility | Temporal Web UI | `ResilienceVisibilityService.snapshot` |
 
 Everything is obtained through `ResiliantServiceFactory` (registered via
@@ -23,13 +23,23 @@ Everything is obtained through `ResiliantServiceFactory` (registered via
 
 ```python
 factory = ResiliantServiceFactory()
-outbox   = factory.get_outbox_service()
-saga     = factory.get_saga_service()
-schedule = factory.get_schedule_service()
+events       = factory.get_messaging_outbox_service()        # domain events → broker
+transactions = factory.get_transaction_outbox_service(target=OutboxTarget.MESSAGING)
+idempotency  = factory.get_idempotency_service()               # IDEMPOTENCY_BACKEND=postgres|redis
+saga         = factory.get_saga_service()
+schedule     = factory.get_schedule_service()
+
+async with session.begin():  # outbox records commit with the business rows
+    await transactions.save_transaction(
+        session, request_id='req-1', transaction_type='deposit',
+        payload={...}, channel='transactions.inbound', account_ref='acc-42',
+    )
 ```
 
-The `outbox_worker` app hosts both the `OutboxPoller` and the `SchedulerPoller`
-as co-located pure pollers (no extra deployable).
+The `outbox_worker` app runs one `OutboxPoller` per outbox table (narrow with
+`OUTBOX_POLL_OUTBOXES=messaging,transaction`) plus the `SchedulerPoller`, as
+co-located pure pollers (no extra deployable). Components and message flow:
+`docs/developers/resiliant-outbox.md`, `docs/developers/resiliant-idempotency.md`.
 
 ## Versioning policy (safe in-flight deploys)
 

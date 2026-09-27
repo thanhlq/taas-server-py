@@ -1,15 +1,8 @@
 """
-Definition of common patterns for resilience services, such as:
-  - Circuit breakers
-  - Outbox
-  - Saga
-  - Idempotency
-  - Retry policies
-  - Bulkheads
-  - Timeouts
-  - Fallbacks
+Definitions (types, configs, enums, errors, protocols) of the resilience patterns:
+circuit breaker, bulkhead, timeout, fallback, retry, outbox, saga, idempotency,
+dead-letter queue and schedules.
+
+Only definitions live here; every implementation (services, repositories, settings
+loaders) is in the ``resiliant`` library, wired via ``FoundationFactory.use_resiliant``.
 """
-
-from .register_services import register_resiliant_factory
-
-__all__ = ["register_resiliant_factory"]

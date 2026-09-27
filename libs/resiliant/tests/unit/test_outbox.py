@@ -1,15 +1,19 @@
-"""Unit tests for the outbox repository and service (via ``ResiliantFactory``).
+"""Unit tests for the messaging outbox repository and service.
 
 These exercise the real database (see ``conftest.py``): save → fetch → mark
-published / failed, and the stats projection.
+published / failed (with backoff), and the stats projection.
 """
 
 from __future__ import annotations
 
 import pytest
-from db.models import OutboxEventTable
-from foundation.resiliant.outbox import OutboxConfig, OutboxStatus
+from resiliant.models import MessagingOutboxTable
+from datetime import timedelta
+
+from foundation.resiliant.outbox import OutboxConfig, OutboxStatus, OutboxTarget
+from foundation.utils import now_in_utc
 from resiliant import ResiliantServiceBuilder
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -24,6 +28,9 @@ async def test_factory_builds_outbox_components(config: OutboxConfig) -> None:
     repo = ResiliantServiceBuilder.build_outbox_repository(config)
     assert service.config.max_retries == 2
     assert repo.config.batch_size == 10
+    # The default outbox is the messaging one.
+    assert repo.model is MessagingOutboxTable
+    assert service.target == OutboxTarget.MESSAGING
 
 
 async def test_save_raw_message_persists_pending(
@@ -60,14 +67,16 @@ async def test_save_event_duck_typed(
         def as_dict(self) -> dict:
             return {"user_id": "u-1"}
 
-    row: OutboxEventTable = await service.save_event(db_session, _Event(), channel="users")
+    row: MessagingOutboxTable = await service.save_event(db_session, _Event(), channel="users")
 
     assert row.event_id == "evt-123"
     assert row.event_type == "UserRegistered"
     assert row.correlation_id == "corr-9"
     assert row.payload == {"user_id": "u-1"}
-    # Metadata is copied into headers for the broker relay.
-    assert row.headers["source"] == "auth-service"
+    assert row.target == OutboxTarget.MESSAGING
+    # Event metadata goes to columns; broker headers are only what the caller passes.
+    assert row.source_service == "auth-service"
+    assert row.headers == {}
 
 
 async def test_fetch_pending_batch_marks_processing(
@@ -125,12 +134,23 @@ async def test_mark_failed_retries_then_dead_letters(
     )
     await repo.fetch_pending_batch(db_session, batch_size=10)
 
-    # First failure -> retriable FAILED.
-    await repo.mark_failed(db_session, row.id, error="boom")
+    # First failure -> retriable FAILED, parked until its backoff elapses.
+    assert await repo.mark_failed(db_session, row.id, error="boom") == OutboxStatus.FAILED
     assert (await repo.get_stats(db_session))["failed"] == 1
+    assert await repo.fetch_pending_batch(db_session, batch_size=10) == []
 
-    # Second failure exhausts the budget -> DEAD_LETTER.
-    await repo.mark_failed(db_session, row.id, error="boom again")
+    # Backoff elapsed -> the FAILED record is claimed again.
+    await db_session.execute(
+        update(MessagingOutboxTable)
+        .where(MessagingOutboxTable.id == row.id)
+        .values(next_attempt_at=now_in_utc() - timedelta(seconds=1))
+    )
+    await db_session.commit()
+    assert [r.id for r in await repo.fetch_pending_batch(db_session, batch_size=10)] == [row.id]
+
+    # Second failure exhausts the budget -> DEAD_LETTER (never claimed again).
+    assert await repo.mark_failed(db_session, row.id, error="boom again") == OutboxStatus.DEAD_LETTER
     stats = await repo.get_stats(db_session)
     assert stats["dead_letter"] == 1
     assert stats["failed"] == 0
+    assert await repo.fetch_pending_batch(db_session, batch_size=10) == []

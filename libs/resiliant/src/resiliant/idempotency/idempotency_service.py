@@ -1,9 +1,10 @@
 """
-Database-backed idempotency service.
+Idempotency service (Postgres or Redis store).
 
 Application-level entry point for at-most-once event processing. It implements
 :class:`~foundation.resiliant.idempotency.IIdempotencyService` and orchestrates
-the repository, in-process metrics, and structured logging behind a single API.
+the store (``IIdempotencyStore``, chosen by ``IdempotencyConfig.backend``),
+in-process metrics, and structured logging behind a single API.
 
 Preferred usage (context manager)::
 
@@ -33,36 +34,36 @@ from foundation.resiliant.idempotency import (
     DuplicateEventError,
     IdempotencyConfig,
     IIdempotencyService,
+    IIdempotencyStore,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from .idempotency_metrics import IdempotencyMetrics
-from .idempotency_repository import IdempotencyRepository
+from .stores import PostgresIdempotencyStore
 
 
 class IdempotencyService(IIdempotencyService, BaseService):
     """High-level API for idempotency enforcement.
 
-    Instances are cheap; one repository is created per service (or injected).
-    All persistence is scoped to the ``session`` passed by the caller, so the
-    idempotency record commits atomically with the surrounding business
-    transaction when used inside the ``guard`` context manager.
+    Instances are cheap; the store is injected (``resiliant.idempotency.factory``
+    picks it from ``config.backend``). With the Postgres store all persistence is
+    scoped to the caller's ``session``, so the record commits atomically with the
+    surrounding business transaction; the Redis store ignores the session.
 
     Worker safety
     -------------
-    The underlying ``INSERT … ON CONFLICT DO NOTHING`` is atomic at the
-    database level: multiple asyncio tasks or OS processes racing on the same
-    key are safe — exactly one wins and the rest detect a duplicate.
+    Both stores claim a key atomically (``INSERT … ON CONFLICT DO NOTHING`` /
+    ``SET NX``): multiple asyncio tasks or OS processes racing on the same key are
+    safe — exactly one wins and the rest detect a duplicate.
     """
 
     def __init__(
         self,
         config: IdempotencyConfig,
-        repository: IdempotencyRepository | None = None,
+        store: IIdempotencyStore | None = None,
     ) -> None:
         super().__init__()
         self.config = config
-        self.repository = repository or IdempotencyRepository(config)
+        self.store: IIdempotencyStore = store or PostgresIdempotencyStore(config)
         self.metrics = IdempotencyMetrics()
 
     # ------------------------------------------------------------------
@@ -89,17 +90,17 @@ class IdempotencyService(IIdempotencyService, BaseService):
 
     async def is_processed(
         self,
-        session: AsyncSession,
+        session: Any,
         idempotency_key: str,
     ) -> bool:
         """Return ``True`` if ``idempotency_key`` has already been recorded."""
         if self.config.enable_metrics:
             self.metrics.record_check()
-        return await self.repository.is_processed(session, idempotency_key)
+        return await self.store.is_processed(session, idempotency_key)
 
     async def mark_processed(
         self,
-        session: AsyncSession,
+        session: Any,
         idempotency_key: str,
         event_id: str,
         event_type: str,
@@ -116,7 +117,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
         Returns ``True`` when this call inserted the row and ``False`` when the
         key already existed (a concurrent duplicate won the race).
         """
-        inserted = await self.repository.mark_processed(
+        inserted = await self.store.mark_processed(
             session=session,
             idempotency_key=idempotency_key,
             event_id=event_id,
@@ -143,7 +144,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
     @asynccontextmanager
     async def guard(  # type: ignore[override]
         self,
-        session: AsyncSession,
+        session: Any,
         event_id: str,
         handler_name: str,
         event_type: str = '',
@@ -184,7 +185,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
         if self.config.enable_metrics:
             self.metrics.record_check()
 
-        if await self.repository.is_processed(session, key):
+        if await self.store.is_processed(session, key):
             if self.config.enable_metrics:
                 self.metrics.record_duplicate(key)
             if self.config.log_duplicates:
@@ -212,7 +213,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
             raise
 
         # ---------------------------------------------------------- clean exit
-        inserted = await self.repository.mark_processed(
+        inserted = await self.store.mark_processed(
             session=session,
             idempotency_key=key,
             event_id=event_id,
@@ -248,7 +249,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
 
     async def cleanup_expired(
         self,
-        session: AsyncSession,
+        session: Any,
         *,
         ttl_days: Optional[int] = None,
         batch_size: Optional[int] = None,
@@ -259,7 +260,7 @@ class IdempotencyService(IIdempotencyService, BaseService):
         Schedule as a low-priority periodic task — never call on the hot path.
         For very large tables, loop until the return value is 0.
         """
-        deleted = await self.repository.cleanup_expired(
+        deleted = await self.store.cleanup_expired(
             session,
             ttl_days=ttl_days,
             batch_size=batch_size,

@@ -51,8 +51,8 @@ def test_register():
             response_json = response.json()
             print(json.dumps(response_json, indent=2))
 
-            # Check response
-            if response.status_code == 200:
+            # Check response (the route declares 201 Created; FastAPI answers 200, Litestar 201)
+            if 200 <= response.status_code < 300:
                 print("\n✅ SUCCESS: User registration completed!")
                 if response_json.get("data", {}).get("status") == "OK":
                     print("\n🎉 Registration successful!")

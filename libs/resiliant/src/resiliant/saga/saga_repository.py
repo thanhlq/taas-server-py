@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-from db.models.resiliant import SagaStateTable
+from resiliant.models import SagaStateTable
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.saga import (
     SagaInstance,

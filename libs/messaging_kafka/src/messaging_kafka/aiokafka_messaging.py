@@ -76,7 +76,7 @@ from foundation.messaging.types import (
 from foundation.messaging.utils.msg_encoder import MsgDecoderError
 from foundation.observability.tracing_factory import TracingFactory
 from foundation.observability.types import ITracingManager
-from foundation.resiliant.retry import retry
+from resiliant.retry import retry
 from foundation.utils.singleton import singleton
 
 from messaging_kafka.aiokafka_security import get_aiokafka_security_kwargs

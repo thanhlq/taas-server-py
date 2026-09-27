@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from db.models.resiliant import ScheduledJobTable
+from resiliant.models import ScheduledJobTable
 from foundation import BaseService
 from foundation.resiliant.schedule import ScheduleConfig, ScheduleJobStatus
 from sqlalchemy import and_, func, select, update

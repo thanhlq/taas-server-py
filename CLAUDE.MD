@@ -9,7 +9,7 @@ The is the uv workspace which include the following libraries, applications and 
 | Project | Description |
 | --- | --- |
 | libs/foundation | Contain all core definitions and common utils for building of application |
-| libs/db | Contain all db models and migrations. |
+| libs/db | Platform db models and the single Alembic migration tree (also migrates `resiliant.models`). |
 | libs/ews | Core eworksuite business (ddd patterns): api definitions which can be used for building apps as: `ews_api` (Fastapi, adapter: libs/http_fastapi) and `ews_api_litestar` (Litestar, adapter: libs/http_litestar) |
 | libs/banking_core | Banking domain core, including crypto factory/utilities |
 | libs/block-kaspa | Kaspa blockchain integration: transactions, fee estimation and typed client |
@@ -19,7 +19,7 @@ The is the uv workspace which include the following libraries, applications and 
 | libs/iam_keycloak | The iam implementation using Keycloak |
 | libs/messaging_faststream | FastStream messaging utilities |
 | libs/messaging_kafka | Kafka messaging utilities |
-| libs/resiliant | Resilience implementations - the purpose is to implement best service patterns that can cover key features of Temporal.io |
+| libs/resiliant | All resilience implementations, settings and models (outboxes per use case, DLQ, idempotency on Postgres or Redis, saga, schedule, retry, circuit breaker, …) — covers key features of Temporal.io; `foundation.resiliant` keeps definitions only. See `docs/developers/resiliant-*.md` |
 | libs/slowapi_advanced | The rate limit library - allowing to use decorator as @rate_limit('5/minutes') which internally use the limits library |
 | libs/store_memcached | Key/value store implementation using memcached |
 | libs/store_redis | Key/value store implementation using redis |
@@ -31,6 +31,7 @@ The is the uv workspace which include the following libraries, applications and 
 | apps/ews_api | The ews api deployed using Fastapi (adapter: libs/http_fastapi) |
 | apps/ews_api_litestar | The ews api deployed using Litestar (adapter: libs/http_litestar) |
 | apps/ews_worker | Background worker for ews |
+| apps/outbox_worker | Outbox relay: one poller per outbox table + scheduler (`start_outbox.sh`, health port 7110) |
 
 ## Rules
 

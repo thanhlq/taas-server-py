@@ -18,14 +18,12 @@ from foundation.messaging.events.event_processor_settings import (
 from foundation.messaging.types import BaseEvent, ProcessingResult
 from foundation.observability.factory import instrument
 from foundation.observability.log_factory import LogFactory
-from foundation.resiliant.dlq import DeadLetterConfig
-from foundation.resiliant.idempotency import (
-    IdempotencyConfig,
-    IdempotencyConflictError,
-    IdempotencyService,
-)
-from foundation.resiliant.retry import Retry
-from resiliant import DLQService
+from foundation.state import get_service
+from foundation.resiliant.dlq import IDLQService
+from foundation.resiliant.idempotency import DuplicateEventError, IIdempotencyService
+from foundation.resiliant.retry import IRetryPolicy
+
+from ._retry_policy import resolve_retry_policy
 
 from .event_handler import BaseEventHandler, handlerRegistry
 from .event_processor_config import EventProcessorConfig
@@ -69,7 +67,6 @@ class EventProcessorFast:
         config: Optional[EventProcessorConfig] = None,
         stats: Union['MessageServiceStats', dict, None] = None,
         session_factory: Optional[Any] = None,
-        idempotency_config: Optional[IdempotencyConfig] = None,
     ):
         """
         Initialize event processor.
@@ -80,8 +77,6 @@ class EventProcessorFast:
             session_factory: Optional async session factory for DLQ and idempotency operations.
                            If provided, failed events will be saved to DLQ and idempotency
                            keys will be persisted when enable_dlq / enable_idempotency are True.
-            idempotency_config: Optional idempotency configuration override. When omitted,
-                           IdempotencyConfig.from_settings() is used if enable_idempotency=True.
         """
         self.config = build_config_from_settings()
         self.logger = LogFactory().get_logger(self.__class__.__name__)
@@ -92,20 +87,20 @@ class EventProcessorFast:
         }
         self.stats = stats or self._internal_stats
 
-        # Initialize retry policy with config
-        if self.config.retry_enabled:
-            self.retry_policy = Retry(
-                name=self.config.retry_policy_name, max_attempts=self.config.max_retries
-            )
+        # Retry policy, resolved lazily from the registry (see `retry_policy`).
+        self._retry_policy_name = self.config.retry_policy_name
+        self._retry_max_attempts = self.config.max_retries
+        self._retry_policy: Optional[IRetryPolicy] = None
+        self._retry_policy_missing = False
 
         # Parallel execution support
         self.processing_tasks: Set[asyncio.Task] = set()
 
         # DLQ support
-        self._dlq_service: Optional[DLQService] = None
+        self._dlq_service: Optional[IDLQService] = None
 
         # Idempotency support
-        self._idempotency_service: Optional[IdempotencyService] = None
+        self._idempotency_service: Optional[IIdempotencyService] = None
 
 
         cli_info: dict[str, Any] = {
@@ -128,35 +123,48 @@ class EventProcessorFast:
         self.logger.info(f'⚡ EventProcessorFast CLI info: {cli_info}')
 
     @property
+    def retry_policy(self) -> Optional[IRetryPolicy]:
+        """Retry policy from the registered ``IRetryPolicyFactory`` (resolved on first use,
+        so processors may be built before ``FoundationFactory.use_resiliant``)."""
+        if self._retry_policy is None and not self._retry_policy_missing:
+            self._retry_policy = resolve_retry_policy(self._retry_policy_name, self._retry_max_attempts)
+            if self._retry_policy is None:
+                self._retry_policy_missing = True
+                self.logger.warning(
+                    'Retry is enabled but no IRetryPolicyFactory is registered '
+                    '(call FoundationFactory.use_resiliant); handlers run without retry.'
+                )
+        return self._retry_policy
+
+    @property
     def session_factory(self) -> Any:
         """Return the configured session factory for DLQ and idempotency operations."""
         return MainDatabase.get_instance().session_factory()
 
     @property
-    def dlq_service(self) -> Optional[DLQService]:
+    def dlq_service(self) -> Optional[IDLQService]:
         if not self.config.enable_dlq:
             raise RuntimeError(
                 'DLQ is not enabled in the configuration. '
                 'Set enable_dlq=True to use DLQ features.'
             )
         if self._dlq_service is None:
-            self._dlq_service = DLQService(config=DeadLetterConfig())
+            # Implementation registered by `FoundationFactory.use_resiliant(...)`;
+            # foundation only knows the IDLQService contract.
+            self._dlq_service = get_service(IDLQService, raise_if_not_found=False)
         return self._dlq_service
 
     @property
-    def idempotency_service(self) -> Optional[IdempotencyService]:
+    def idempotency_service(self) -> Optional[IIdempotencyService]:
         if not self.config.enable_idempotency:
             raise RuntimeError(
                 'Idempotency is not enabled in the configuration. '
                 'Set enable_idempotency=True to use idempotency features.'
             )
         if self._idempotency_service is None:
-            idempotency_config = (
-                IdempotencyConfig.from_settings()
-                if self.config.enable_idempotency
-                else None
-            )
-            self._idempotency_service = IdempotencyService(config=idempotency_config)
+            # Implementation (Postgres or Redis store, per IDEMPOTENCY_BACKEND) is
+            # registered by `FoundationFactory.use_resiliant(...)`.
+            self._idempotency_service = get_service(IIdempotencyService, raise_if_not_found=False)
         return self._idempotency_service
 
 
@@ -237,10 +245,10 @@ class EventProcessorFast:
                 )
             return result
 
-        except IdempotencyConflictError as dup:
+        except DuplicateEventError as dup:
             # Event was already successfully processed — skip silently.
             self.logger.info(
-                f'Duplicate event skipped idempotency_key={dup.key} '
+                f'Duplicate event skipped idempotency_key={dup.idempotency_key} '
                 f'event_id={event.event_id} '
                 f'handler={handler_name}'
             )
@@ -303,8 +311,9 @@ class EventProcessorFast:
         that callers (idempotency guard, DLQ handler) can handle the exception
         correctly without accidentally marking a failed event as processed.
         """
-        if self.config.retry_enabled:
-            return await self.retry_policy.execute_async(
+        policy = self.retry_policy if self.config.retry_enabled else None
+        if policy is not None:
+            return await policy.execute_async(
                 func=lambda: execute_handler_with_tracing(
                     event=event,
                     handler=handler,

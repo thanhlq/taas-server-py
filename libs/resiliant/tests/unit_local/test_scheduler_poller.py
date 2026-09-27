@@ -9,8 +9,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from db.models.resiliant import ScheduledJobTable
 from foundation.resiliant.schedule import ScheduleConfig, ScheduleJobKind
+from resiliant.models import ScheduledJobTable
 from resiliant.schedule import SchedulerPoller
 
 

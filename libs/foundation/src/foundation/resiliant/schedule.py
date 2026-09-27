@@ -25,7 +25,7 @@ Layout mirrors the other resiliant primitives:
 * ``ScheduleError``     - base error type
 
 The database-backed implementation lives in the ``resiliant`` library and the
-SQLAlchemy model in ``db.models.resiliant``; this module stays free of
+SQLAlchemy model in ``resiliant.models``; this module stays free of
 persistence-layer imports (session/return types are intentionally ``Any``).
 """
 

@@ -5,8 +5,9 @@ Concrete worker application built on :class:`foundation.worker.BaseWorker`.
 
 Responsibilities:
   * initialise the FastStream Kafka messaging service (as a *publisher* only),
-  * construct the :class:`resiliant.outbox.OutboxPoller`, and
-  * run the poller loop until the process is stopped.
+  * build one :class:`resiliant.outbox.OutboxPoller` per registered outbox
+    (messaging, transaction, … — narrow with ``OUTBOX_POLL_OUTBOXES``), and
+  * run the poller loops until the process is stopped.
 
 Unlike ``ews_worker`` this worker does **not** consume Kafka topics — it only
 relays pending transactional-outbox events to the broker via the pure
@@ -32,7 +33,8 @@ from foundation.worker.base_worker import BaseWorker
 from messaging_faststream import initialize_messaging_service, messaging
 from resiliant import ResiliantServiceFactory
 from resiliant.outbox import OutboxPoller
-from resiliant.outbox.outbox_settings import get_outbox_config
+from resiliant.outbox.factory import build_outbox_pollers
+from resiliant.outbox.outbox_settings import get_polled_outboxes
 from resiliant.maintenances import (
     define_maintenance_jobs,
     register_maintenance_callbacks,
@@ -44,8 +46,8 @@ from resiliant.schedule.schedule_settings import get_schedule_config
 class OutboxWorker(BaseWorker):
     """Outbox relay worker.
 
-    Runs two pure pollers side by side (no Kafka consumer):
-      * :class:`OutboxPoller` — relays transactional-outbox events to the broker;
+    Runs pure pollers side by side (no Kafka consumer):
+      * :class:`OutboxPoller` (one per outbox table) — relays records to their target;
       * :class:`SchedulerPoller` — fires due durable timers / schedules.
 
     Both reuse the same ``FOR UPDATE SKIP LOCKED`` claiming discipline and the
@@ -54,7 +56,7 @@ class OutboxWorker(BaseWorker):
 
     def __init__(self) -> None:
         super().__init__(name='outbox_worker')
-        self._poller: OutboxPoller | None = None
+        self._pollers: list[OutboxPoller] = []
         self._scheduler: SchedulerPoller | None = None
         # The base class derives the health port from a settings attribute that
         # isn't defined in this repo's Settings; read it from the environment
@@ -77,20 +79,21 @@ class OutboxWorker(BaseWorker):
         await self._init_services()
 
 
-        # 3. Build the pollers. Both reuse the resiliant repositories and
-        #    publish through the messaging service.
+        # 2. One poller per outbox table; messaging-target records are published
+        #    through the messaging service.
         db: AdvancedDBManager = MainDatabase.get_instance()
-        self._poller = OutboxPoller(
-            config=get_outbox_config(),
+        self._pollers = build_outbox_pollers(
             session_factory=db.new_session,
             publisher=self.messaging_service,
+            outboxes=get_polled_outboxes(),
         )
 
-        # 4. Run the poller loops as worker tasks.
+        # 3. Run the poller loops as worker tasks.
         self.worker_tasks = []
-        poller_task = asyncio.create_task(self._poller.run())
-        self.worker_tasks.append(('outbox_poller', poller_task))
-        self.logger.info(f'{Icons.OUTBOX_SERVICE} Outbox poller task started')
+        for poller in self._pollers:
+            task = asyncio.create_task(poller.run())
+            self.worker_tasks.append((f'outbox_poller:{poller.name}', task))
+            self.logger.info(f'{Icons.OUTBOX_SERVICE} Outbox poller "{poller.name}" started')
 
         schedule_config = get_schedule_config()
         if schedule_config.enabled:
@@ -112,11 +115,11 @@ class OutboxWorker(BaseWorker):
 
     async def shutdown(self) -> None:
         """Stop the pollers gracefully, then defer to the base shutdown."""
-        if self._poller is not None:
+        for poller in self._pollers:
             try:
-                await self._poller.stop()
+                await poller.stop()
             except Exception:
-                self.logger.exception('Error while stopping outbox poller')
+                self.logger.exception(f'Error while stopping outbox poller "{poller.name}"')
         if self._scheduler is not None:
             try:
                 await self._scheduler.stop()

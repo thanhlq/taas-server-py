@@ -11,6 +11,8 @@ dependencies = [
     "advanced-alchemy[cryptography]==1.11.0",
     "alembic>=1.18.5",
     'foundation',
+    # Its models are migrated by this package's single Alembic tree (db/migrations/env.py).
+    'resiliant',
     "psycopg[binary]>=3.2",
     "sqlalchemy==2.0.51",
 ]

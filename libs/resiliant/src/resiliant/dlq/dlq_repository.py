@@ -10,8 +10,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from db import DBUtils
-from db.models.resiliant import DLQEventTable
+from resiliant.models import DLQEventTable
 from foundation import BaseService
 from foundation.resiliant.dlq import DeadLetterConfig, DLQStatus
 from foundation.utils import now_in_utc
@@ -123,7 +122,7 @@ class DLQRepository(BaseService):
             .where(DLQEventTable.id == dlq_id)
             .values(
                 status=DLQStatus.RESOLVED,
-                processed_at=DBUtils.now(),
+                processed_at=now_in_utc().replace(tzinfo=None),
                 updated_at=now_in_utc(),
             )
         )

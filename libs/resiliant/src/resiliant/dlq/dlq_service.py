@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from db.models.resiliant import DLQEventTable
+from resiliant.models import DLQEventTable
 from foundation import BaseService
 from foundation.resiliant.dlq import DeadLetterConfig, DLQStatus, IDLQService
 from foundation.utils import now_in_utc

@@ -6,20 +6,17 @@ from foundation.utils.icons import Icons
 from sqlalchemy import inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
-from sqlalchemy.orm import RelationshipProperty
 
 
 def _declared_columns(mapper) -> List[str]:
     """Return the keys of the flat columns declared on a mapped class.
 
-    Relationship properties are skipped (they don't map to physical columns);
-    each remaining property may expand to one or more columns.
+    Only column properties count: relationships, synonyms (e.g.
+    ``TransactionOutboxTable.transaction_type``) and other non-column attributes
+    don't map to physical columns. Each property may expand to several columns.
     """
     keys: List[str] = []
-    for column_prop in mapper.attrs:
-        if isinstance(column_prop, RelationshipProperty):
-            # TODO: Add sanity checks for relations
-            continue
+    for column_prop in mapper.column_attrs:
         for column in column_prop.columns:
             keys.append(column.key)
     return keys

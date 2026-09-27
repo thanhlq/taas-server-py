@@ -11,12 +11,12 @@ from foundation import BaseService
 from foundation.exceptions.report_error import report_error
 from foundation.messaging.types import BaseEvent, EventMetadata, ProcessingResult
 from foundation.observability.tracing_factory import TracingFactory
-from foundation.resiliant.retry import Retry
+from foundation.resiliant.retry import IRetryPolicy
 
 from .event_handler import BaseEventHandler, handlerRegistry
 from .event_processor_config import EventProcessorConfig, get_event_processor_config
 
-# from .safety.exp_backoff_retry import ExponentialBackoffRetry as Retry
+from ._retry_policy import resolve_retry_policy
 
 
 class EventProcessor(BaseService):
@@ -63,8 +63,25 @@ class EventProcessor(BaseService):
         }
         self.stats = stats or self._internal_stats
 
-        # Initialize retry policy with config
-        self.retry_policy = Retry(name=self._config.retry_policy_name)
+        # Retry policy (default: 3 attempts), resolved lazily from the registry.
+        self._retry_policy_name = self._config.retry_policy_name
+        self._retry_max_attempts = 3
+        self._retry_policy: Optional[IRetryPolicy] = None
+        self._retry_policy_missing = False
+
+    @property
+    def retry_policy(self) -> Optional[IRetryPolicy]:
+        """Retry policy from the registered ``IRetryPolicyFactory`` (resolved on first use,
+        so processors may be built before ``FoundationFactory.use_resiliant``)."""
+        if self._retry_policy is None and not self._retry_policy_missing:
+            self._retry_policy = resolve_retry_policy(self._retry_policy_name, self._retry_max_attempts)
+            if self._retry_policy is None:
+                self._retry_policy_missing = True
+                self.logger.warning(
+                    'Retry is enabled but no IRetryPolicyFactory is registered '
+                    '(call FoundationFactory.use_resiliant); handlers run without retry.'
+                )
+        return self._retry_policy
 
     @property
     def config(self) -> EventProcessorConfig:
@@ -195,10 +212,9 @@ class EventProcessor(BaseService):
         # Execute with retry policy
         # Note: execute_async() returns an awaitable coroutine, await it directly
         try:
-            if self.config.retry_enabled:
-                return await self.retry_policy.execute_async(
-                    func=process_event_with_handler
-                )  # type: ignore
+            policy = self.retry_policy if self.config.retry_enabled else None
+            if policy is not None:
+                return await policy.execute_async(func=process_event_with_handler)
             else:
                 return await process_event_with_handler()
         except Exception as e:

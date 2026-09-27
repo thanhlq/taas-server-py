@@ -11,13 +11,15 @@ wins, the rest observe a duplicate.
 Layout
 ------
 * ``IdempotencyStatus``   - lifecycle state recorded for a key
+* ``IdempotencyBackend``  - where keys are stored (``postgres`` | ``redis``)
 * ``DuplicateEventError`` - raised (strict mode) when a duplicate is seen
-* ``IdempotencyConfig``   - policy (key format, TTL, cleanup, behaviour flags)
+* ``IdempotencyConfig``   - policy (backend, key format, TTL, cleanup, behaviour flags)
+* ``IIdempotencyStore``   - storage contract (one implementation per backend)
 * ``IIdempotencyService`` - application-facing contract
 
-The concrete, database-backed implementation lives in the ``resiliant``
-library (``resiliant.idempotency``) and is wired through ``ResiliantFactory``.
-The DB model lives in ``db.models.resiliant`` (``ProcessedEventTable``).
+Implementations (service, Postgres and Redis stores, settings loader) live in
+the ``resiliant`` library (``resiliant.idempotency``), wired through
+``ResiliantServiceFactory``; the Postgres table is ``resiliant.models.ProcessedEventTable``.
 
 Session/return types on the service contract are intentionally loose
 (``Any``) so this definitions module stays free of any persistence-layer
@@ -49,6 +51,19 @@ class IdempotencyStatus(StrEnum):
 
     PROCESSED = 'processed'
     """Event was successfully processed — do not reprocess."""
+
+
+class IdempotencyBackend(StrEnum):
+    """Where idempotency keys are stored (``IDEMPOTENCY_BACKEND``)."""
+
+    POSTGRES = 'postgres'
+    """``resiliant_processed_events`` table. The key commits atomically with the
+    caller's business transaction (same session); expiry via ``cleanup_expired``."""
+
+    REDIS = 'redis'
+    """``SET key NX EX ttl`` — faster and expires by itself, but recorded outside
+    the business transaction (session ignored): a crash between the business
+    commit and the key write means the handler runs again on redelivery."""
 
 
 # --------------------------------------------------------------------------- #
@@ -134,6 +149,13 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
     >>> config = IdempotencyConfig(ttl_days=60, strict_mode=True)
     """
 
+    # Storage
+    backend: IdempotencyBackend = IdempotencyBackend.POSTGRES
+    """Store implementation used by the service."""
+
+    redis_key_prefix: str = 'idempotency'
+    """Namespace of the Redis keys (``<prefix>:<handler_name>:<event_id>``)."""
+
     # Key construction
     key_separator: str = ':'
     """Separator used to join handler_name and event_id into a composite key."""
@@ -176,36 +198,6 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
         """``ttl_days`` expressed in seconds for datetime arithmetic."""
         return self.ttl_days * 86_400
 
-    @classmethod
-    def from_settings(cls, settings: Any) -> 'IdempotencyConfig':
-        """
-        Build config from an application settings object.
-
-        Falls back gracefully when settings attributes are absent so that
-        adding idempotency to an existing service only requires the settings
-        keys you actually want to override.
-
-        Expected attribute names (all optional):
-            IDEMPOTENCY_TTL_DAYS              int  = 30
-            IDEMPOTENCY_CLEANUP_BATCH_SIZE    int  = 500
-            IDEMPOTENCY_ENABLE_METRICS        bool = True
-            IDEMPOTENCY_LOG_DUPLICATES        bool = True
-            IDEMPOTENCY_STRICT_MODE           bool = False
-            IDEMPOTENCY_DB_QUERY_TIMEOUT_MS   int  = 3000
-        """
-        return cls(
-            ttl_days=getattr(settings, 'IDEMPOTENCY_TTL_DAYS', 30),
-            cleanup_batch_size=getattr(
-                settings, 'IDEMPOTENCY_CLEANUP_BATCH_SIZE', 500
-            ),
-            enable_metrics=getattr(settings, 'IDEMPOTENCY_ENABLE_METRICS', True),
-            log_duplicates=getattr(settings, 'IDEMPOTENCY_LOG_DUPLICATES', True),
-            strict_mode=getattr(settings, 'IDEMPOTENCY_STRICT_MODE', False),
-            db_query_timeout_ms=getattr(
-                settings, 'IDEMPOTENCY_DB_QUERY_TIMEOUT_MS', 3000
-            ),
-        )
-
 
 # --------------------------------------------------------------------------- #
 # Service contract
@@ -213,9 +205,51 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
 
 
 @runtime_checkable
+class IIdempotencyStore(Protocol):
+    """Storage behind the idempotency service — one implementation per
+    :class:`IdempotencyBackend` (``resiliant.idempotency.stores``).
+
+    ``session`` is the caller's DB session; stores that do not need it (Redis)
+    ignore it, so callers always pass the same arguments.
+    """
+
+    backend: IdempotencyBackend
+
+    async def is_processed(self, session: Any, idempotency_key: str) -> bool:
+        """Return ``True`` if the key has already been recorded."""
+        ...
+
+    async def mark_processed(
+        self,
+        session: Any,
+        idempotency_key: str,
+        event_id: str,
+        event_type: str,
+        handler_name: str,
+        *,
+        saga_id: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        extra_metadata: Optional[dict[str, Any]] = None,
+    ) -> bool:
+        """Record the key atomically; ``True`` if this call won (inserted), ``False`` on duplicate."""
+        ...
+
+    async def cleanup_expired(
+        self,
+        session: Any,
+        *,
+        ttl_days: Optional[int] = None,
+        batch_size: Optional[int] = None,
+    ) -> int:
+        """Delete keys older than the TTL; return how many (0 when the store expires keys itself)."""
+        ...
+
+
+@runtime_checkable
 class IIdempotencyService(Protocol):
     """
-    Application-facing contract for the database-backed idempotency service.
+    Application-facing contract of the idempotency service (Postgres or Redis store).
 
     The idempotency key is always *scoped* to an ``(event_id, handler_name)``
     pair, so the same domain event can be processed independently by multiple
@@ -320,6 +354,8 @@ class IIdempotencyService(Protocol):
 __all__ = [
     'DuplicateEventError',
     'IIdempotencyService',
+    'IIdempotencyStore',
+    'IdempotencyBackend',
     'IdempotencyConfig',
     'IdempotencyStatus',
 ]

@@ -1,6 +1,8 @@
 """
 IMPORTANT:
  - To enable migration of a model, you need to import it in this __init__.py so it registers with the metadata registry.
+ - The resiliant tables (outboxes, DLQ, …) are owned by ``resiliant.models``; the
+   migration env imports that package too (``db/migrations/env.py``).
 """
 
 from advanced_alchemy.base import AdvancedDeclarativeBase
@@ -57,15 +59,6 @@ from .ews import (
     Workflow,
     WorkflowStage,
 )
-from .resiliant import (
-    DLQEventArchiveTable,
-    DLQEventTable,
-    OutboxEventArchiveTable,
-    OutboxEventTable,
-    ProcessedEventTable,
-    SagaStateTable,
-    ScheduledJobTable,
-)
 
 # from sqlalchemy.orm import DeclarativeBase
 
@@ -92,13 +85,6 @@ __all__ = [
     'OrganizationMember',
 
     # Resiliant
-    'DLQEventTable',
-    'DLQEventArchiveTable',
-    'OutboxEventTable',
-    'OutboxEventArchiveTable',
-    'ProcessedEventTable',
-    'SagaStateTable',
-    'ScheduledJobTable',
 
     # CRM
     'CrmAccount',

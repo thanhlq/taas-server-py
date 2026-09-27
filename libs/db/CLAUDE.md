@@ -5,6 +5,11 @@
 - tests/unit: contain official unit tests / executed in releases
 - tests/unit_dev: contain unit tests that executed during development only (local machine)
 
+## Models
+
+- Platform models: `src/db/models` (import new ones in `db/models/__init__.py`).
+- Resiliant tables (`resiliant_*`) are owned by `libs/resiliant` (`resiliant.models`); `db/migrations/env.py` imports them so the one revision covers both.
+
 ## Run migration
 
 see libs/db/src/db/migrations/migration-guide.md

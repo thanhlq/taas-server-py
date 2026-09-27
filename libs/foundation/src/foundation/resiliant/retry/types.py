@@ -14,7 +14,7 @@ Definition of common patterns for resilience services, such as:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, Protocol, TypeVar, runtime_checkable
 
 T = TypeVar('T')
 
@@ -39,6 +39,26 @@ class IRetryPolicy(ABC):
         ...
 
     @abstractmethod
+    async def execute_async(
+        self,
+        func: Callable[..., Any],
+        *args: Any,
+        should_retry: Optional[Callable[[Exception], bool]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Await ``func`` (a coroutine function) with retry logic, returning its result."""
+        ...
+
+    @abstractmethod
+    def decorator(
+        self,
+        should_retry: Optional[Callable[[Exception], bool]] = None,
+        name: Optional[str] = None,
+    ) -> Callable[..., Any]:
+        """Return a decorator applying this policy to sync or async functions."""
+        ...
+
+    @abstractmethod
     def get_next_delay(self, attempt: int) -> float:
         """Return the delay (seconds) before the next retry for ``attempt``."""
         ...
@@ -48,3 +68,23 @@ class IRetryPolicy(ABC):
         """Reset retry state to initial conditions."""
         ...
 
+
+@runtime_checkable
+class IRetryPolicyFactory(Protocol):
+    """Creates retry policies (implementation: ``resiliant.retry``).
+
+    Registered in the service registry by ``FoundationFactory.use_resiliant(...)``,
+    so foundation code (e.g. the messaging event processors) obtains retries
+    without importing an implementation.
+    """
+
+    def create(
+        self,
+        name: str,
+        *,
+        max_attempts: int = 3,
+        initial_delay: float = 1.0,
+        max_delay: float = 60.0,
+    ) -> IRetryPolicy:
+        """A new retry policy (exponential backoff) named ``name``."""
+        ...

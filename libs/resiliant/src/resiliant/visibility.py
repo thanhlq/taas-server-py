@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from db.models.resiliant import (
+from resiliant.models import (
     DLQEventTable,
-    OutboxEventTable,
+    MessagingOutboxTable,
     SagaStateTable,
     ScheduledJobTable,
 )
@@ -38,7 +38,7 @@ class ResilienceVisibilityService(BaseService):
         and no saga that failed its own compensation.
         """
         outbox = await self._counts(
-            session, OutboxEventTable, OutboxEventTable.status, OutboxStatus
+            session, MessagingOutboxTable, MessagingOutboxTable.status, OutboxStatus
         )
         dlq = await self._counts(
             session, DLQEventTable, DLQEventTable.status, DLQStatus

@@ -23,7 +23,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Optional
 
-from db.models.resiliant import ScheduledJobTable
+from resiliant.models import ScheduledJobTable
 from foundation.messaging.types import MessagingServiceT
 from foundation.observability.log_factory import LogFactory
 from foundation.resiliant.schedule import ScheduleConfig

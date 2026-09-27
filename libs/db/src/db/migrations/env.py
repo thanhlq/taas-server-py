@@ -14,6 +14,8 @@ from sqlalchemy.sql.schema import SchemaItem
 # Without this, `metadata_registry.get(bind_key)` returns an empty metadata
 # and every autogenerate revision is a no-op.
 import db.models  # noqa: F401
+# Packages owning their own models (tables prefixed `resiliant_`).
+import resiliant.models  # noqa: F401
 
 if TYPE_CHECKING:
     from advanced_alchemy.alembic.commands import AlembicCommandConfig

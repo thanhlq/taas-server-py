@@ -52,6 +52,31 @@ class OutboxStatus(enum.StrEnum):
     DEAD_LETTER = 'dead_letter'
 
 
+class OutboxTarget(enum.StrEnum):
+    """Where the relay delivers an outbox record (one dispatcher per target).
+
+    Stored on every record, so one outbox table can feed several targets; the
+    poller routes each record to the dispatcher registered for its target.
+    """
+
+    MESSAGING = 'messaging'
+    """Publish to the message broker (Kafka, …) via ``MessagingServiceT``."""
+
+
+class OutboxName(enum.StrEnum):
+    """Built-in outboxes — one table per use case (see ``resiliant.outbox.registry``).
+
+    Plain strings are accepted wherever an outbox name is expected, so apps can
+    register their own outboxes without extending this enum.
+    """
+
+    MESSAGING = 'messaging'
+    """Domain events published to the broker (``resiliant_outbox_messages``)."""
+
+    TRANSACTION = 'transaction'
+    """Inbound transaction requests relayed to a target (``resiliant_outbox_transactions``)."""
+
+
 class OutboxMessage(BaseModel):
     """A message awaiting publication."""
 
@@ -212,6 +237,40 @@ class IOutboxRepository(Protocol):
 
 
 @runtime_checkable
+class IOutboxRecord(Protocol):
+    """Columns every outbox table provides — what the generic relay relies on.
+
+    Use-case tables add their own columns on top (``resiliant.models.outbox``).
+    """
+
+    id: Any
+    event_type: str
+    target: OutboxTarget
+    channel: str | None
+    ordering_key: str | None
+    payload: dict[str, Any]
+    headers: dict[str, Any] | None
+    status: OutboxStatus
+    retry_count: int
+    max_retries: int
+    last_error: str | None
+    correlation_id: str | None
+
+
+@runtime_checkable
+class IOutboxDispatcher(Protocol):
+    """Delivers claimed outbox records to one :class:`OutboxTarget`.
+
+    Raising marks the record failed (retried until ``max_retries``, then
+    ``DEAD_LETTER``); returning marks it published.
+    """
+
+    target: OutboxTarget
+
+    async def dispatch(self, record: IOutboxRecord) -> None: ...
+
+
+@runtime_checkable
 class IOutboxPublisher(Protocol):
     """Broker-facing publisher (Kafka, RabbitMQ, SNS, ...)."""
 
@@ -228,8 +287,9 @@ class IOutboxService(Protocol):
     are persisted inside the caller's business transaction (same
     ``AsyncSession``) so the write and the message enqueue commit atomically.
 
-    Implementations live in the ``resiliant`` library and are wired through
-    ``ResiliantFactory``. Session/event/return types are intentionally left
+    This is the *messaging* outbox contract (domain events → broker). Get it via
+    ``ResiliantServiceFactoryT.get_messaging_outbox_service()``; other use cases
+    have their own contracts (e.g. :class:`ITransactionOutboxService`). Session/event/return types are intentionally left
     loose (``Any``) so this definitions module stays free of SQLAlchemy and
     persistence-layer imports.
     """
@@ -266,18 +326,55 @@ class IOutboxService(Protocol):
         ...
 
 
+@runtime_checkable
+class ITransactionOutboxService(Protocol):
+    """Records inbound transaction requests for reliable relay to a target.
+
+    ``request_id`` is the caller's idempotency key: saving the same request twice
+    returns the existing record instead of enqueuing a duplicate. Obtain it via
+    ``ResiliantServiceFactoryT.get_transaction_outbox_service(target=…)``.
+    """
+
+    async def save_transaction(
+        self,
+        session: Any,
+        *,
+        request_id: str,
+        transaction_type: str,
+        payload: dict[str, Any],
+        channel: str | None = None,
+        ordering_key: str | None = None,
+        account_ref: str | None = None,
+        source_system: str | None = None,
+        headers: dict[str, Any] | None = None,
+        correlation_id: str | None = None,
+        max_retries: int | None = None,
+    ) -> Any:
+        """Persist a transaction request within ``session`` (idempotent on ``request_id``)."""
+        ...
+
+    async def get_stats(self, session: Any) -> dict[str, Any]:
+        """Return counters describing the current outbox backlog."""
+        ...
+
+
 
 
 
 
 
 __all__ = [
+    "IOutboxDispatcher",
     "IOutboxPublisher",
+    "IOutboxRecord",
     "IOutboxRepository",
     "IOutboxService",
+    "ITransactionOutboxService",
     "OutboxConfig",
     "OutboxError",
     "OutboxMessage",
+    "OutboxName",
     "OutboxPublishError",
     "OutboxStatus",
+    "OutboxTarget",
 ]

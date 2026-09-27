@@ -1,7 +1,7 @@
 [project]
 name = "resiliant"
 version = "0.1.0"
-description = "Add your description here"
+description = "Durable resilience patterns (outboxes, DLQ, idempotency, sagas, schedules) and their models"
 readme = "README.md"
 authors = [
     { name = "Thanh LE", email = "thanh@floin.com" }
@@ -9,9 +9,13 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     'foundation',
-    'db',
+    # Owns its SQLAlchemy models (resiliant.models); libs/db only runs the migrations.
     'advanced_alchemy',
     'croniter>=3.0.0',
+    # Retry policies (resiliant.retry) and the Redis idempotency store.
+    "tenacity>=9.0.0",
+    # Redis idempotency store (client built via store_redis: single / sentinel / cluster).
+    'store-redis',
 ]
 
 [build-system]

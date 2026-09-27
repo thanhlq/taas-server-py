@@ -1,5 +1,5 @@
 """
-Outbox poller for fetching and publishing events.
+Outbox poller — claims due records of ONE outbox table and dispatches them.
 
 Pure poller: it owns the polling / publishing loop only. It does **not**
 manage a process lifecycle, health checks or signal handling — a separate
@@ -9,9 +9,13 @@ worker application (see ``apps/outbox_worker``) is expected to construct an
 The poller reuses the transactional-outbox building blocks already provided by
 this library:
 
-* :class:`resiliant.outbox.OutboxRepository` — batched fetch / mark helpers
+* :class:`resiliant.outbox.OutboxRepository` — batched claim / mark helpers,
+  bound to the outbox table (any ``OutboxRecordMixin`` model)
+* :class:`resiliant.outbox.dispatchers.OutboxDispatchRouter` — delivers each record
+  to the dispatcher of its ``target`` (messaging, …)
 * :class:`foundation.resiliant.outbox.OutboxConfig` — polling policy
-* :class:`foundation.messaging.types.IMessagingService` — broker publisher
+
+One poller per registered outbox (see ``resiliant.outbox.factory.build_outbox_pollers``).
 """
 
 from __future__ import annotations
@@ -22,15 +26,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Optional
 
-from db.models.resiliant import OutboxEventTable
 from foundation.cli import cli
 from foundation.messaging.types import MessagingServiceT
 from foundation.observability.log_factory import LogFactory
-from foundation.resiliant.outbox import OutboxConfig
-from foundation.state import get_service
+from foundation.resiliant.outbox import IOutboxDispatcher, OutboxConfig, OutboxStatus
 from foundation.utils.icons import Icons
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from resiliant.models.outbox import MessagingOutboxTable, OutboxRecordMixin
+
+from .dispatchers import OutboxDispatchRouter, default_dispatchers
 from .outbox_metrics import OutboxMetrics
 from .outbox_repository import OutboxRepository
 
@@ -71,7 +76,9 @@ class OutboxPoller:
         config: OutboxConfig,
         session_factory: Callable[[], AsyncSession],
         publisher: Optional[MessagingServiceT] = None,
-        repository: Optional[OutboxRepository] = None,
+        repository: Optional[OutboxRepository[Any]] = None,
+        dispatchers: Optional[list[IOutboxDispatcher]] = None,
+        name: str = 'messaging',
     ):
         """
         Initialize outbox poller.
@@ -79,18 +86,19 @@ class OutboxPoller:
         Args:
             config: Outbox configuration.
             session_factory: Factory for creating database sessions.
-            publisher: Message publisher (Kafka, SQS, etc.). Resolved lazily
-                from the service locator when omitted.
-            repository: Outbox repository. A fresh one is built from ``config``
-                when omitted.
+            publisher: Broker publisher for the default messaging dispatcher
+                (resolved from the service locator when omitted).
+            repository: Repository of the outbox table to poll. Defaults to the
+                messaging outbox.
+            dispatchers: One per target; defaults to the built-in dispatchers.
+            name: Outbox name (logs / metrics).
         """
         self.config = config
         self.session_factory = session_factory
-        self._publisher = publisher
-        self.repository = repository or OutboxRepository(config)
-        self.logger = LogFactory().get_logger(
-            f'{self.__class__.__name__}'
-        )
+        self.name = name
+        self.repository = repository or OutboxRepository(MessagingOutboxTable, config)
+        self.router = OutboxDispatchRouter(dispatchers or default_dispatchers(publisher))
+        self.logger = LogFactory().get_logger(f'{self.__class__.__name__}[{name}]')
 
         # Runtime state
         self.state = OutboxPollerState(
@@ -107,7 +115,10 @@ class OutboxPoller:
         self._wake_event: asyncio.Event = asyncio.Event()
         self._notify_task: Optional[asyncio.Task] = None
 
-        startup_info: dict[str | Any] = {
+        startup_info: dict[str, Any] = {
+            'outbox': name,
+            'table': self.repository.table_name,
+            'targets': ', '.join(t.value for t in self.router.targets),
             'concurrent_workers': config.concurrent_workers,
             'batch_size': config.batch_size,
             'poll_strategy': config.poll_strategy,
@@ -123,13 +134,6 @@ class OutboxPoller:
         }
         cli.info_table('OutboxPoller startup info', startup_info)
         # self.logger.info(f'Outbox poller initialized: {startup_info}')
-
-    @property
-    def publisher(self) -> MessagingServiceT:
-        """Get the message publisher."""
-        if not self._publisher:
-            self._publisher = get_service(MessagingServiceT)
-        return self._publisher
 
     async def start(self) -> None:
         """Start the outbox poller with concurrent workers."""
@@ -439,7 +443,7 @@ class OutboxPoller:
                     self.state.consecutive_empty_polls += 1
                     self.state.consecutive_full_polls = 0
 
-                # Publish events
+                # Deliver records
                 for event in events:
                     await self._publish_event(session, event)
 
@@ -459,73 +463,43 @@ class OutboxPoller:
     async def _publish_event(
         self,
         session: AsyncSession,
-        event: OutboxEventTable,
+        event: OutboxRecordMixin,
     ) -> None:
-        """
-        Publish a single event.
-
-        Args:
-            session: Database session
-            event: Outbox event to publish
-        """
+        """Deliver one claimed record via its target's dispatcher, then mark it
+        published — or failed (retried with backoff, dead-lettered at the cap)."""
         start_time = datetime.now()
-        msg_data: dict[str, Any] = event.payload # type: ignore
-
         self.logger.debug(
-            f'[OutboxPoller] Publishing event {event.event_type} (id={event.id}) to {event.channel}, msg type {type(msg_data)}'
+            f'Dispatching {event.event_type} (id={event.id}) to {event.target}:{event.channel}'  # type: ignore[attr-defined]
         )
 
         try:
-            # Publish to messaging system
-            await self.publisher.publish(
-                channel=event.channel,
-                message=msg_data,
-                headers=event.headers,
-                ordering_key=event.ordering_key,
-            )
-
-            # Mark as published
-            await self.repository.mark_published(session, event.id)
-
-            publish_duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-
-            # Record metrics
+            await self.router.dispatch(event)  # type: ignore[arg-type]
+            await self.repository.mark_published(session, event.id)  # type: ignore[attr-defined]
+            duration_ms = (datetime.now() - start_time).total_seconds() * 1000
             if self.metrics:
-                self.metrics.record_publish(
-                    duration_ms=publish_duration_ms,
-                    success=True,
-                    moved_to_dlq=False,
-                )
-
+                self.metrics.record_publish(duration_ms=duration_ms, success=True, moved_to_dlq=False)
             self.logger.debug(
-                f'Published event {event.event_type} (id={event.id}) '
-                f'to {event.channel} in {publish_duration_ms:.2f}ms'
+                # Wording relied on by taas-tests/e2e/user-registration ("healthy run").
+                f'Published event {event.event_type} (id={event.id}) to {event.channel} in {duration_ms:.2f}ms'  # type: ignore[attr-defined]
             )
 
         except Exception as e:
-            # Mark as failed
-            error_msg = f'{type(e).__name__}: {str(e)}'
-
-            # TODO: consider moving to DLQ if retry count exceeded
-            # await self.repository.mark_failed(session, event.id, error_msg)
-
-            publish_duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-
-            # Check if moved to DLQ
-            moved_to_dlq = (event.retry_count + 1) >= event.max_retries
-
-            # Record metrics
+            error_msg = f'{type(e).__name__}: {e}'
+            try:
+                # Dispatch never writes to ``session``, so no rollback is needed (a
+                # rollback would expire the other claimed records of this batch).
+                new_status = await self.repository.mark_failed(session, event.id, error_msg)  # type: ignore[attr-defined]
+            except Exception:
+                self.logger.exception(f'Could not mark record {event.id} as failed')  # type: ignore[attr-defined]
+                new_status = None
+            duration_ms = (datetime.now() - start_time).total_seconds() * 1000
             if self.metrics:
                 self.metrics.record_publish(
-                    duration_ms=publish_duration_ms,
+                    duration_ms=duration_ms,
                     success=False,
-                    moved_to_dlq=moved_to_dlq,
+                    moved_to_dlq=new_status == OutboxStatus.DEAD_LETTER,
                 )
-
-            self.logger.error(
-                f'Failed to publish event {event.event_type} '
-                f'(id={event.id}): {error_msg}'
-            )
+            self.logger.error(f'Failed to deliver {event.event_type} (id={event.id}): {error_msg}')  # type: ignore[attr-defined]
 
     async def _maintenance_loop(self) -> None:
         """
@@ -549,11 +523,11 @@ class OutboxPoller:
 
                     # Log metrics
                     if self.metrics and self.config.enable_metrics:
-                        self.logger.info(f'Outbox metrics: {self.metrics.to_dict()}')
+                        self.logger.info(f'Outbox {self.name} metrics: {self.metrics.to_dict()}')
 
                     # Log stats
                     stats = await self.repository.get_stats(session)
-                    self.logger.info(f'Outbox stats: {stats}')
+                    self.logger.info(f'Outbox {self.name} stats: {stats}')
 
                 # Sleep for configured interval
                 await asyncio.sleep(self.config.metrics_log_interval_seconds)

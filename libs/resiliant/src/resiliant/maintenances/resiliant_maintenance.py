@@ -34,7 +34,7 @@ from resiliant import ResiliantServiceFactory
 from resiliant.outbox.partition_maintenance import OutboxPartitionMaintainer
 
 if TYPE_CHECKING:
-    from db.models.resiliant import ScheduledJobTable
+    from resiliant.models import ScheduledJobTable
     from resiliant.schedule import SchedulerPoller
 
 _logger = LogFactory().get_logger('ResiliantMaintenance')

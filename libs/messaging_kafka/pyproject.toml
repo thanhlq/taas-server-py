@@ -10,6 +10,8 @@ requires-python = ">=3.14"
 dependencies = [
     # Workspace modules
     "foundation",
+    # Shared retry decorator (resiliant.retry)
+    "resiliant",
 
     # Message queuing and streaming
     "aiokafka==0.14.0",

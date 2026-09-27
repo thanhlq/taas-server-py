@@ -1,8 +1,8 @@
 """init database
 
 Revision ID: bdb25317e822
-Revises:
-Create Date: 2026-07-29 11:39:58.311357
+Revises: 
+Create Date: 2026-09-27 10:05:28.158254
 
 """
 
@@ -10,24 +10,14 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
-import sqlalchemy.dialects.postgresql.named_types as pg_types  # <--- Add this line.
-from advanced_alchemy.types import (
-    GUID,
-    ORA_JSONB,
-    DateTimeUTC,
-    EncryptedString,
-    EncryptedText,
-    FernetBackend,
-    PasswordHash,
-    StoredObject,
-)
-from advanced_alchemy.types.encrypted_string import PGCryptoBackend
+import sqlalchemy.dialects.postgresql.named_types as pg_types    # <--- Add this line.
 from alembic import op
-from db.migrations.utils import check_enum_exists  # <--- Add this line.
-from db.models.types import JSONText  # <--- Add this line.
+from db.migrations.utils import check_enum_exists    # <--- Add this line.
+from db.models.types import JSONText              # <--- Add this line.
+from advanced_alchemy.types import EncryptedString, EncryptedText, GUID, ORA_JSONB, DateTimeUTC, StoredObject, PasswordHash, FernetBackend
+from advanced_alchemy.types.encrypted_string import PGCryptoBackend
 from sqlalchemy import Text  # noqa: F401
 from sqlalchemy.dialects import postgresql
-
 try:
     from advanced_alchemy.types.password_hash.argon2 import Argon2Hasher
 except ImportError:
@@ -42,7 +32,7 @@ except ImportError:
     PwdlibHasher = Any  # type: ignore
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Sequence
 
 __all__ = ["downgrade", "upgrade", "schema_upgrades", "schema_downgrades", "data_upgrades", "data_downgrades"]
 
@@ -147,11 +137,14 @@ def schema_upgrades() -> None:
         batch_op.create_index('idx_dlq_archive_handler', ['handler_name'], unique=False)
         batch_op.create_index('idx_dlq_archive_status', ['status'], unique=False)
 
-    op.create_table('resiliant_outbox_events',
+    op.create_table('resiliant_outbox_messages',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('event_id', sa.String(length=64), nullable=False),
+    sa.Column('source_service', sa.String(length=100), nullable=True),
+    sa.Column('user_id', sa.String(length=64), nullable=True),
     sa.Column('event_type', sa.String(length=255), nullable=False),
-    sa.Column('channel', sa.String(length=255), nullable=False),
+    sa.Column('target', pg_types.ENUM('MESSAGING', name='outboxtarget', create_type=not check_enum_exists(op, 'outboxtarget')), nullable=False),
+    sa.Column('channel', sa.String(length=255), nullable=True),
     sa.Column('ordering_key', sa.String(length=255), nullable=True),
     sa.Column('payload', sa.JSON(), nullable=False),
     sa.Column('headers', sa.JSON(), nullable=True),
@@ -159,22 +152,53 @@ def schema_upgrades() -> None:
     sa.Column('retry_count', sa.Integer(), nullable=False),
     sa.Column('max_retries', sa.Integer(), nullable=False),
     sa.Column('last_error', sa.Text(), nullable=True),
-    sa.Column('processed_at', sa.TIMESTAMP(), nullable=True),
-    sa.Column('source_service', sa.String(length=100), nullable=True),
+    sa.Column('next_attempt_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('processed_at', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.Column('correlation_id', sa.String(length=64), nullable=True),
-    sa.Column('user_id', sa.String(length=64), nullable=True),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_resiliant_outbox_events'))
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_resiliant_outbox_messages'))
     )
-    with op.batch_alter_table('resiliant_outbox_events', schema=None) as batch_op:
-        batch_op.create_index('idx_outbox_status_created', ['status', 'created_at'], unique=False)
-        batch_op.create_index('idx_outbox_status_retry', ['status', 'retry_count', 'created_at'], unique=False)
-        batch_op.create_index(batch_op.f('ix_resiliant_outbox_events_correlation_id'), ['correlation_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_resiliant_outbox_events_event_id'), ['event_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_resiliant_outbox_events_event_type'), ['event_type'], unique=False)
-        batch_op.create_index(batch_op.f('ix_resiliant_outbox_events_status'), ['status'], unique=False)
+    with op.batch_alter_table('resiliant_outbox_messages', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_messages_correlation_id'), ['correlation_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_messages_event_id'), ['event_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_messages_event_type'), ['event_type'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_messages_status'), ['status'], unique=False)
+        batch_op.create_index('ix_resiliant_outbox_messages_status_created', ['status', 'created_at'], unique=False)
+        batch_op.create_index('ix_resiliant_outbox_messages_status_retry', ['status', 'retry_count', 'created_at'], unique=False)
+
+    op.create_table('resiliant_outbox_transactions',
+    sa.Column('id', sa.GUID(length=16), nullable=False),
+    sa.Column('request_id', sa.String(length=128), nullable=False),
+    sa.Column('account_ref', sa.String(length=128), nullable=True),
+    sa.Column('source_system', sa.String(length=100), nullable=True),
+    sa.Column('event_type', sa.String(length=255), nullable=False),
+    sa.Column('target', pg_types.ENUM('MESSAGING', name='outboxtarget', create_type=not check_enum_exists(op, 'outboxtarget')), nullable=False),
+    sa.Column('channel', sa.String(length=255), nullable=True),
+    sa.Column('ordering_key', sa.String(length=255), nullable=True),
+    sa.Column('payload', sa.JSON(), nullable=False),
+    sa.Column('headers', sa.JSON(), nullable=True),
+    sa.Column('status', pg_types.ENUM('PENDING', 'PROCESSING', 'PUBLISHED', 'FAILED', 'DEAD_LETTER', name='outboxstatus', create_type=not check_enum_exists(op, 'outboxstatus')), nullable=False),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('max_retries', sa.Integer(), nullable=False),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('next_attempt_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('processed_at', sa.DateTimeUTC(timezone=True), nullable=True),
+    sa.Column('correlation_id', sa.String(length=64), nullable=True),
+    sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTimeUTC(timezone=True), nullable=False),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_resiliant_outbox_transactions')),
+    sa.UniqueConstraint('request_id', name=op.f('uq_resiliant_outbox_transactions_request_id'))
+    )
+    with op.batch_alter_table('resiliant_outbox_transactions', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_transactions_account_ref'), ['account_ref'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_transactions_correlation_id'), ['correlation_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_transactions_event_type'), ['event_type'], unique=False)
+        batch_op.create_index(batch_op.f('ix_resiliant_outbox_transactions_status'), ['status'], unique=False)
+        batch_op.create_index('ix_resiliant_outbox_transactions_status_created', ['status', 'created_at'], unique=False)
+        batch_op.create_index('ix_resiliant_outbox_transactions_status_retry', ['status', 'retry_count', 'created_at'], unique=False)
 
     op.create_table('resiliant_processed_events',
     sa.Column('id', sa.GUID(length=16), nullable=False),
@@ -184,6 +208,7 @@ def schema_upgrades() -> None:
     sa.Column('handler_name', sa.String(length=255), nullable=False, comment='Name of the handler that processed this event'),
     sa.Column('saga_id', sa.Text(), nullable=True, comment='Optional saga UUID for linking to saga_state rows'),
     sa.Column('correlation_id', sa.String(length=255), nullable=True, comment='W3C correlation ID propagated from the original request'),
+    sa.Column('tenant_id', sa.String(length=64), nullable=True, comment='Tenant of the event — per-tenant replay / audit queries'),
     sa.Column('extra_metadata', sa.JSON(), nullable=True, comment='Free-form JSON for future extensibility'),
     sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('NOW()'), nullable=False, comment='Wall-clock time when the row was inserted'),
     sa.Column('sa_orm_sentinel', sa.Integer(), nullable=True),
@@ -193,6 +218,7 @@ def schema_upgrades() -> None:
     with op.batch_alter_table('resiliant_processed_events', schema=None) as batch_op:
         batch_op.create_index('idx_idempotency_created_at', ['created_at'], unique=False)
         batch_op.create_index('idx_idempotency_event_id', ['event_id'], unique=False)
+        batch_op.create_index('idx_idempotency_tenant', ['tenant_id'], unique=False)
 
     op.create_table('resiliant_saga_state',
     sa.Column('id', sa.GUID(length=16), nullable=False),
@@ -709,7 +735,6 @@ def schema_upgrades() -> None:
     sa.Column('failed_reset_attempts', sa.Integer(), nullable=False),
     sa.Column('reset_locked_until', sa.DateTimeUTC(timezone=True), nullable=True),
     sa.Column('tenant_id', sa.Integer(), nullable=True),
-    sa.Column('org_id', sa.String(length=36), nullable=True),
     sa.Column('totp_secret', sa.EncryptedString(key='your-secret-key-here', backend=FernetBackend, length=None), nullable=True),
     sa.Column('mfa_enabled', sa.Boolean(), nullable=False),
     sa.Column('two_factor_confirmed_at', sa.DateTimeUTC(timezone=True), nullable=True),
@@ -721,7 +746,6 @@ def schema_upgrades() -> None:
     )
     with op.batch_alter_table('taas_user_account', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_taas_user_account_email'), ['email'], unique=False)
-        batch_op.create_index(batch_op.f('ix_taas_user_account_org_id'), ['org_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_status'), ['status'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_tenant_id'), ['tenant_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_taas_user_account_username'), ['username'], unique=False)
@@ -1505,7 +1529,6 @@ def schema_downgrades() -> None:
         batch_op.drop_index(batch_op.f('ix_taas_user_account_username'))
         batch_op.drop_index(batch_op.f('ix_taas_user_account_tenant_id'))
         batch_op.drop_index(batch_op.f('ix_taas_user_account_status'))
-        batch_op.drop_index(batch_op.f('ix_taas_user_account_org_id'))
         batch_op.drop_index(batch_op.f('ix_taas_user_account_email'))
 
     op.drop_table('taas_user_account')
@@ -1598,19 +1621,29 @@ def schema_downgrades() -> None:
 
     op.drop_table('resiliant_saga_state')
     with op.batch_alter_table('resiliant_processed_events', schema=None) as batch_op:
+        batch_op.drop_index('idx_idempotency_tenant')
         batch_op.drop_index('idx_idempotency_event_id')
         batch_op.drop_index('idx_idempotency_created_at')
 
     op.drop_table('resiliant_processed_events')
-    with op.batch_alter_table('resiliant_outbox_events', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_events_status'))
-        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_events_event_type'))
-        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_events_event_id'))
-        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_events_correlation_id'))
-        batch_op.drop_index('idx_outbox_status_retry')
-        batch_op.drop_index('idx_outbox_status_created')
+    with op.batch_alter_table('resiliant_outbox_transactions', schema=None) as batch_op:
+        batch_op.drop_index('ix_resiliant_outbox_transactions_status_retry')
+        batch_op.drop_index('ix_resiliant_outbox_transactions_status_created')
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_transactions_status'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_transactions_event_type'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_transactions_correlation_id'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_transactions_account_ref'))
 
-    op.drop_table('resiliant_outbox_events')
+    op.drop_table('resiliant_outbox_transactions')
+    with op.batch_alter_table('resiliant_outbox_messages', schema=None) as batch_op:
+        batch_op.drop_index('ix_resiliant_outbox_messages_status_retry')
+        batch_op.drop_index('ix_resiliant_outbox_messages_status_created')
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_messages_status'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_messages_event_type'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_messages_event_id'))
+        batch_op.drop_index(batch_op.f('ix_resiliant_outbox_messages_correlation_id'))
+
+    op.drop_table('resiliant_outbox_messages')
     with op.batch_alter_table('resiliant_dlq_events_archive', schema=None) as batch_op:
         batch_op.drop_index('idx_dlq_archive_status')
         batch_op.drop_index('idx_dlq_archive_handler')

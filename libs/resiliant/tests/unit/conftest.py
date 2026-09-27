@@ -52,13 +52,26 @@ def _run_sync[T](coro: Awaitable[T]) -> T:
         loop.close()
 
 
-# Tables owned by the resilience layer that the tests write to. Truncated
-# between tests so the suite is isolated and never touches unrelated data.
-_RESILIANT_TABLES = (
-    "outbox_events",
-    "dlq_events",
-    "dlq_events_archive",
-    "resiliant_processed_events",
+# Tables owned by the resilience layer that the tests write to (names come from
+# the models, so they follow RESILIANT_TABLE_PREFIX). Truncated between tests so
+# the suite is isolated and never touches unrelated data.
+from resiliant.models import (  # noqa: E402
+    DLQEventArchiveTable,
+    DLQEventTable,
+    MessagingOutboxTable,
+    ProcessedEventTable,
+    TransactionOutboxTable,
+)
+
+_RESILIANT_TABLES = tuple(
+    model.__tablename__
+    for model in (
+        MessagingOutboxTable,
+        TransactionOutboxTable,
+        DLQEventTable,
+        DLQEventArchiveTable,
+        ProcessedEventTable,
+    )
 )
 
 

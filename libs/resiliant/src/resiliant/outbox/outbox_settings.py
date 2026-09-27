@@ -21,6 +21,10 @@ class OutboxSettings:
     ENABLED: bool = field(default_factory=get_env('OUTBOX_ENABLED', True))
     """Whether outbox polling is enabled."""
 
+    POLL_OUTBOXES: str = field(default_factory=get_env('OUTBOX_POLL_OUTBOXES', ''))
+    """Comma-separated outboxes the worker relays (e.g. ``messaging,transaction``);
+    empty = every registered outbox (``resiliant.outbox.registry``)."""
+
     # Poll strategy: 'fixed', 'adaptive', or 'notify'.
     POLL_STRATEGY: str = field(default_factory=get_env('OUTBOX_POLL_STRATEGY', 'fixed'))
     """Poll strategy: fixed, adaptive, or notify."""
@@ -199,3 +203,10 @@ def get_outbox_config(settings: OutboxSettings | None = None) -> OutboxConfig:
     """
     return (settings or OutboxSettings()).get_config()
 
+
+
+def get_polled_outboxes(settings: OutboxSettings | None = None) -> list[str] | None:
+    """Outbox names from ``OUTBOX_POLL_OUTBOXES``; ``None`` = all registered outboxes."""
+    raw = (settings or OutboxSettings()).POLL_OUTBOXES
+    names = [name.strip() for name in raw.split(',') if name.strip()]
+    return names or None

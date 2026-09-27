@@ -8,17 +8,17 @@ semantics of ``SagaService`` together.
 
 from __future__ import annotations
 
-from db.models.resiliant import SagaStateTable
 from foundation.resiliant.saga import (
     SagaContext,
     SagaDefinition,
     SagaInstance,
-    SagaService,
     SagaStatus,
     SagaStep,
     SagaStepRecord,
     SagaStepStatus,
 )
+from resiliant.models import SagaStateTable
+from resiliant.saga import SagaService
 from resiliant.saga.saga_repository import (
     _current_step,
     _instance_to_values,
