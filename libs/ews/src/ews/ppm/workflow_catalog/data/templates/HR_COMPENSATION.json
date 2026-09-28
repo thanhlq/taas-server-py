@@ -1,0 +1,272 @@
+{
+  "id": "hr.compensation",
+  "category": "hr",
+  "name": "Compensation",
+  "description": "Review, analyze, approve and implement compensation changes.",
+  "workflow_type": "kanban",
+  "icon": "users",
+  "color": "#f59e0b",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "salary_review",
+      "term": "Salary Review",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "compensation_analysis",
+      "term": "Compensation Analysis",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "market_benchmarking",
+      "term": "Market Benchmarking",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "pay_equity_review",
+      "term": "Pay Equity Review",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "payroll_processing",
+      "term": "Payroll Processing",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "payroll_adjustment",
+      "term": "Payroll Adjustment",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "tax_processing",
+      "term": "Tax Processing",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "time_tracking",
+      "term": "Time Tracking",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "bonus_calculation",
+      "term": "Bonus Calculation",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "incentive_program",
+      "term": "Incentive Program",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "commission_processing",
+      "term": "Commission Processing",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "stock_option",
+      "term": "Stock Option",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "benefits_enrollment",
+      "term": "Benefits Enrollment",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "benefits_administration",
+      "term": "Benefits Administration",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "open_enrollment",
+      "term": "Open Enrollment",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "leave_management",
+      "term": "Leave Management",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "review",
+    "approval",
+    "done",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Review Initiated",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Analysis",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Recommendation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Manager Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "HR Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Communicated",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Implemented",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Review Initiated",
+      "stage_type": "new"
+    },
+    {
+      "name": "Analysis",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Recommendation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Manager Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "HR Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Communicated",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Implemented",
+      "stage_type": "done"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

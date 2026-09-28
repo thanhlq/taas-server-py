@@ -1,0 +1,171 @@
+[
+  {
+    "id": "universal",
+    "name": "General Business",
+    "description": "Simple, flexible workflows for any team or project.",
+    "icon": "briefcase",
+    "color": "#64748b",
+    "order": 1,
+    "templates": [
+      "universal.general"
+    ]
+  },
+  {
+    "id": "technology",
+    "name": "Software Development & IT",
+    "description": "Agile, Scrum, Kanban, DevOps, QA and security.",
+    "icon": "code",
+    "color": "#6366f1",
+    "order": 2,
+    "templates": [
+      "technology.agile",
+      "technology.scrum",
+      "technology.kanban",
+      "technology.scrumban",
+      "technology.lean",
+      "technology.safe",
+      "technology.shape_up",
+      "technology.waterfall",
+      "technology.extreme_programming",
+      "technology.software_development",
+      "technology.devops",
+      "technology.testing",
+      "technology.security"
+    ]
+  },
+  {
+    "id": "marketing",
+    "name": "Marketing & Advertising",
+    "description": "Campaigns, content, digital marketing and events.",
+    "icon": "megaphone",
+    "color": "#ec4899",
+    "order": 3,
+    "templates": [
+      "marketing.campaigns",
+      "marketing.content",
+      "marketing.digital",
+      "marketing.events"
+    ]
+  },
+  {
+    "id": "sales",
+    "name": "Sales & CRM",
+    "description": "Pipelines, proposals and account management.",
+    "icon": "handshake",
+    "color": "#0ea5e9",
+    "order": 4,
+    "templates": [
+      "sales.pipeline",
+      "sales.proposals",
+      "sales.account_management"
+    ]
+  },
+  {
+    "id": "operations",
+    "name": "Operations & Manufacturing",
+    "description": "Goals, onboarding, RFQs, production, supply chain, quality and facilities.",
+    "icon": "factory",
+    "color": "#f97316",
+    "order": 5,
+    "templates": [
+      "operations.business_goals",
+      "operations.client_onboarding",
+      "operations.rfq",
+      "operations.meetings",
+      "operations.production",
+      "operations.supply_chain",
+      "operations.quality",
+      "operations.facilities"
+    ]
+  },
+  {
+    "id": "hr",
+    "name": "Human Resources",
+    "description": "Recruitment, employee lifecycle and compensation.",
+    "icon": "users",
+    "color": "#f59e0b",
+    "order": 6,
+    "templates": [
+      "hr.recruitment",
+      "hr.employee_management",
+      "hr.compensation"
+    ]
+  },
+  {
+    "id": "finance",
+    "name": "Finance & Accounting",
+    "description": "Accounting, budgeting and tax.",
+    "icon": "landmark",
+    "color": "#10b981",
+    "order": 7,
+    "templates": [
+      "finance.accounting",
+      "finance.budgeting",
+      "finance.tax"
+    ]
+  },
+  {
+    "id": "construction",
+    "name": "Construction & Engineering",
+    "description": "Design, permits and site execution.",
+    "icon": "hard-hat",
+    "color": "#eab308",
+    "order": 8,
+    "templates": [
+      "construction.design",
+      "construction.permits",
+      "construction.execution"
+    ]
+  },
+  {
+    "id": "healthcare",
+    "name": "Healthcare & Medical",
+    "description": "Patient care, clinical research and compliance.",
+    "icon": "heart-pulse",
+    "color": "#ef4444",
+    "order": 9,
+    "templates": [
+      "healthcare.patient_care",
+      "healthcare.clinical_research",
+      "healthcare.compliance"
+    ]
+  },
+  {
+    "id": "education",
+    "name": "Education & Training",
+    "description": "Curriculum, assessment and student management.",
+    "icon": "graduation-cap",
+    "color": "#8b5cf6",
+    "order": 10,
+    "templates": [
+      "education.curriculum",
+      "education.assessment",
+      "education.student_management"
+    ]
+  },
+  {
+    "id": "legal",
+    "name": "Legal & Compliance",
+    "description": "Contracts, litigation, compliance and intellectual property.",
+    "icon": "scale",
+    "color": "#78716c",
+    "order": 11,
+    "templates": [
+      "legal.contracts",
+      "legal.litigation",
+      "legal.compliance",
+      "legal.intellectual_property"
+    ]
+  },
+  {
+    "id": "custom",
+    "name": "Custom",
+    "description": "Start from a blank, fully customizable workflow.",
+    "icon": "shapes",
+    "color": "#94a3b8",
+    "order": 99,
+    "templates": [
+      "custom.workflow"
+    ]
+  }
+]

@@ -1,0 +1,282 @@
+{
+  "id": "finance.budgeting",
+  "category": "finance",
+  "name": "Budgeting",
+  "description": "Plan, review and approve budgets, then monitor them.",
+  "workflow_type": "kanban",
+  "icon": "landmark",
+  "color": "#10b981",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "budget_planning",
+      "term": "Budget Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "budget_preparation",
+      "term": "Budget Preparation",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "budget_review",
+      "term": "Budget Review",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "budget_approval",
+      "term": "Budget Approval",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "financial_forecast",
+      "term": "Financial Forecast",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "revenue_forecast",
+      "term": "Revenue Forecast",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "expense_forecast",
+      "term": "Expense Forecast",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "cash_flow_forecast",
+      "term": "Cash Flow Forecast",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "budget_variance",
+      "term": "Budget Variance",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "variance_analysis",
+      "term": "Variance Analysis",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "variance_report",
+      "term": "Variance Report",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "budget_adjustment",
+      "term": "Budget Adjustment",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "financial_planning",
+      "term": "Financial Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "scenario_planning",
+      "term": "Scenario Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "strategic_planning",
+      "term": "Strategic Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "capital_planning",
+      "term": "Capital Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "in_progress",
+    "review",
+    "approval",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "Draft",
+      "stage_type": "new",
+      "color": "gray"
+    },
+    {
+      "name": "Department Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Revised",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Finance Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Executive Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Department Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Revised",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Finance Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Executive Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

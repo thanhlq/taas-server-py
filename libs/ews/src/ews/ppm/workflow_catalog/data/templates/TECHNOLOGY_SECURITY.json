@@ -1,0 +1,273 @@
+{
+  "id": "technology.security",
+  "category": "technology",
+  "name": "Security",
+  "description": "Report, triage, assess, remediate and verify security findings.",
+  "workflow_type": "kanban",
+  "icon": "code",
+  "color": "#6366f1",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "security_review",
+      "term": "Security Review",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "security_audit",
+      "term": "Security Audit",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "vulnerability_assessment",
+      "term": "Vulnerability Assessment",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "risk_assessment",
+      "term": "Risk Assessment",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "security_test",
+      "term": "Security Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "penetration_test",
+      "term": "Penetration Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "vulnerability_scan",
+      "term": "Vulnerability Scan",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "code_security_review",
+      "term": "Code Security Review",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "vulnerability_fix",
+      "term": "Vulnerability Fix",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "security_patch",
+      "term": "Security Patch",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "security_incident",
+      "term": "Security Incident",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "incident_response",
+      "term": "Incident Response",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "compliance_check",
+      "term": "Compliance Check",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "security_policy",
+      "term": "Security Policy",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "access_control",
+      "term": "Access Control",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "encryption_setup",
+      "term": "Encryption Setup",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "ready",
+    "in_progress",
+    "review",
+    "validation",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Reported",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Triaged",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Remediation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Verification",
+      "stage_type": "validation",
+      "color": "amber"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed",
+      "color": "green"
+    },
+    {
+      "name": "Accepted Risk",
+      "stage_type": "closed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Reported",
+      "stage_type": "new"
+    },
+    {
+      "name": "Triaged",
+      "stage_type": "ready"
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Remediation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Verification",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Accepted Risk",
+      "stage_type": "closed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

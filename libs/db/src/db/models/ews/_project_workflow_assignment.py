@@ -27,6 +27,8 @@ class ProjectWorkflowAssignment(UUIDv7Base, SoftDeleteColumns):
     workflow assignment where:
     - A project can have one workflow for all users (team_id = None)
     - A project can have multiple teams with different workflows (team_id set)
+    - Users assigned to a workflow (user_id set): who may see a workflow whose
+      privacy is ``assigned``; the lowest ``priority`` is the user's home workflow
     """
 
     __tablename__ = PROJECTS_WORKFLOWS_ASSIGNMENTS_TABLE
@@ -39,6 +41,8 @@ class ProjectWorkflowAssignment(UUIDv7Base, SoftDeleteColumns):
     )
 
     team_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    # A user assigned to the workflow (id / email until IAM users exist).
+    user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
 
     assigned_by: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     assigned_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

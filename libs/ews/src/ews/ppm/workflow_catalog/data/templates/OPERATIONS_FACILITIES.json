@@ -1,0 +1,291 @@
+{
+  "id": "operations.facilities",
+  "category": "operations",
+  "name": "Facilities",
+  "description": "Requests, scheduling, maintenance and inspections of facilities.",
+  "workflow_type": "kanban",
+  "icon": "factory",
+  "color": "#f97316",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "maintenance_request",
+      "term": "Maintenance Request",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "preventive_maintenance",
+      "term": "Preventive Maintenance",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "corrective_maintenance",
+      "term": "Corrective Maintenance",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "emergency_repair",
+      "term": "Emergency Repair",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "space_planning",
+      "term": "Space Planning",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "office_relocation",
+      "term": "Office Relocation",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "workspace_setup",
+      "term": "Workspace Setup",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "furniture_request",
+      "term": "Furniture Request",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "safety_inspection",
+      "term": "Safety Inspection",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "security_check",
+      "term": "Security Check",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "access_control",
+      "term": "Access Control",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "incident_response",
+      "term": "Incident Response",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "utility_management",
+      "term": "Utility Management",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "hvac_maintenance",
+      "term": "HVAC Maintenance",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "cleaning_schedule",
+      "term": "Cleaning Schedule",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "waste_management",
+      "term": "Waste Management",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "backlog",
+    "planning",
+    "ready",
+    "in_progress",
+    "building",
+    "review",
+    "testing",
+    "approval",
+    "done",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Request Received",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Scheduled",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Scheduled",
+      "stage_type": "ready"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Queue",
+      "stage_type": "backlog"
+    },
+    {
+      "name": "Production",
+      "stage_type": "building"
+    },
+    {
+      "name": "Quality Check",
+      "stage_type": "testing"
+    },
+    {
+      "name": "Packaging",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Shipping",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Request Received",
+      "stage_type": "new"
+    },
+    {
+      "name": "Processing",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Fulfillment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Delivered",
+      "stage_type": "done"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

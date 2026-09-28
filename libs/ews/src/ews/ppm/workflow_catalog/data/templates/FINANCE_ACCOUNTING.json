@@ -1,0 +1,273 @@
+{
+  "id": "finance.accounting",
+  "category": "finance",
+  "name": "Accounting",
+  "description": "Draft, review, approve, post and reconcile accounting entries.",
+  "workflow_type": "kanban",
+  "icon": "landmark",
+  "color": "#10b981",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "journal_entry",
+      "term": "Journal Entry",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "account_reconciliation",
+      "term": "Account Reconciliation",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "month_end_closing",
+      "term": "Month End Closing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "year_end_closing",
+      "term": "Year End Closing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "invoice_processing",
+      "term": "Invoice Processing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "payment_processing",
+      "term": "Payment Processing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "vendor_payment",
+      "term": "Vendor Payment",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "expense_reimbursement",
+      "term": "Expense Reimbursement",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "invoice_generation",
+      "term": "Invoice Generation",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "payment_collection",
+      "term": "Payment Collection",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "customer_payment",
+      "term": "Customer Payment",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "collections",
+      "term": "Collections",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "financial_statement",
+      "term": "Financial Statement",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "financial_report",
+      "term": "Financial Report",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "balance_sheet",
+      "term": "Balance Sheet",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "income_statement",
+      "term": "Income Statement",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "review",
+    "approval",
+    "done",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Draft",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Pending Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Reviewed",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Pending Approval",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Processing",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Posted",
+      "stage_type": "done",
+      "color": "green"
+    },
+    {
+      "name": "Reconciled",
+      "stage_type": "done",
+      "color": "green"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Pending Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Reviewed",
+      "stage_type": "review"
+    },
+    {
+      "name": "Pending Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Processing",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Posted",
+      "stage_type": "done"
+    },
+    {
+      "name": "Reconciled",
+      "stage_type": "done"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

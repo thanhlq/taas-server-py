@@ -1,0 +1,278 @@
+{
+  "id": "technology.testing",
+  "category": "technology",
+  "name": "Testing & QA",
+  "description": "Test planning, design, execution, retests and sign-off.",
+  "workflow_type": "kanban",
+  "icon": "code",
+  "color": "#6366f1",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "test_plan",
+      "term": "Test Plan",
+      "group": "quality",
+      "icon": "clipboard",
+      "color": "#10b981",
+      "description": "Testing strategy and approach"
+    },
+    {
+      "key": "test_strategy",
+      "term": "Test Strategy",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "test_case",
+      "term": "Test Case",
+      "group": "quality",
+      "icon": "check-circle",
+      "color": "#10b981",
+      "description": "Specific test scenario to execute"
+    },
+    {
+      "key": "test_suite",
+      "term": "Test Suite",
+      "group": "quality",
+      "icon": "list",
+      "color": "#10b981",
+      "description": "Collection of related test cases"
+    },
+    {
+      "key": "unit_test",
+      "term": "Unit Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "integration_test",
+      "term": "Integration Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "automation_test",
+      "term": "Automated Test",
+      "group": "quality",
+      "icon": "cpu",
+      "color": "#6366f1",
+      "description": "Automated test script"
+    },
+    {
+      "key": "performance_test",
+      "term": "Performance Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "regression_test",
+      "term": "Regression Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "uat",
+      "term": "Uat",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "smoke_test",
+      "term": "Smoke Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "load_test",
+      "term": "Load Test",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "test_execution",
+      "term": "Test Execution",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "bug_reporting",
+      "term": "Bug Reporting",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "defect",
+      "term": "Defect",
+      "group": "issues",
+      "icon": "alert-circle",
+      "color": "#dc2626",
+      "description": "Quality issue or flaw"
+    },
+    {
+      "key": "test_review",
+      "term": "Test Review",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "ready",
+    "testing",
+    "validation",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Test Planning",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Test Design",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Ready For Testing",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "In Testing",
+      "stage_type": "testing",
+      "color": "amber"
+    },
+    {
+      "name": "Passed",
+      "stage_type": "validation",
+      "color": "amber"
+    },
+    {
+      "name": "Retest",
+      "stage_type": "testing",
+      "color": "amber"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Test Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Test Design",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Ready For Testing",
+      "stage_type": "ready"
+    },
+    {
+      "name": "In Testing",
+      "stage_type": "testing"
+    },
+    {
+      "name": "Passed",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Retest",
+      "stage_type": "testing"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Failed",
+      "stage_type": "rejected"
+    },
+    {
+      "name": "Blocked",
+      "stage_type": "blocked"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

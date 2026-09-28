@@ -1,0 +1,312 @@
+{
+  "id": "construction.permits",
+  "category": "construction",
+  "name": "Building Permits",
+  "description": "Prepare, submit and follow permit applications until approval.",
+  "workflow_type": "kanban",
+  "icon": "hard-hat",
+  "color": "#eab308",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "permit_application",
+      "term": "Permit Application",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "building_permit",
+      "term": "Building Permit",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "zoning_approval",
+      "term": "Zoning Approval",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "environmental_permit",
+      "term": "Environmental Permit",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "inspection",
+      "term": "Inspection",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "safety_inspection",
+      "term": "Safety Inspection",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "materials_testing",
+      "term": "Materials Testing",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "code_compliance",
+      "term": "Code Compliance",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "progress_reporting",
+      "term": "Progress Reporting",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "change_order",
+      "term": "Change Order",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "milestone_review",
+      "term": "Milestone Review",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "punch_list",
+      "term": "Punch List",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "final_inspection",
+      "term": "Final Inspection",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "certificate_occupancy",
+      "term": "Certificate Occupancy",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "warranty_documentation",
+      "term": "Warranty Documentation",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    },
+    {
+      "key": "project_closeout",
+      "term": "Project Closeout",
+      "group": "domain",
+      "icon": "hard-hat",
+      "color": "#eab308"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "in_progress",
+    "building",
+    "review",
+    "testing",
+    "approval",
+    "done",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Permit Application",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Permit Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Permit Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Design",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Engineering",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Permit Application",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Permit Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Permit Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Pre Construction",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Mobilization",
+      "stage_type": "building"
+    },
+    {
+      "name": "Foundation",
+      "stage_type": "building"
+    },
+    {
+      "name": "Construction",
+      "stage_type": "building"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Inspection",
+      "stage_type": "review"
+    },
+    {
+      "name": "Quality Control",
+      "stage_type": "testing"
+    },
+    {
+      "name": "Punch List",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Substantial Completion",
+      "stage_type": "review"
+    },
+    {
+      "name": "Final Inspection",
+      "stage_type": "review"
+    },
+    {
+      "name": "Closeout",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

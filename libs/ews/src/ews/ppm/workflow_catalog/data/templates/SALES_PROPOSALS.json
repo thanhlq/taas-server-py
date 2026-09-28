@@ -1,0 +1,277 @@
+{
+  "id": "sales.proposals",
+  "category": "sales",
+  "name": "Sales Proposals",
+  "description": "Research, draft, price, review and send proposals.",
+  "workflow_type": "kanban",
+  "icon": "handshake",
+  "color": "#0ea5e9",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "demo_preparation",
+      "term": "Demo Preparation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "demo_delivery",
+      "term": "Demo Delivery",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "presentation",
+      "term": "Presentation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "proof_of_concept",
+      "term": "Proof Of Concept",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "proposal_creation",
+      "term": "Proposal Creation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "proposal_writing",
+      "term": "Proposal Writing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "pricing_development",
+      "term": "Pricing Development",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "quote_generation",
+      "term": "Quote Generation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "contract_negotiation",
+      "term": "Contract Negotiation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "terms_negotiation",
+      "term": "Terms Negotiation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "pricing_negotiation",
+      "term": "Pricing Negotiation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "concession_approval",
+      "term": "Concession Approval",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "proposal_review",
+      "term": "Proposal Review",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "legal_review",
+      "term": "Legal Review",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "pricing_approval",
+      "term": "Pricing Approval",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "executive_approval",
+      "term": "Executive Approval",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "creation",
+    "review",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "Request Received",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Research",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Drafting",
+      "stage_type": "creation",
+      "color": "blue"
+    },
+    {
+      "name": "Internal Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Pricing",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Final Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Sent",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Accepted",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Request Received",
+      "stage_type": "new"
+    },
+    {
+      "name": "Research",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Drafting",
+      "stage_type": "creation"
+    },
+    {
+      "name": "Internal Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Pricing",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Final Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Sent",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Accepted",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Rejected",
+      "stage_type": "rejected"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

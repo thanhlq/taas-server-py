@@ -1,0 +1,268 @@
+{
+  "id": "sales.account_management",
+  "category": "sales",
+  "name": "Account Management",
+  "description": "Onboard, engage, grow and renew customer accounts.",
+  "workflow_type": "kanban",
+  "icon": "handshake",
+  "color": "#0ea5e9",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "customer_onboarding",
+      "term": "Customer Onboarding",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "account_setup",
+      "term": "Account Setup",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "customer_training",
+      "term": "Customer Training",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "implementation_support",
+      "term": "Implementation Support",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "account_management",
+      "term": "Account Management",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "relationship_building",
+      "term": "Relationship Building",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "quarterly_review",
+      "term": "Quarterly Review",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "executive_briefing",
+      "term": "Executive Briefing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "upselling",
+      "term": "Upselling",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "cross_selling",
+      "term": "Cross Selling",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "renewal_management",
+      "term": "Renewal Management",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "customer_renewal",
+      "term": "Customer Renewal",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "expansion_opportunity",
+      "term": "Expansion Opportunity",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "customer_support",
+      "term": "Customer Support",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "technical_support",
+      "term": "Technical Support",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "complaint_resolution",
+      "term": "Complaint Resolution",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "escalation_handling",
+      "term": "Escalation Handling",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "done",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New Account",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Onboarding",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Engagement",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Upsell Opportunity",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Renewal",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "At Risk",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New Account",
+      "stage_type": "new"
+    },
+    {
+      "name": "Onboarding",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Engagement",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Upsell Opportunity",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Renewal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "At Risk",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Churned",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

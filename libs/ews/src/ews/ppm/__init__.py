@@ -2,6 +2,11 @@ from foundation.http import BaseController
 
 from .controllers._project_api import ProjectController, TaskController
 from .controllers._task_activity_api import TaskCommentController, TaskTimelogController
+from .controllers._workflow_api import (
+    ProjectWorkflowController,
+    WorkflowStageTypeController,
+    WorkflowTemplateController,
+)
 from .controllers._task_planning_api import (
     ProjectIterationController,
     ProjectTaskListController,
@@ -21,6 +26,9 @@ def get_project_controllers() -> list[BaseController]:
         ProjectIterationController(),
         TaskCommentController(),
         TaskTimelogController(),
+        WorkflowTemplateController(),
+        WorkflowStageTypeController(),
+        ProjectWorkflowController(),
         TestController(),
     ]
     return project_controllers

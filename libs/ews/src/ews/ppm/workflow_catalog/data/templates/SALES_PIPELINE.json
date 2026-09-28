@@ -1,0 +1,257 @@
+{
+  "id": "sales.pipeline",
+  "category": "sales",
+  "name": "Sales Pipeline",
+  "description": "Move deals from prospect and lead to qualified, proposal, negotiation and close.",
+  "workflow_type": "kanban",
+  "icon": "handshake",
+  "color": "#0ea5e9",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "lead_generation",
+      "term": "Lead Generation",
+      "group": "domain",
+      "icon": "users",
+      "color": "#10b981",
+      "description": "Generate new leads"
+    },
+    {
+      "key": "lead_qualification",
+      "term": "Lead Qualification",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "lead_nurturing",
+      "term": "Lead Nurturing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "lead_scoring",
+      "term": "Lead Scoring",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "cold_outreach",
+      "term": "Cold Outreach",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "opportunity_creation",
+      "term": "Opportunity Creation",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "opportunity_assessment",
+      "term": "Opportunity Assessment",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "needs_analysis",
+      "term": "Needs Analysis",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "solution_mapping",
+      "term": "Solution Mapping",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "sales_call",
+      "term": "Sales Call",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "discovery_call",
+      "term": "Discovery Call",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "follow_up_call",
+      "term": "Follow Up Call",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "sales_meeting",
+      "term": "Sales Meeting",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "deal_closing",
+      "term": "Deal Closing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "contract_signing",
+      "term": "Contract Signing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "order_processing",
+      "term": "Order Processing",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    },
+    {
+      "key": "handoff_to_delivery",
+      "term": "Handoff To Delivery",
+      "group": "domain",
+      "icon": "handshake",
+      "color": "#0ea5e9"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "ready",
+    "in_progress",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "Prospect",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Lead",
+      "stage_type": "new",
+      "color": "gray"
+    },
+    {
+      "name": "Qualified",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "Proposal",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Negotiation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Closed Won",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Prospect",
+      "stage_type": "new"
+    },
+    {
+      "name": "Lead",
+      "stage_type": "new"
+    },
+    {
+      "name": "Qualified",
+      "stage_type": "ready"
+    },
+    {
+      "name": "Proposal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Negotiation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Closed Won",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Closed Lost",
+      "stage_type": "rejected"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

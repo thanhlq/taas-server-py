@@ -1,0 +1,296 @@
+{
+  "id": "technology.devops",
+  "category": "technology",
+  "name": "DevOps & Infrastructure",
+  "description": "Build, CI/CD, staging and production releases with monitoring.",
+  "workflow_type": "kanban",
+  "icon": "code",
+  "color": "#6366f1",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "infrastructure",
+      "term": "Infrastructure",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "infrastructure_setup",
+      "term": "Infrastructure Setup",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "configuration",
+      "term": "Configuration",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "environment_setup",
+      "term": "Environment Setup",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "deployment",
+      "term": "Deployment",
+      "group": "domain",
+      "icon": "upload",
+      "color": "#10b981",
+      "description": "Releasing code to environment"
+    },
+    {
+      "key": "ci_cd_setup",
+      "term": "CI/CD Setup",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "pipeline_creation",
+      "term": "Pipeline Creation",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "build_automation",
+      "term": "Build Automation",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "release_management",
+      "term": "Release Management",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "monitoring",
+      "term": "Monitoring",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "backup",
+      "term": "Backup",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "migration",
+      "term": "Migration",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "upgrade",
+      "term": "Upgrade",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "disaster_recovery",
+      "term": "Disaster Recovery",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "incident",
+      "term": "Incident",
+      "group": "issues",
+      "icon": "alert-octagon",
+      "color": "#dc2626",
+      "description": "Urgent problem requiring immediate attention"
+    },
+    {
+      "key": "issue",
+      "term": "Issue",
+      "group": "issues",
+      "icon": "alert-triangle",
+      "color": "#f59e0b",
+      "description": "Problem or concern to address"
+    },
+    {
+      "key": "hotfix_deployment",
+      "term": "Hotfix Deployment",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    },
+    {
+      "key": "rollback",
+      "term": "Rollback",
+      "group": "domain",
+      "icon": "code",
+      "color": "#6366f1"
+    }
+  ],
+  "allowed_stage_types": [
+    "planning",
+    "in_progress",
+    "development",
+    "testing",
+    "validation",
+    "done",
+    "deployed",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "Planned",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Build",
+      "stage_type": "development",
+      "color": "blue"
+    },
+    {
+      "name": "CI/CD",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Staging",
+      "stage_type": "testing",
+      "color": "amber"
+    },
+    {
+      "name": "Pre Production",
+      "stage_type": "validation",
+      "color": "amber"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "In Production",
+      "stage_type": "deployed",
+      "color": "green"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Planned",
+      "stage_type": "planning"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Build",
+      "stage_type": "development"
+    },
+    {
+      "name": "CI/CD",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Staging",
+      "stage_type": "testing"
+    },
+    {
+      "name": "Pre Production",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "In Production",
+      "stage_type": "deployed"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Rolled Back",
+      "stage_type": "rejected"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

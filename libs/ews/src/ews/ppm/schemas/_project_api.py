@@ -12,6 +12,8 @@ from typing import Any, Optional
 from db.models.ews.ews_enums import ProjectStatus
 from foundation.serialization import ApiRequest, ApiResponse
 
+from ._workflow_api import WorkItemTypeItem
+
 
 class ProjectCreateRequest(ApiRequest):
     """Create a project, optionally seeded from a workflow template."""
@@ -32,9 +34,21 @@ class ProjectCreateRequest(ApiRequest):
     user_id: Optional[str] = None
     # Free-form labels shown on the project card (stored in ``tags.labels``).
     labels: Optional[list[str]] = None
-    # When set, the project's workflow is seeded from this template
-    # (a ``WorkItemCategory``/methodology id, e.g. ``technology.scrum``).
+    # Workflow template (``GET /workflow-templates``, e.g. ``construction.design``).
+    # Sticky: it constrains the project's work item types and stage types.
+    # Without it the project is unconstrained.
     template_id: Optional[str] = None
+    # Language of the seeded stage names / work item terms (BCP 47, default en).
+    locale: Optional[str] = None
+
+
+class WorkItemTypeInput(ApiRequest):
+    key: str
+    term: str
+    group: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
 
 
 class ProjectUpdateRequest(ApiRequest):
@@ -54,6 +68,9 @@ class ProjectUpdateRequest(ApiRequest):
     user_id: Optional[str] = None
     client_id: Optional[str] = None
     labels: Optional[list[str]] = None
+    # The project's work item types. With a template: a subset of the template's
+    # types (terms may be renamed); without: any types.
+    work_item_types: Optional[list[WorkItemTypeInput]] = None
 
 
 class ProjectListItem(ApiResponse):
@@ -92,6 +109,14 @@ class ProjectResponse(ProjectListItem):
     """Full project detail."""
 
     org_id: Optional[str] = None
+    # Process: the sticky workflow template and its constraints.
+    template_id: Optional[str] = None
+    template_name: Optional[str] = None
+    work_item_types: list[WorkItemTypeItem] = []
+    # True: only the template's work item types (no new ones).
+    work_item_types_locked: bool = False
+    # None: any stage type; else the allowed ones.
+    allowed_stage_types: Optional[list[str]] = None
     workflow: Optional[dict[str, Any]] = None
     settings: Optional[dict[str, Any]] = None
     properties: Optional[dict[str, Any]] = None

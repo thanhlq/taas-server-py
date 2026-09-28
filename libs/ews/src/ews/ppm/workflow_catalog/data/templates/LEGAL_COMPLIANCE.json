@@ -1,0 +1,316 @@
+{
+  "id": "legal.compliance",
+  "category": "legal",
+  "name": "Legal Compliance",
+  "description": "Assess obligations, remediate gaps and verify compliance.",
+  "workflow_type": "kanban",
+  "icon": "scale",
+  "color": "#78716c",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "policy_development",
+      "term": "Policy Development",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "policy_review",
+      "term": "Policy Review",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "procedure_documentation",
+      "term": "Procedure Documentation",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "governance_framework",
+      "term": "Governance Framework",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "compliance_monitoring",
+      "term": "Compliance Monitoring",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "compliance_audit",
+      "term": "Compliance Audit",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "compliance_assessment",
+      "term": "Compliance Assessment",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "gap_analysis",
+      "term": "Gap Analysis",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "regulatory_analysis",
+      "term": "Regulatory Analysis",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "regulatory_filing",
+      "term": "Regulatory Filing",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "regulatory_update",
+      "term": "Regulatory Update",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "regulatory_response",
+      "term": "Regulatory Response",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "training_compliance",
+      "term": "Training Compliance",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "audit_response",
+      "term": "Audit Response",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "compliance_report",
+      "term": "Compliance Report",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "incident_reporting",
+      "term": "Incident Reporting",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "in_progress",
+    "execution",
+    "review",
+    "validation",
+    "approval",
+    "done",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Remediation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Verification",
+      "stage_type": "validation",
+      "color": "amber"
+    },
+    {
+      "name": "Compliant",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Negotiation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Execution",
+      "stage_type": "execution"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Renewal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Case Opened",
+      "stage_type": "new"
+    },
+    {
+      "name": "Investigation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Discovery",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Settlement Negotiation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Trial",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Judgment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Appeal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Remediation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Verification",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Signed",
+      "stage_type": "done"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Compliant",
+      "stage_type": "done"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    },
+    {
+      "name": "Expired",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

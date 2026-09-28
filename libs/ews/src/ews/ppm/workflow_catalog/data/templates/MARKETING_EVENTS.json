@@ -1,0 +1,287 @@
+{
+  "id": "marketing.events",
+  "category": "marketing",
+  "name": "Events",
+  "description": "Plan venues and speakers, promote, run the event and follow up.",
+  "workflow_type": "kanban",
+  "icon": "megaphone",
+  "color": "#ec4899",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "event_planning",
+      "term": "Event Planning",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "event_coordination",
+      "term": "Event Coordination",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "venue_selection",
+      "term": "Venue Selection",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "event_budget",
+      "term": "Event Budget",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "webinar",
+      "term": "Webinar",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "conference",
+      "term": "Conference",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "trade_show",
+      "term": "Trade Show",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "workshop",
+      "term": "Workshop",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "networking_event",
+      "term": "Networking Event",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "promotion",
+      "term": "Promotion",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "promotional_material",
+      "term": "Promotional Material",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "sponsorship",
+      "term": "Sponsorship",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "partnership",
+      "term": "Partnership",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "market_research",
+      "term": "Market Research",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "competitor_analysis",
+      "term": "Competitor Analysis",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "customer_survey",
+      "term": "Customer Survey",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "focus_group",
+      "term": "Focus Group",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    }
+  ],
+  "allowed_stage_types": [
+    "planning",
+    "in_progress",
+    "execution",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "Venue Booking",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Speaker Confirmation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Promotion",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Registration",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Pre Event",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Event Day",
+      "stage_type": "execution",
+      "color": "blue"
+    },
+    {
+      "name": "Post Event",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Venue Booking",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Speaker Confirmation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Promotion",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Registration",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Pre Event",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Event Day",
+      "stage_type": "execution"
+    },
+    {
+      "name": "Post Event",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

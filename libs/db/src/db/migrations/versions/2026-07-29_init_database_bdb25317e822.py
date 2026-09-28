@@ -1155,6 +1155,7 @@ def schema_upgrades() -> None:
     sa.Column('project_id', sa.GUID(length=16), nullable=False),
     sa.Column('workflow_id', sa.GUID(length=16), nullable=False),
     sa.Column('team_id', sa.TEXT(), nullable=True),
+    sa.Column('user_id', sa.TEXT(), nullable=True),
     sa.Column('assigned_by', sa.TEXT(), nullable=True),
     sa.Column('assigned_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('priority', sa.Integer(), server_default=sa.text('100'), nullable=False),
@@ -1167,6 +1168,9 @@ def schema_upgrades() -> None:
     sa.ForeignKeyConstraint(['workflow_id'], ['taas_projects_workflows.id'], name=op.f('fk_taas_projects_workflows_assignments_workflow_id_taas_projects_workflows')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taas_projects_workflows_assignments'))
     )
+    with op.batch_alter_table('taas_projects_workflows_assignments', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_taas_projects_workflows_assignments_user_id'), ['user_id'], unique=False)
+
     op.create_table('taas_projects_workflows_stages',
     sa.Column('id', sa.GUID(length=16), nullable=False),
     sa.Column('name', sa.TEXT(), nullable=True),
@@ -1489,6 +1493,9 @@ def schema_downgrades() -> None:
 
     op.drop_table('taas_tasks_lists')
     op.drop_table('taas_projects_workflows_stages')
+    with op.batch_alter_table('taas_projects_workflows_assignments', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_taas_projects_workflows_assignments_user_id'))
+
     op.drop_table('taas_projects_workflows_assignments')
     op.drop_table('taas_checklist_items')
     op.drop_table('taas_user_account_role')

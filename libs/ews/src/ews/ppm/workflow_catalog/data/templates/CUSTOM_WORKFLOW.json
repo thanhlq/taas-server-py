@@ -1,0 +1,169 @@
+{
+  "id": "custom.workflow",
+  "category": "custom",
+  "name": "Blank Workflow",
+  "description": "Minimal stages and no preset work item types — shape it exactly as you need.",
+  "workflow_type": "kanban",
+  "icon": "shapes",
+  "color": "#94a3b8",
+  "work_item_types": [],
+  "allowed_stage_types": [
+    "new",
+    "backlog",
+    "planning",
+    "ready",
+    "in_progress",
+    "review",
+    "validation",
+    "approval",
+    "done",
+    "completed",
+    "closed",
+    "archived",
+    "blocked",
+    "on_hold",
+    "paused",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Backlog",
+      "stage_type": "backlog",
+      "color": "gray"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Ready",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Backlog",
+      "stage_type": "backlog"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Ready",
+      "stage_type": "ready"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Working",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Validation",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Archived",
+      "stage_type": "archived"
+    },
+    {
+      "name": "Blocked",
+      "stage_type": "blocked"
+    },
+    {
+      "name": "On Hold",
+      "stage_type": "on_hold"
+    },
+    {
+      "name": "Paused",
+      "stage_type": "paused"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

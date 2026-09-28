@@ -1,0 +1,302 @@
+{
+  "id": "education.student_management",
+  "category": "education",
+  "name": "Student Management",
+  "description": "Enrollment, onboarding, progress tracking and graduation.",
+  "workflow_type": "kanban",
+  "icon": "graduation-cap",
+  "color": "#8b5cf6",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "enrollment_processing",
+      "term": "Enrollment Processing",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "registration_management",
+      "term": "Registration Management",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "waitlist_management",
+      "term": "Waitlist Management",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "withdrawal_processing",
+      "term": "Withdrawal Processing",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "scheduling",
+      "term": "Scheduling",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "class_assignment",
+      "term": "Class Assignment",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "timetable_creation",
+      "term": "Timetable Creation",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "resource_allocation",
+      "term": "Resource Allocation",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "record_keeping",
+      "term": "Record Keeping",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "transcript_generation",
+      "term": "Transcript Generation",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "certification",
+      "term": "Certification",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "credential_management",
+      "term": "Credential Management",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "academic_advising",
+      "term": "Academic Advising",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "counseling_session",
+      "term": "Counseling Session",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "tutoring_session",
+      "term": "Tutoring Session",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    },
+    {
+      "key": "progress_tracking",
+      "term": "Progress Tracking",
+      "group": "domain",
+      "icon": "graduation-cap",
+      "color": "#8b5cf6"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "ready",
+    "in_progress",
+    "development",
+    "implementation",
+    "review",
+    "approval",
+    "done",
+    "completed",
+    "deployed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Enrollment",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Evaluation",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Graduated",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Design",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Development",
+      "stage_type": "development"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Implementation",
+      "stage_type": "implementation"
+    },
+    {
+      "name": "Evaluation",
+      "stage_type": "review"
+    },
+    {
+      "name": "Enrollment",
+      "stage_type": "new"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Scheduled",
+      "stage_type": "ready"
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Grading",
+      "stage_type": "review"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Graduated",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Graded",
+      "stage_type": "done"
+    },
+    {
+      "name": "Published",
+      "stage_type": "deployed"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

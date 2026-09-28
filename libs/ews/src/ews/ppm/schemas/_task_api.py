@@ -29,6 +29,9 @@ class TaskCreateRequest(ApiRequest):
     name: str
     description: Optional[str] = None
     description_html: Optional[str] = None
+    # Placement: a stage (id), else the first stage of ``stage_type`` in the
+    # workflow (default: the project's default workflow), else its default stage.
+    workflow_id: Optional[str] = None
     stage_id: Optional[str] = None
     stage_type: Optional[str] = None
     work_item_type: Optional[str] = None
@@ -57,6 +60,8 @@ class TaskUpdateRequest(ApiRequest):
     description: Optional[str] = None
     # Rich text (HTML) of the description; ``description`` keeps its plain text.
     description_html: Optional[str] = None
+    # Move to another workflow (same stage type when possible) / stage.
+    workflow_id: Optional[str] = None
     stage_id: Optional[str] = None
     stage_type: Optional[str] = None
     work_item_type: Optional[str] = None
@@ -83,7 +88,9 @@ class TaskResponse(ApiResponse):
     description_html: Optional[str] = None
     # Human key, ``<project code>-<sequence>`` (e.g. ``TT-67``).
     code: Optional[str] = None
+    workflow_id: Optional[str] = None
     stage_id: Optional[str] = None
+    # Mirrors the stage's type (analytics across workflows).
     stage_type: Optional[str] = None
     work_item_type: Optional[str] = None
     parent_id: Optional[str] = None

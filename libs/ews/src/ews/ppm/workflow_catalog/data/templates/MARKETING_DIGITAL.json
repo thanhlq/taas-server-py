@@ -1,0 +1,286 @@
+{
+  "id": "marketing.digital",
+  "category": "marketing",
+  "name": "Digital Marketing",
+  "description": "Ad creation, targeting, launch, monitoring and optimization.",
+  "workflow_type": "kanban",
+  "icon": "megaphone",
+  "color": "#ec4899",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "seo_optimization",
+      "term": "SEO Optimization",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "keyword_research",
+      "term": "Keyword Research",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "on_page_seo",
+      "term": "On Page SEO",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "off_page_seo",
+      "term": "Off Page SEO",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "technical_seo",
+      "term": "Technical SEO",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "social_media_post",
+      "term": "Social Media Post",
+      "group": "domain",
+      "icon": "share-2",
+      "color": "#ec4899",
+      "description": "Social media content"
+    },
+    {
+      "key": "social_media_management",
+      "term": "Social Media Management",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "community_engagement",
+      "term": "Community Engagement",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "influencer_outreach",
+      "term": "Influencer Outreach",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "email_template",
+      "term": "Email Template",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "email_list_management",
+      "term": "Email List Management",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "newsletter_creation",
+      "term": "Newsletter Creation",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "automation_setup",
+      "term": "Automation Setup",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "landing_page",
+      "term": "Landing Page",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "website_update",
+      "term": "Website Update",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "conversion_optimization",
+      "term": "Conversion Optimization",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    },
+    {
+      "key": "user_experience",
+      "term": "User Experience",
+      "group": "domain",
+      "icon": "megaphone",
+      "color": "#ec4899"
+    }
+  ],
+  "allowed_stage_types": [
+    "planning",
+    "in_progress",
+    "creation",
+    "review",
+    "approval",
+    "completed",
+    "blocked",
+    "on_hold",
+    "paused",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "Ad Creation",
+      "stage_type": "creation",
+      "color": "blue"
+    },
+    {
+      "name": "Targeting Setup",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Live",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Optimization",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Ad Creation",
+      "stage_type": "creation"
+    },
+    {
+      "name": "Targeting Setup",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Live",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Optimization",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Paused",
+      "stage_type": "paused"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

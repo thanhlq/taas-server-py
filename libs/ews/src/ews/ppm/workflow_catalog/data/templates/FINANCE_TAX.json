@@ -1,0 +1,271 @@
+{
+  "id": "finance.tax",
+  "category": "finance",
+  "name": "Tax",
+  "description": "Prepare, calculate, review, file and pay taxes.",
+  "workflow_type": "kanban",
+  "icon": "landmark",
+  "color": "#10b981",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "tax_preparation",
+      "term": "Tax Preparation",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_return",
+      "term": "Tax Return",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_filing",
+      "term": "Tax Filing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_payment",
+      "term": "Tax Payment",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_planning",
+      "term": "Tax Planning",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_strategy",
+      "term": "Tax Strategy",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_optimization",
+      "term": "Tax Optimization",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_research",
+      "term": "Tax Research",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_compliance",
+      "term": "Tax Compliance",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_audit",
+      "term": "Tax Audit",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_audit_response",
+      "term": "Tax Audit Response",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "sales_tax",
+      "term": "Sales Tax",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_documentation",
+      "term": "Tax Documentation",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_notice_response",
+      "term": "Tax Notice Response",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "tax_return_review",
+      "term": "Tax Return Review",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    },
+    {
+      "key": "extension_filing",
+      "term": "Extension Filing",
+      "group": "domain",
+      "icon": "landmark",
+      "color": "#10b981"
+    }
+  ],
+  "allowed_stage_types": [
+    "planning",
+    "in_progress",
+    "review",
+    "approval",
+    "done",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Preparation",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "Documentation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Calculation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "Filing",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Filed",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Preparation",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Documentation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Calculation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Filing",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Payment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Audit",
+      "stage_type": "review"
+    },
+    {
+      "name": "Filed",
+      "stage_type": "done"
+    },
+    {
+      "name": "Paid",
+      "stage_type": "done"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

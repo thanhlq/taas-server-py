@@ -1,0 +1,301 @@
+{
+  "id": "hr.recruitment",
+  "category": "hr",
+  "name": "Recruitment",
+  "description": "Post jobs, source and screen candidates, interview, offer and hire.",
+  "workflow_type": "kanban",
+  "icon": "users",
+  "color": "#f59e0b",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "hiring_requisition",
+      "term": "Hiring Requisition",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "job_posting",
+      "term": "Job Posting",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "job_description",
+      "term": "Job Description",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "recruitment_strategy",
+      "term": "Recruitment Strategy",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "candidate_sourcing",
+      "term": "Candidate Sourcing",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "resume_screening",
+      "term": "Resume Screening",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "candidate_outreach",
+      "term": "Candidate Outreach",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "talent_pool",
+      "term": "Talent Pool",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "interview_scheduling",
+      "term": "Interview Scheduling",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "interview_conducting",
+      "term": "Interview Conducting",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "phone_screening",
+      "term": "Phone Screening",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "technical_interview",
+      "term": "Technical Interview",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "panel_interview",
+      "term": "Panel Interview",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "reference_check",
+      "term": "Reference Check",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "background_check",
+      "term": "Background Check",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "job_offer",
+      "term": "Job Offer",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "offer_negotiation",
+      "term": "Offer Negotiation",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    },
+    {
+      "key": "onboarding",
+      "term": "Onboarding",
+      "group": "domain",
+      "icon": "users",
+      "color": "#f59e0b"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "review",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "Job Posted",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Application Received",
+      "stage_type": "new",
+      "color": "gray"
+    },
+    {
+      "name": "Screening",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Phone Interview",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Technical Interview",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Panel Interview",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Offer Extended",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Hired",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Job Posted",
+      "stage_type": "new"
+    },
+    {
+      "name": "Sourcing",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Application Received",
+      "stage_type": "new"
+    },
+    {
+      "name": "Screening",
+      "stage_type": "review"
+    },
+    {
+      "name": "Phone Interview",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Technical Interview",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Panel Interview",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Reference Check",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Offer Preparation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Offer Extended",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Offer Accepted",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Hired",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Offer Declined",
+      "stage_type": "rejected"
+    },
+    {
+      "name": "Rejected",
+      "stage_type": "rejected"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

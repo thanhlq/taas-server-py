@@ -68,7 +68,7 @@ def apply_task_update(t: ews_models.Task, fields: dict[str, Any]) -> None:
     labels = fields.pop('labels', None)
     watchers = fields.pop('watchers', None)
     html = fields.pop('description_html', None)
-    for key in ('task_list_id', 'iteration_id', 'stage_id'):
+    for key in ('task_list_id', 'iteration_id'):
         if key in fields:
             fields[key] = to_uuid(fields[key])
     if 'priority' in fields:
@@ -104,6 +104,7 @@ def task_to_response(t: ews_models.Task) -> TaskResponse:
         description=t.description,
         description_html=t.html_text,
         code=t.code,
+        workflow_id=str(t.workflow_id) if t.workflow_id else None,
         stage_id=str(t.stage_id) if t.stage_id else None,
         stage_type=t.stage_type,
         work_item_type=t.work_item_type,

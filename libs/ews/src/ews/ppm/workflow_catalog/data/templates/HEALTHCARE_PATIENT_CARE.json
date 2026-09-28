@@ -1,0 +1,319 @@
+{
+  "id": "healthcare.patient_care",
+  "category": "healthcare",
+  "name": "Patient Care",
+  "description": "Intake, diagnosis, treatment, monitoring and discharge.",
+  "workflow_type": "kanban",
+  "icon": "heart-pulse",
+  "color": "#ef4444",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "patient_consultation",
+      "term": "Patient Consultation",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "initial_assessment",
+      "term": "Initial Assessment",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "follow_up_visit",
+      "term": "Follow Up Visit",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "telemedicine_consultation",
+      "term": "Telemedicine Consultation",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "treatment_plan",
+      "term": "Treatment Plan",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "medical_procedure",
+      "term": "Medical Procedure",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "medication_administration",
+      "term": "Medication Administration",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "therapy_session",
+      "term": "Therapy Session",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "follow_up_care",
+      "term": "Follow Up Care",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "patient_education",
+      "term": "Patient Education",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "discharge_planning",
+      "term": "Discharge Planning",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "referral_management",
+      "term": "Referral Management",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "medical_record_update",
+      "term": "Medical Record Update",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "lab_result_review",
+      "term": "Lab Result Review",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "imaging_review",
+      "term": "Imaging Review",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "prescription_writing",
+      "term": "Prescription Writing",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "ready",
+    "in_progress",
+    "execution",
+    "review",
+    "approval",
+    "done",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Registration",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Triage",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "Consultation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Diagnosis",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Treatment",
+      "stage_type": "execution",
+      "color": "blue"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Discharged",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Registration",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Triage",
+      "stage_type": "ready"
+    },
+    {
+      "name": "Consultation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Diagnosis",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Treatment",
+      "stage_type": "execution"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Recruitment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Screening",
+      "stage_type": "review"
+    },
+    {
+      "name": "Enrollment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Discharged",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    },
+    {
+      "name": "Waiting",
+      "stage_type": "on_hold"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

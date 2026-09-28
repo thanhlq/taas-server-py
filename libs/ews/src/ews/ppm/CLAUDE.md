@@ -12,7 +12,16 @@ The purpose is to build a so flexible project & poforlio management system (as h
 
 ## Specification
 
-See taas-server-py/libs/ews/docs/specs/ppm
+See taas-server-py/libs/ews/docs/specs/ppm and the workflow standard
+`taas-specs/ppm/project/project-workflow/README.md`.
+
+## Workflows
+
+- Rules live in `_workflow_service.py` (process, workflows, stages, task placement, lazy
+  migration of older projects); controllers in `controllers/_workflow_api.py`.
+- The template catalog is `workflow_catalog/data/` — a copy of the specs' `templates/`,
+  `categories.json`, `stage-types.json` + catalog translations `i18n/<locale>.json`
+  (English = source; keep every locale's keys in sync — a unit test checks it).
 
 ## References
 

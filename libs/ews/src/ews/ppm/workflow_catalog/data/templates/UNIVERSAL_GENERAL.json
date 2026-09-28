@@ -1,0 +1,370 @@
+{
+  "id": "universal.general",
+  "category": "universal",
+  "name": "General Project",
+  "description": "A simple, flexible board for any kind of project: plan, do, review, done.",
+  "workflow_type": "kanban",
+  "icon": "briefcase",
+  "color": "#64748b",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "epic",
+      "term": "Epic",
+      "group": "work",
+      "icon": "layers",
+      "color": "#8b5cf6",
+      "description": "Large work item spanning multiple iterations"
+    },
+    {
+      "key": "story",
+      "term": "Story",
+      "group": "work",
+      "icon": "book-open",
+      "color": "#10b981",
+      "description": "User-facing functionality or requirement"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "action_item",
+      "term": "Action Item",
+      "group": "work",
+      "icon": "zap",
+      "color": "#f59e0b",
+      "description": "Specific action to be taken"
+    },
+    {
+      "key": "bug",
+      "term": "Bug",
+      "group": "issues",
+      "icon": "bug",
+      "color": "#ef4444",
+      "description": "Software defect or error"
+    },
+    {
+      "key": "issue",
+      "term": "Issue",
+      "group": "issues",
+      "icon": "alert-triangle",
+      "color": "#f59e0b",
+      "description": "Problem or concern to address"
+    },
+    {
+      "key": "incident",
+      "term": "Incident",
+      "group": "issues",
+      "icon": "alert-octagon",
+      "color": "#dc2626",
+      "description": "Urgent problem requiring immediate attention"
+    },
+    {
+      "key": "risk",
+      "term": "Risk",
+      "group": "issues",
+      "icon": "shield-alert",
+      "color": "#f97316",
+      "description": "Potential problem or threat"
+    },
+    {
+      "key": "feature_request",
+      "term": "Feature Request",
+      "group": "requests",
+      "icon": "message-square",
+      "color": "#8b5cf6",
+      "description": "Request for new functionality"
+    },
+    {
+      "key": "change_request",
+      "term": "Change Request",
+      "group": "requests",
+      "icon": "git-branch",
+      "color": "#f59e0b",
+      "description": "Request to modify existing functionality"
+    },
+    {
+      "key": "support_request",
+      "term": "Support Request",
+      "group": "requests",
+      "icon": "life-buoy",
+      "color": "#06b6d4",
+      "description": "Request for assistance or support"
+    },
+    {
+      "key": "enhancement",
+      "term": "Enhancement",
+      "group": "development",
+      "icon": "trending-up",
+      "color": "#10b981",
+      "description": "Improvement to existing functionality"
+    },
+    {
+      "key": "meeting",
+      "term": "Meeting",
+      "group": "communication",
+      "icon": "calendar",
+      "color": "#06b6d4",
+      "description": "Scheduled meeting or discussion"
+    },
+    {
+      "key": "presentation",
+      "term": "Presentation",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "workshop",
+      "term": "Workshop",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "review",
+      "term": "Review",
+      "group": "process",
+      "icon": "eye",
+      "color": "#8b5cf6",
+      "description": "Review or approval activity"
+    },
+    {
+      "key": "documentation",
+      "term": "Documentation",
+      "group": "documentation",
+      "icon": "file-text",
+      "color": "#06b6d4",
+      "description": "Create or update documentation"
+    },
+    {
+      "key": "research",
+      "term": "Research",
+      "group": "process",
+      "icon": "search",
+      "color": "#8b5cf6",
+      "description": "Research or investigation"
+    },
+    {
+      "key": "analysis",
+      "term": "Analysis",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "report",
+      "term": "Report",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "process_improvement",
+      "term": "Process Improvement",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "training",
+      "term": "Training",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "audit",
+      "term": "Audit",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    },
+    {
+      "key": "compliance",
+      "term": "Compliance",
+      "group": "domain",
+      "icon": "briefcase",
+      "color": "#64748b"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "backlog",
+    "planning",
+    "ready",
+    "in_progress",
+    "review",
+    "validation",
+    "approval",
+    "done",
+    "completed",
+    "closed",
+    "archived",
+    "blocked",
+    "on_hold",
+    "paused",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "New",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Backlog",
+      "stage_type": "backlog",
+      "color": "gray"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Ready",
+      "stage_type": "ready",
+      "color": "teal"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Backlog",
+      "stage_type": "backlog"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Ready",
+      "stage_type": "ready"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Working",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Validation",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Archived",
+      "stage_type": "archived"
+    },
+    {
+      "name": "Blocked",
+      "stage_type": "blocked"
+    },
+    {
+      "name": "On Hold",
+      "stage_type": "on_hold"
+    },
+    {
+      "name": "Paused",
+      "stage_type": "paused"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

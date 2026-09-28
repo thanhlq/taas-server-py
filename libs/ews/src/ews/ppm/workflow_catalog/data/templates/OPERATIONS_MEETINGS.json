@@ -1,0 +1,290 @@
+{
+  "id": "operations.meetings",
+  "category": "operations",
+  "name": "Meetings",
+  "description": "Collect topics, finalize the agenda, run the meeting and follow up.",
+  "workflow_type": "kanban",
+  "icon": "factory",
+  "color": "#f97316",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "meeting_request",
+      "term": "Meeting Request",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "meeting_scheduling",
+      "term": "Meeting Scheduling",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "agenda_preparation",
+      "term": "Agenda Preparation",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "materials_preparation",
+      "term": "Materials Preparation",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "team_meeting",
+      "term": "Team Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "standup_meeting",
+      "term": "Standup Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "planning_meeting",
+      "term": "Planning Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "review_meeting",
+      "term": "Review Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "retrospective",
+      "term": "Retrospective",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "one_on_one",
+      "term": "One On One",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "client_meeting",
+      "term": "Client Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "board_meeting",
+      "term": "Board Meeting",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "all_hands",
+      "term": "All Hands",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "meeting_facilitation",
+      "term": "Meeting Facilitation",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "notes_taking",
+      "term": "Notes Taking",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "decision_logging",
+      "term": "Decision Logging",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "action_items_capture",
+      "term": "Action Items Capture",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "meeting_minutes",
+      "term": "Meeting Minutes",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "action_items_distribution",
+      "term": "Action Items Distribution",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "follow_up_tracking",
+      "term": "Follow Up Tracking",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "next_steps",
+      "term": "Next Steps",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "in_progress",
+    "review",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Draft",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Topics Collection",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Finalized",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Shared",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "In Meeting",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Topics Collection",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Finalized",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Shared",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "In Meeting",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

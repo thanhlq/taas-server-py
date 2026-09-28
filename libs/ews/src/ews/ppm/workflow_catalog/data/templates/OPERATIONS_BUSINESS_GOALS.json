@@ -1,0 +1,275 @@
+{
+  "id": "operations.business_goals",
+  "category": "operations",
+  "name": "Business Goals",
+  "description": "Draft, approve and track goals until achieved.",
+  "workflow_type": "kanban",
+  "icon": "factory",
+  "color": "#f97316",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "business_goal",
+      "term": "Business Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "strategic_initiative",
+      "term": "Strategic Initiative",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "okr",
+      "term": "OKR",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "kpi",
+      "term": "KPI",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "quarterly_goal",
+      "term": "Quarterly Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "annual_goal",
+      "term": "Annual Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "department_goal",
+      "term": "Department Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "team_goal",
+      "term": "Team Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "individual_goal",
+      "term": "Individual Goal",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "goal_review",
+      "term": "Goal Review",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "goal_update",
+      "term": "Goal Update",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "goal_alignment",
+      "term": "Goal Alignment",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "metrics_review",
+      "term": "Metrics Review",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "performance_dashboard",
+      "term": "Performance Dashboard",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "strategic_planning",
+      "term": "Strategic Planning",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "quarterly_planning",
+      "term": "Quarterly Planning",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "annual_planning",
+      "term": "Annual Planning",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    },
+    {
+      "key": "roadmap_planning",
+      "term": "Roadmap Planning",
+      "group": "domain",
+      "icon": "factory",
+      "color": "#f97316"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "in_progress",
+    "review",
+    "approval",
+    "completed",
+    "archived",
+    "blocked",
+    "on_hold",
+    "cancelled",
+    "rejected"
+  ],
+  "stages": [
+    {
+      "name": "Draft",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval",
+      "color": "amber"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "On Track",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "At Risk",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Achieved",
+      "stage_type": "completed",
+      "color": "green"
+    },
+    {
+      "name": "Archived",
+      "stage_type": "archived",
+      "color": "gray"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "In Progress",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "On Track",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "At Risk",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Achieved",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Archived",
+      "stage_type": "archived"
+    },
+    {
+      "name": "Not Achieved",
+      "stage_type": "rejected"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

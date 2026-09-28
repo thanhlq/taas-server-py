@@ -1,0 +1,331 @@
+{
+  "id": "legal.litigation",
+  "category": "legal",
+  "name": "Litigation",
+  "description": "Open cases, investigate, file, negotiate settlements and close.",
+  "workflow_type": "kanban",
+  "icon": "scale",
+  "color": "#78716c",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "litigation_prep",
+      "term": "Litigation Prep",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "case_filing",
+      "term": "Case Filing",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "case_management",
+      "term": "Case Management",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "case_strategy",
+      "term": "Case Strategy",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "discovery",
+      "term": "Discovery",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "document_production",
+      "term": "Document Production",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "interrogatories",
+      "term": "Interrogatories",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "deposition",
+      "term": "Deposition",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "motion_filing",
+      "term": "Motion Filing",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "hearing_prep",
+      "term": "Hearing Prep",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "trial_prep",
+      "term": "Trial Prep",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "court_appearance",
+      "term": "Court Appearance",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "settlement_negotiation",
+      "term": "Settlement Negotiation",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "mediation",
+      "term": "Mediation",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "arbitration",
+      "term": "Arbitration",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    },
+    {
+      "key": "judgment_enforcement",
+      "term": "Judgment Enforcement",
+      "group": "domain",
+      "icon": "scale",
+      "color": "#78716c"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "in_progress",
+    "execution",
+    "review",
+    "validation",
+    "approval",
+    "done",
+    "closed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Case Opened",
+      "stage_type": "new",
+      "color": "gray",
+      "is_default": true
+    },
+    {
+      "name": "Investigation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Discovery",
+      "stage_type": "planning",
+      "color": "purple"
+    },
+    {
+      "name": "Settlement Negotiation",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Trial",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Judgment",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Appeal",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Draft",
+      "stage_type": "new"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Negotiation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Execution",
+      "stage_type": "execution"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Renewal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Case Opened",
+      "stage_type": "new"
+    },
+    {
+      "name": "Investigation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Discovery",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Settlement Negotiation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Trial",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Judgment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Appeal",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Assessment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Remediation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Verification",
+      "stage_type": "validation"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Signed",
+      "stage_type": "done"
+    },
+    {
+      "name": "Closed",
+      "stage_type": "closed"
+    },
+    {
+      "name": "Compliant",
+      "stage_type": "done"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    },
+    {
+      "name": "Expired",
+      "stage_type": "cancelled"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}

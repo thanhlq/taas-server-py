@@ -1,0 +1,175 @@
+{
+  "bands": [
+    "initial",
+    "active",
+    "review",
+    "done",
+    "special"
+  ],
+  "stage_types": [
+    {
+      "key": "new",
+      "band": "initial",
+      "order": 0,
+      "tone": "gray"
+    },
+    {
+      "key": "backlog",
+      "band": "initial",
+      "order": 1,
+      "tone": "gray"
+    },
+    {
+      "key": "planning",
+      "band": "initial",
+      "order": 2,
+      "tone": "purple"
+    },
+    {
+      "key": "ready",
+      "band": "initial",
+      "order": 3,
+      "tone": "teal"
+    },
+    {
+      "key": "todo",
+      "band": "initial",
+      "order": 4,
+      "tone": "gray"
+    },
+    {
+      "key": "in_progress",
+      "band": "active",
+      "order": 5,
+      "tone": "blue"
+    },
+    {
+      "key": "development",
+      "band": "active",
+      "order": 6,
+      "tone": "blue"
+    },
+    {
+      "key": "creation",
+      "band": "active",
+      "order": 7,
+      "tone": "blue"
+    },
+    {
+      "key": "execution",
+      "band": "active",
+      "order": 8,
+      "tone": "blue"
+    },
+    {
+      "key": "implementation",
+      "band": "active",
+      "order": 9,
+      "tone": "blue"
+    },
+    {
+      "key": "building",
+      "band": "active",
+      "order": 10,
+      "tone": "blue"
+    },
+    {
+      "key": "review",
+      "band": "review",
+      "order": 11,
+      "tone": "amber"
+    },
+    {
+      "key": "testing",
+      "band": "review",
+      "order": 12,
+      "tone": "amber"
+    },
+    {
+      "key": "validation",
+      "band": "review",
+      "order": 13,
+      "tone": "amber"
+    },
+    {
+      "key": "approval",
+      "band": "review",
+      "order": 14,
+      "tone": "amber"
+    },
+    {
+      "key": "acceptance",
+      "band": "review",
+      "order": 15,
+      "tone": "amber"
+    },
+    {
+      "key": "done",
+      "band": "done",
+      "order": 16,
+      "tone": "green"
+    },
+    {
+      "key": "completed",
+      "band": "done",
+      "order": 17,
+      "tone": "green"
+    },
+    {
+      "key": "deployed",
+      "band": "done",
+      "order": 18,
+      "tone": "green"
+    },
+    {
+      "key": "closed",
+      "band": "done",
+      "order": 19,
+      "tone": "green"
+    },
+    {
+      "key": "archived",
+      "band": "done",
+      "order": 20,
+      "tone": "gray"
+    },
+    {
+      "key": "blocked",
+      "band": "special",
+      "order": 21,
+      "tone": "red"
+    },
+    {
+      "key": "on_hold",
+      "band": "special",
+      "order": 22,
+      "tone": "purple"
+    },
+    {
+      "key": "paused",
+      "band": "special",
+      "order": 23,
+      "tone": "purple"
+    },
+    {
+      "key": "deferred",
+      "band": "special",
+      "order": 24,
+      "tone": "gray"
+    },
+    {
+      "key": "cancelled",
+      "band": "special",
+      "order": 25,
+      "tone": "gray",
+      "excluded_from_progress": true
+    },
+    {
+      "key": "rejected",
+      "band": "special",
+      "order": 26,
+      "tone": "red",
+      "excluded_from_progress": true
+    }
+  ]
+}

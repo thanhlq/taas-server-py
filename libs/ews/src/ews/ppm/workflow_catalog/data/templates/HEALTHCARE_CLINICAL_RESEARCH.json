@@ -1,0 +1,319 @@
+{
+  "id": "healthcare.clinical_research",
+  "category": "healthcare",
+  "name": "Clinical Research",
+  "description": "Protocols, approvals, enrollment, trials, analysis and reporting.",
+  "workflow_type": "kanban",
+  "icon": "heart-pulse",
+  "color": "#ef4444",
+  "work_item_types": [
+    {
+      "key": "task",
+      "term": "Task",
+      "group": "work",
+      "icon": "check-square",
+      "color": "#3b82f6",
+      "description": "A unit of work to be completed"
+    },
+    {
+      "key": "milestone",
+      "term": "Milestone",
+      "group": "work",
+      "icon": "flag",
+      "color": "#f59e0b",
+      "description": "Significant project checkpoint or goal"
+    },
+    {
+      "key": "deliverable",
+      "term": "Deliverable",
+      "group": "work",
+      "icon": "package",
+      "color": "#06b6d4",
+      "description": "Tangible output or result to be delivered"
+    },
+    {
+      "key": "clinical_trial",
+      "term": "Clinical Trial",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "protocol_development",
+      "term": "Protocol Development",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "irb_submission",
+      "term": "IRB Submission",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "study_design",
+      "term": "Study Design",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "patient_recruitment",
+      "term": "Patient Recruitment",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "screening_assessment",
+      "term": "Screening Assessment",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "informed_consent",
+      "term": "Informed Consent",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "enrollment_process",
+      "term": "Enrollment Process",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "data_collection",
+      "term": "Data Collection",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "case_report_form",
+      "term": "Case Report Form",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "adverse_event_reporting",
+      "term": "Adverse Event Reporting",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "laboratory_analysis",
+      "term": "Laboratory Analysis",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "data_analysis",
+      "term": "Data Analysis",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "statistical_analysis",
+      "term": "Statistical Analysis",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "results_interpretation",
+      "term": "Results Interpretation",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    },
+    {
+      "key": "publication_preparation",
+      "term": "Publication Preparation",
+      "group": "domain",
+      "icon": "heart-pulse",
+      "color": "#ef4444"
+    }
+  ],
+  "allowed_stage_types": [
+    "new",
+    "planning",
+    "ready",
+    "in_progress",
+    "execution",
+    "review",
+    "approval",
+    "done",
+    "completed",
+    "blocked",
+    "on_hold",
+    "cancelled"
+  ],
+  "stages": [
+    {
+      "name": "Planning",
+      "stage_type": "planning",
+      "color": "purple",
+      "is_default": true
+    },
+    {
+      "name": "Recruitment",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Screening",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Enrollment",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress",
+      "color": "blue"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review",
+      "color": "amber"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed",
+      "color": "green"
+    }
+  ],
+  "stage_suggestions": [
+    {
+      "name": "New",
+      "stage_type": "new"
+    },
+    {
+      "name": "Registration",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Triage",
+      "stage_type": "ready"
+    },
+    {
+      "name": "Consultation",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Diagnosis",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Treatment",
+      "stage_type": "execution"
+    },
+    {
+      "name": "Follow Up",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Planning",
+      "stage_type": "planning"
+    },
+    {
+      "name": "Recruitment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Screening",
+      "stage_type": "review"
+    },
+    {
+      "name": "Enrollment",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Active",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Monitoring",
+      "stage_type": "in_progress"
+    },
+    {
+      "name": "Review",
+      "stage_type": "review"
+    },
+    {
+      "name": "Approval",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Approved",
+      "stage_type": "approval"
+    },
+    {
+      "name": "Done",
+      "stage_type": "done"
+    },
+    {
+      "name": "Discharged",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Completed",
+      "stage_type": "completed"
+    },
+    {
+      "name": "Cancelled",
+      "stage_type": "cancelled"
+    },
+    {
+      "name": "Waiting",
+      "stage_type": "on_hold"
+    }
+  ],
+  "settings": {
+    "allow_task_reopen": true,
+    "allow_task_reopen_from_done": true,
+    "allow_task_move_backward": true,
+    "allow_task_move_forward": true,
+    "allow_task_edit": true,
+    "allow_task_delete": true,
+    "allow_stage_edit": true,
+    "allow_stage_delete": true,
+    "allow_stage_add": true,
+    "allow_work_item_type_edit": true,
+    "allow_work_item_type_delete": true,
+    "allow_work_item_type_add": true,
+    "enable_assignee": true,
+    "enable_due_date": true,
+    "enable_priority": true,
+    "enable_time_tracking": true,
+    "enable_estimation": true,
+    "enable_recurring_tasks": false,
+    "enable_task_dependencies": false,
+    "enable_subtasks": true,
+    "default_priority": 1,
+    "default_due_days": 0,
+    "default_estimated_minutes": 0,
+    "auto_assign_new_tasks": false,
+    "auto_move_tasks_to_next_stage": false,
+    "auto_archive_completed_tasks": false,
+    "auto_archive_after_days": 30
+  }
+}
