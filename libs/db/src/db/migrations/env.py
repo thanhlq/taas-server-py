@@ -14,8 +14,11 @@ from sqlalchemy.sql.schema import SchemaItem
 # Without this, `metadata_registry.get(bind_key)` returns an empty metadata
 # and every autogenerate revision is a no-op.
 import db.models  # noqa: F401
-# Packages owning their own models (tables prefixed `resiliant_`).
+# The resiliant models are imported for completeness, but their tables are NOT
+# Alembic's: they come from the drizzle migrations shared with taas-server-js
+# (`resiliant.migrations`, run first by `python -m db.migrations upgrade`).
 import resiliant.models  # noqa: F401
+from resiliant.models.config import RESILIANT_TABLE_PREFIX
 
 if TYPE_CHECKING:
     from advanced_alchemy.alembic.commands import AlembicCommandConfig
@@ -58,6 +61,9 @@ def include_object(
     """
     return not (
         (name is not None and name.startswith("saq_"))
+        # Owned by the shared drizzle migrations (resiliant.migrations).
+        or (type_ == "table" and name is not None and name.startswith(RESILIANT_TABLE_PREFIX))
+        or (type_ == "schema" and name == "drizzle")
         or (type_ == "table" and name in {"task_queue", "task_queue_stats", "task_queue_ddl_version"})
         or (name is not None and name == "task_queue_lock_key_seq")
     )

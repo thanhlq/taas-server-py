@@ -1,17 +1,23 @@
-"""Scheduled maintenance jobs for the resiliant subsystem."""
+"""Scheduled maintenance of the resiliant tables (twin of ``@taas/resiliant`` maintenance)."""
 
 from .resiliant_maintenance import (
-    OUTBOX_MAINTENANCE_JOB,
+    DEFAULT_MAINTENANCE_CRON,
+    RESILIANT_MAINTENANCE_JOB,
+    MaintenanceReport,
+    ResiliantMaintenance,
+    build_maintenance,
     define_maintenance_jobs,
     maintenance_cron,
     register_maintenance_callbacks,
-    run_outbox_maintenance,
 )
 
 __all__ = [
-    'OUTBOX_MAINTENANCE_JOB',
+    'DEFAULT_MAINTENANCE_CRON',
+    'MaintenanceReport',
+    'RESILIANT_MAINTENANCE_JOB',
+    'ResiliantMaintenance',
+    'build_maintenance',
     'define_maintenance_jobs',
     'maintenance_cron',
     'register_maintenance_callbacks',
-    'run_outbox_maintenance',
 ]

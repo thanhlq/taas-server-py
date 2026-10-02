@@ -27,9 +27,9 @@ POST /api/v1/auth/signup                    ews_api          (publisher)
         │
         │  writes rows to the transactional outbox (same DB txn)
         ▼
-   outbox table
+   resiliant_outbox_messages (same table / relay algorithm as taas-server-js)
         │
-        │  OutboxPoller claims + publishes, encoding at publish time
+        │  OutboxPoller claims (SKIP LOCKED) + publishes, encoding at publish time
         ▼
    Kafka topics ── iam.user.registered ── user.directory_created
                 │                       └ user.registered
@@ -64,7 +64,7 @@ cd taas-server-js/demos/messaging_kafka_demo && ./start-consumer.sh            #
 cd taas-server-js/demos/messaging_kafka_demo && ./start-consumer.sh kafka-cp   # confluent
 
 # 5. Trigger the flow
-cd taas-server-py/libs/iam/tests/e2e/bin && uv run python test_register_new_user.py
+cd taas-server-py/apps/ews_api/tests/performance_test/k6/test-signup-user && uv run python test_register_new_user.py
 ```
 
 A healthy run produces three published events and three decoded events per

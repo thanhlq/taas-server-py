@@ -1,4 +1,9 @@
-"""Load outbox settings from environment variables."""
+"""Outbox settings from the environment — the same ``OUTBOX_*`` variables and defaults as
+``ResiliantSettings`` of ``@taas/foundation`` (taas-server-js), so one ``.env`` drives both relays.
+
+A malformed value raises (``get_env`` conversion / ``OutboxConfig`` validation); it never
+silently falls back to a default.
+"""
 
 from __future__ import annotations
 
@@ -6,203 +11,147 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import cast
 
-from foundation.resiliant.outbox import OutboxConfig, PollStrategy
+from foundation.resiliant.outbox import OutboxConfig, PollStrategy, RoutingStrategy
 from foundation.utils.env_utils import get_env
+
+_D = OutboxConfig()
 
 
 @dataclass
 class OutboxSettings:
-    """Transactional outbox configuration.
-
-    All values are read from environment variables (prefixed with ``OUTBOX_``)
-    and mapped onto an :class:`OutboxConfig` via :meth:`get_config`.
-    """
+    """Transactional outbox configuration (``OUTBOX_*``), mapped onto :class:`OutboxConfig`."""
 
     ENABLED: bool = field(default_factory=get_env('OUTBOX_ENABLED', True))
-    """Whether outbox polling is enabled."""
-
     POLL_OUTBOXES: str = field(default_factory=get_env('OUTBOX_POLL_OUTBOXES', ''))
-    """Comma-separated outboxes the worker relays (e.g. ``messaging,transaction``);
-    empty = every registered outbox (``resiliant.outbox.registry``)."""
+    """Comma-separated outboxes the worker relays (``messaging,transaction``); empty = all registered."""
 
-    # Poll strategy: 'fixed', 'adaptive', or 'notify'.
-    POLL_STRATEGY: str = field(default_factory=get_env('OUTBOX_POLL_STRATEGY', 'fixed'))
-    """Poll strategy: fixed, adaptive, or notify."""
-
-    # Polling configuration
+    POLL_STRATEGY: str = field(
+        default_factory=get_env('OUTBOX_POLL_STRATEGY', _D.poll_strategy)
+    )
     FIXED_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('OUTBOX_FIXED_POLL_INTERVAL_MS', 3000, int)
+        default_factory=get_env(
+            'OUTBOX_FIXED_POLL_INTERVAL_MS', _D.fixed_poll_interval_ms
+        )
     )
-    """Sleep interval every cycle when POLL_STRATEGY is 'fixed' (ms)."""
     MIN_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('OUTBOX_MIN_POLL_INTERVAL_MS', 100, int)
+        default_factory=get_env('OUTBOX_MIN_POLL_INTERVAL_MS', _D.min_poll_interval_ms)
     )
-    """Minimum polling interval when busy (ms)."""
     MAX_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('OUTBOX_MAX_POLL_INTERVAL_MS', 20000, int)
+        default_factory=get_env('OUTBOX_MAX_POLL_INTERVAL_MS', _D.max_poll_interval_ms)
     )
-    """Maximum polling interval when idle (ms)."""
     INITIAL_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('OUTBOX_INITIAL_POLL_INTERVAL_MS', 5000, int)
+        default_factory=get_env(
+            'OUTBOX_INITIAL_POLL_INTERVAL_MS', _D.initial_poll_interval_ms
+        )
     )
-    """Starting polling interval (ms)."""
-
-    # Adaptive backoff tuning (parsed as float in get_config)
-    BACKOFF_GROWTH_FACTOR: str = field(
-        default_factory=get_env('OUTBOX_BACKOFF_GROWTH_FACTOR', '3.0')
+    BACKOFF_GROWTH_FACTOR: float = field(
+        default_factory=get_env(
+            'OUTBOX_BACKOFF_GROWTH_FACTOR', _D.backoff_growth_factor
+        )
     )
-    """Decorrelated jitter growth factor (must be > 1.0)."""
-    DRAIN_THRESHOLD_RATIO: str = field(
-        default_factory=get_env('OUTBOX_DRAIN_THRESHOLD_RATIO', '1.0')
+    DRAIN_THRESHOLD_RATIO: float = field(
+        default_factory=get_env(
+            'OUTBOX_DRAIN_THRESHOLD_RATIO', _D.drain_threshold_ratio
+        )
     )
-    """Skip sleep and poll again when fetched >= batch_size * ratio."""
-
-    # NOTIFY strategy (Postgres LISTEN/NOTIFY)
     NOTIFY_CHANNEL: str = field(
-        default_factory=get_env('OUTBOX_NOTIFY_CHANNEL', 'outbox_new_event')
+        default_factory=get_env('OUTBOX_NOTIFY_CHANNEL', _D.notify_channel)
     )
-    """Postgres LISTEN/NOTIFY channel name."""
     NOTIFY_DSN: str = field(default_factory=get_env('OUTBOX_NOTIFY_DSN', ''))
-    """Optional asyncpg DSN for the LISTEN connection (empty means in-process only)."""
+    """LISTEN connection (Python only); empty = derived from ``DATABASE_URL``."""
 
-    # Batch processing
-    BATCH_SIZE: int = field(default_factory=get_env('OUTBOX_BATCH_SIZE', 100, int))
-    """Number of events to fetch per poll."""
+    BATCH_SIZE: int = field(default_factory=get_env('OUTBOX_BATCH_SIZE', _D.batch_size))
     CONCURRENT_WORKERS: int = field(
-        default_factory=get_env('OUTBOX_CONCURRENT_WORKERS', 1, int)
+        default_factory=get_env('OUTBOX_CONCURRENT_WORKERS', _D.concurrent_workers)
     )
-    """Number of concurrent poller workers."""
-
-    # Retry configuration
-    MAX_RETRIES: int = field(default_factory=get_env('OUTBOX_MAX_RETRIES', 3, int))
-    """Maximum retry attempts before moving to DLQ."""
-    RETRY_BACKOFF_MULTIPLIER: str = field(
-        default_factory=get_env('OUTBOX_RETRY_BACKOFF_MULTIPLIER', '2.0')
+    MAX_RETRIES: int = field(
+        default_factory=get_env('OUTBOX_MAX_RETRIES', _D.max_retries)
     )
-    """Exponential backoff multiplier for retries (parsed as float in get_config)."""
-    PROCESSING_TIMEOUT_SECONDS: int = field(
-        default_factory=get_env('OUTBOX_PROCESSING_TIMEOUT_SECONDS', 30, int)
+    RETRY_BACKOFF_MULTIPLIER: float = field(
+        default_factory=get_env(
+            'OUTBOX_RETRY_BACKOFF_MULTIPLIER', _D.retry_backoff_multiplier
+        )
     )
-    """Timeout for processing events (seconds)."""
-
-    # Database optimizations
-    USE_SKIP_LOCKED: bool = field(
-        default_factory=get_env('OUTBOX_USE_SKIP_LOCKED', True)
+    RETRY_MAX_BACKOFF_MS: int = field(
+        default_factory=get_env('OUTBOX_RETRY_MAX_BACKOFF_MS', _D.retry_max_backoff_ms)
     )
-    """Use FOR UPDATE SKIP LOCKED in queries."""
-    USE_READ_REPLICA: bool = field(
-        default_factory=get_env('OUTBOX_USE_READ_REPLICA', False)
+    DISPATCH_TIMEOUT_MS: int = field(
+        default_factory=get_env('OUTBOX_DISPATCH_TIMEOUT_MS', _D.dispatch_timeout_ms)
     )
-    """Use read replica for initial queries."""
-
-    # Archiving configuration
-    ARCHIVE_AFTER_DAYS: int = field(
-        default_factory=get_env('OUTBOX_ARCHIVE_AFTER_DAYS', 7, int)
+    PRESERVE_ORDERING: bool = field(
+        default_factory=get_env('OUTBOX_PRESERVE_ORDERING', _D.preserve_ordering)
     )
-    """Move published events to archive after N days."""
-    CLEANUP_ARCHIVE_AFTER_DAYS: int = field(
-        default_factory=get_env('OUTBOX_CLEANUP_ARCHIVE_AFTER_DAYS', 30, int)
+    BREAKER_FAILURE_THRESHOLD: int = field(
+        default_factory=get_env(
+            'OUTBOX_BREAKER_FAILURE_THRESHOLD', _D.breaker_failure_threshold
+        )
     )
-    """Delete archived events after N days."""
-
-    # Monitoring
+    BREAKER_COOLDOWN_MS: int = field(
+        default_factory=get_env('OUTBOX_BREAKER_COOLDOWN_MS', _D.breaker_cooldown_ms)
+    )
+    RETENTION_DAYS: int = field(
+        default_factory=get_env('OUTBOX_RETENTION_DAYS', _D.retention_days)
+    )
     ENABLE_METRICS: bool = field(
-        default_factory=get_env('OUTBOX_ENABLE_METRICS', True)
+        default_factory=get_env('OUTBOX_ENABLE_METRICS', _D.enable_metrics)
     )
-    """Enable metrics collection."""
-    METRICS_LOG_INTERVAL_SECONDS: int = field(
-        default_factory=get_env('OUTBOX_METRICS_LOG_INTERVAL_SECONDS', 60, int)
+    METRICS_LOG_INTERVAL_MS: int = field(
+        default_factory=get_env(
+            'OUTBOX_METRICS_LOG_INTERVAL_MS', _D.metrics_log_interval_ms
+        )
     )
-    """Interval between metrics log emissions (seconds)."""
 
-    # Connection pool
-    DB_POOL_MIN_SIZE: int = field(
-        default_factory=get_env('OUTBOX_DB_POOL_MIN_SIZE', 5, int)
-    )
-    """Minimum database connection pool size."""
-    DB_POOL_MAX_SIZE: int = field(
-        default_factory=get_env('OUTBOX_DB_POOL_MAX_SIZE', 20, int)
-    )
-    """Maximum database connection pool size."""
-    DB_QUERY_TIMEOUT_MS: int = field(
-        default_factory=get_env('OUTBOX_DB_QUERY_TIMEOUT_MS', 5000, int)
-    )
-    """Database query timeout (ms)."""
-
-    # MESSAGING ROUTING
+    # Messaging routing (Python MessageRoutingService)
     DEFAULT_ROUTING: str = field(
         default_factory=get_env('OUTBOX_DEFAULT_ROUTING', 'outbox')
     )
     DIRECT_CHANNELS: str = field(
         default_factory=get_env('OUTBOX_DIRECT_CHANNEL_ROUTING', '')
     )
-    """
-    Example: DIRECT_CHANNELS="audits,notifications"
-    """
-    OUTBOX_CHANNEL: str = field(
-        default_factory=get_env('OUTBOX_OUTBOX_CHANNEL', '')
-    )
-    """ The channel name for direct routing. Messages sent to this channel will be routed directly
-    to the consumer without going through the default routing mechanism. """
+    """Channels published directly (no outbox), e.g. ``audits,notifications``."""
+    OUTBOX_CHANNEL: str = field(default_factory=get_env('OUTBOX_OUTBOX_CHANNEL', ''))
 
     def get_config(self) -> OutboxConfig:
-        """Return the validated :class:`OutboxConfig`.
-
-        Returns:
-            The outbox configuration.
-        """
-        config = OutboxConfig(
+        """The validated :class:`OutboxConfig`."""
+        direct = {
+            c.strip(): c.strip() for c in self.DIRECT_CHANNELS.split(',') if c.strip()
+        }
+        outbox = (
+            {self.OUTBOX_CHANNEL: self.OUTBOX_CHANNEL} if self.OUTBOX_CHANNEL else {}
+        )
+        return OutboxConfig(
             enabled=self.ENABLED,
             poll_strategy=cast(PollStrategy, self.POLL_STRATEGY),
-            fixed_poll_interval_ms=self.FIXED_POLL_INTERVAL_MS,
-            min_poll_interval_ms=self.MIN_POLL_INTERVAL_MS,
-            max_poll_interval_ms=self.MAX_POLL_INTERVAL_MS,
-            initial_poll_interval_ms=self.INITIAL_POLL_INTERVAL_MS,
+            fixed_poll_interval_ms=int(self.FIXED_POLL_INTERVAL_MS),
+            min_poll_interval_ms=int(self.MIN_POLL_INTERVAL_MS),
+            max_poll_interval_ms=int(self.MAX_POLL_INTERVAL_MS),
+            initial_poll_interval_ms=int(self.INITIAL_POLL_INTERVAL_MS),
             backoff_growth_factor=float(self.BACKOFF_GROWTH_FACTOR),
             drain_threshold_ratio=float(self.DRAIN_THRESHOLD_RATIO),
             notify_channel=self.NOTIFY_CHANNEL,
             notify_dsn=self.NOTIFY_DSN or None,
-            batch_size=self.BATCH_SIZE,
-            concurrent_workers=self.CONCURRENT_WORKERS,
-            max_retries=self.MAX_RETRIES,
+            batch_size=int(self.BATCH_SIZE),
+            concurrent_workers=int(self.CONCURRENT_WORKERS),
+            max_retries=int(self.MAX_RETRIES),
             retry_backoff_multiplier=float(self.RETRY_BACKOFF_MULTIPLIER),
-            processing_timeout_seconds=self.PROCESSING_TIMEOUT_SECONDS,
-            use_skip_locked=self.USE_SKIP_LOCKED,
-            use_read_replica=self.USE_READ_REPLICA,
-            archive_after_days=self.ARCHIVE_AFTER_DAYS,
-            cleanup_archive_after_days=self.CLEANUP_ARCHIVE_AFTER_DAYS,
-            enable_metrics=self.ENABLE_METRICS,
-            metrics_log_interval_seconds=self.METRICS_LOG_INTERVAL_SECONDS,
-            db_pool_min_size=self.DB_POOL_MIN_SIZE,
-            db_pool_max_size=self.DB_POOL_MAX_SIZE,
-            db_query_timeout_ms=self.DB_QUERY_TIMEOUT_MS,
-            # Routing
-            routing_default=self.DEFAULT_ROUTING,
+            retry_max_backoff_ms=int(self.RETRY_MAX_BACKOFF_MS),
+            dispatch_timeout_ms=int(self.DISPATCH_TIMEOUT_MS),
+            preserve_ordering=bool(self.PRESERVE_ORDERING),
+            breaker_failure_threshold=int(self.BREAKER_FAILURE_THRESHOLD),
+            breaker_cooldown_ms=int(self.BREAKER_COOLDOWN_MS),
+            retention_days=int(self.RETENTION_DAYS),
+            enable_metrics=bool(self.ENABLE_METRICS),
+            metrics_log_interval_ms=int(self.METRICS_LOG_INTERVAL_MS),
+            routing_default=cast(RoutingStrategy, self.DEFAULT_ROUTING),
+            direct_channels=direct,
+            outbox_channels=outbox,
         )
-        if self.DIRECT_CHANNELS:
-            # Examples: "audits,notifications"
-            for channel in self.DIRECT_CHANNELS.split(","):
-                config.direct_channels[channel.strip()] = channel.strip()
-
-        if self.OUTBOX_CHANNEL:
-            config.outbox_channels[self.OUTBOX_CHANNEL] = self.OUTBOX_CHANNEL
-
-        return config
 
 
 @lru_cache(maxsize=1)
 def get_outbox_config(settings: OutboxSettings | None = None) -> OutboxConfig:
-    """Build the internal (validated) :class:`OutboxConfig` from settings.
-
-    Args:
-        settings: Optional settings instance. When omitted, a fresh
-            :class:`OutboxSettings` is read from the environment.
-
-    Returns:
-        The outbox configuration.
-    """
+    """The validated :class:`OutboxConfig` from ``settings`` (default: the environment)."""
     return (settings or OutboxSettings()).get_config()
-
 
 
 def get_polled_outboxes(settings: OutboxSettings | None = None) -> list[str] | None:

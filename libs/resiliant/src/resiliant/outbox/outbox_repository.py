@@ -1,36 +1,55 @@
 """
-Generic outbox repository — works on any ``OutboxRecordMixin`` table.
+Generic outbox repository — any ``OutboxRecordMixin`` table; same SQL as
+``OutboxRepository`` of ``@taas/resiliant``.
 
-The table is chosen at construction (``OutboxRepository(MessagingOutboxTable, config)``),
-so every use case shares the same claiming / retry / stats logic. All methods take
-a caller-supplied :class:`AsyncSession`; ``save`` only flushes, so the record
-commits with the surrounding business transaction (the outbox guarantee).
+Claiming is lock-based: ``FOR UPDATE SKIP LOCKED`` inside the relay's transaction,
+outcomes written in the same transaction. There is no ``processing`` state to leak:
+a relay that crashes mid-batch rolls back, its locks vanish and another replica
+claims the same rows again (at-least-once).
+
+Every status change is a compare-and-set on the claimable statuses, so a row an
+operator dead-lettered or requeued meanwhile is never overwritten. Writes join the
+caller's session; nothing here commits.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
+from dataclasses import dataclass
 from typing import Any
 
-from foundation import BaseService
-from foundation.resiliant.outbox import OutboxConfig, OutboxStatus
-from foundation.utils import now_in_utc
-from sqlalchemy import CursorResult, and_, func, or_, select, update
+from foundation.resiliant.outbox import CLAIMABLE_OUTBOX_STATUSES, OutboxStatus
+from sqlalchemy import and_, delete, func, or_, select, text, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from resiliant.models.outbox import OutboxRecordMixin
+from resiliant.sql import (
+    clip,
+    db_now,
+    db_now_minus_ms,
+    db_now_plus_ms,
+    in_values,
+    sql_literal,
+)
 
-# Records older than this are ignored by the poller (manual follow-up instead).
-_MAX_RECORD_AGE = timedelta(days=7)
-# Retryable states: fresh records and failed ones waiting for their backoff.
-_CLAIMABLE = (OutboxStatus.PENDING, OutboxStatus.FAILED)
+OUTBOX_INSERT_CHUNK = 500
+"""Rows per multi-row INSERT: far below the 65 535 bind-parameter cap."""
 
 
-class OutboxRepository[RecordT: OutboxRecordMixin](BaseService):
-    """Claiming, status transitions and stats for one outbox table."""
+@dataclass(frozen=True, slots=True)
+class OutboxFailure:
+    record: OutboxRecordMixin
+    error: str
+    counted: bool
+    """Attributed to the record (counts against its budget) or to the target (does not)."""
+    retry_in_ms: float
 
-    def __init__(self, model: type[RecordT], config: OutboxConfig):
-        super().__init__()
+
+class OutboxRepository[RecordT: OutboxRecordMixin]:
+    """Claiming, status transitions, retention and stats for one outbox table."""
+
+    def __init__(self, model: type[RecordT], config: Any = None) -> None:
         self.model = model
         self.config = config
 
@@ -38,143 +57,294 @@ class OutboxRepository[RecordT: OutboxRecordMixin](BaseService):
     def table_name(self) -> str:
         return self.model.__tablename__  # type: ignore[attr-defined]
 
-    async def save(self, session: AsyncSession, record: RecordT) -> RecordT:
-        """Add ``record`` to the business transaction (flushed, not committed)."""
-        session.add(record)
-        await session.flush()
-        return record
+    async def _notify(self, session: AsyncSession, channel: str | None) -> None:
+        if channel:
+            # Delivered by Postgres when the caller's transaction commits.
+            await session.execute(
+                text('select pg_notify(:channel, :table)'),
+                {'channel': channel, 'table': self.table_name},
+            )
+
+    async def append(
+        self,
+        session: AsyncSession,
+        values: list[dict[str, Any]],
+        notify_channel: str | None = None,
+    ) -> int:
+        """Insert rows; a row hitting a unique key (event id, request id) is skipped. Returns how many were new."""
+        model = self.model
+        inserted = 0
+        for i in range(0, len(values), OUTBOX_INSERT_CHUNK):
+            batch = values[i : i + OUTBOX_INSERT_CHUNK]
+            stmt = (
+                insert(model).values(batch).on_conflict_do_nothing().returning(model.id)
+            )  # type: ignore[attr-defined]
+            inserted += len((await session.execute(stmt)).all())
+        if inserted:
+            await self._notify(session, notify_channel)
+        return inserted
+
+    async def insert_returning(
+        self,
+        session: AsyncSession,
+        value: dict[str, Any],
+        notify_channel: str | None = None,
+    ) -> RecordT | None:
+        """Insert one row and return it; ``None`` when a unique key already exists."""
+        model = self.model
+        stmt = insert(model).values(value).on_conflict_do_nothing().returning(model)  # type: ignore[attr-defined]
+        row = (await session.execute(stmt)).scalars().first()
+        if row is not None:
+            await self._notify(session, notify_channel)
+        return row
+
+    async def get(self, session: AsyncSession, record_id: int) -> RecordT | None:
+        return await session.get(self.model, record_id)
+
+    async def find_by(
+        self, session: AsyncSession, column: str, value: Any
+    ) -> RecordT | None:
+        """First row whose ``column`` equals ``value`` (e.g. ``request_id``)."""
+        target = getattr(self.model, column, None)
+        if target is None:
+            raise ValueError(f'{self.table_name} has no column {column!r}')
+        return (
+            (await session.execute(select(self.model).where(target == value).limit(1)))
+            .scalars()
+            .first()
+        )
 
     async def find_one(self, session: AsyncSession, **criteria: Any) -> RecordT | None:
-        """First record whose columns equal ``criteria`` (e.g. ``request_id=…``)."""
-        model = self.model
-        conditions = [getattr(model, key) == value for key, value in criteria.items()]
-        result = await session.execute(select(model).where(*conditions).limit(1))
-        return result.scalar_one_or_none()
+        conditions = [
+            getattr(self.model, key) == value for key, value in criteria.items()
+        ]
+        return (
+            (await session.execute(select(self.model).where(*conditions).limit(1)))
+            .scalars()
+            .first()
+        )
 
-    async def fetch_pending_batch(
-        self, session: AsyncSession, batch_size: int | None = None
+    async def claim(
+        self, session: AsyncSession, limit: int, *, preserve_ordering: bool
     ) -> list[RecordT]:
-        """Claim up to ``batch_size`` due records and mark them ``PROCESSING`` (commits).
+        """Lock up to ``limit`` due rows for this transaction, oldest (lowest id) first.
 
-        Due = ``PENDING``, or ``FAILED`` whose backoff elapsed, under the retry cap.
-        ``FOR UPDATE SKIP LOCKED`` lets several pollers share a table safely.
+        Due = ``pending``, or ``failed`` whose backoff elapsed. With ``preserve_ordering`` a
+        row waits while an earlier row of its ordering key is failing — on the same target
+        and channel only (order only exists within one destination).
         """
-        model = self.model
-        now = now_in_utc()
-        query = (
-            select(model)
-            .where(
-                and_(
-                    model.status.in_(_CLAIMABLE),
-                    model.retry_count < model.max_retries,
-                    model.created_at >= now - _MAX_RECORD_AGE,  # type: ignore[attr-defined]
-                    or_(model.next_attempt_at.is_(None), model.next_attempt_at <= now),
+        if not session.in_transaction():
+            raise RuntimeError(
+                f'OutboxRepository({self.table_name}).claim must run inside a transaction'
+            )
+        if limit < 1:
+            return []
+        t: Any = self.model
+        conditions: list[Any] = [
+            in_values(t.status, CLAIMABLE_OUTBOX_STATUSES),
+            or_(t.next_attempt_at.is_(None), t.next_attempt_at <= db_now()),
+        ]
+        if preserve_ordering:
+            earlier: Any = aliased(self.model, name='earlier')
+            blocked = (
+                select(text('1'))
+                .select_from(earlier)
+                .where(
+                    earlier.ordering_key == t.ordering_key,
+                    earlier.target.is_not_distinct_from(t.target),
+                    earlier.channel.is_not_distinct_from(t.channel),
+                    earlier.status == sql_literal(OutboxStatus.FAILED.value),
+                    earlier.id < t.id,
                 )
             )
-            .order_by(model.created_at.asc())  # type: ignore[attr-defined]
-            .limit(batch_size or self.config.batch_size)
+            conditions.append(or_(t.ordering_key.is_(None), ~blocked.exists()))
+        stmt = (
+            select(t)
+            .where(and_(*conditions))
+            .order_by(t.id.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True, of=t)
         )
-        if self.config.use_skip_locked:
-            query = query.with_for_update(skip_locked=True)
+        return list((await session.execute(stmt)).scalars().all())
 
-        records = list((await session.execute(query)).scalars().all())
-        if records:
-            await session.execute(
-                update(model)
-                .where(model.id.in_([r.id for r in records]))  # type: ignore[attr-defined]
-                .values(status=OutboxStatus.PROCESSING, updated_at=now)
+    async def mark_published(self, session: AsyncSession, ids: list[int]) -> int:
+        if not ids:
+            return 0
+        t: Any = self.model
+        result = await session.execute(
+            update(t)
+            .where(t.id.in_(ids), in_values(t.status, CLAIMABLE_OUTBOX_STATUSES))
+            .values(
+                status=OutboxStatus.PUBLISHED,
+                processed_at=db_now(),
+                updated_at=db_now(),
+                last_error=None,
+                next_attempt_at=None,
             )
-            await session.commit()
-        return records
-
-    async def mark_published(self, session: AsyncSession, record_id: Any) -> None:
-        """Record successful delivery (commits)."""
-        now = now_in_utc()
-        await session.execute(
-            update(self.model)
-            .where(self.model.id == record_id)  # type: ignore[attr-defined]
-            .values(status=OutboxStatus.PUBLISHED, processed_at=now, updated_at=now, last_error=None)
+            .execution_options(synchronize_session=False)
         )
-        await session.commit()
+        return result.rowcount  # type: ignore[attr-defined]
 
-    async def mark_failed(self, session: AsyncSession, record_id: Any, error: str) -> OutboxStatus | None:
-        """Count a failed delivery (commits).
-
-        Below ``max_retries`` the record becomes ``FAILED`` and is retried after
-        ``retry_backoff_multiplier ** attempt`` seconds; at the cap it becomes
-        ``DEAD_LETTER`` (terminal). Returns the new status (``None`` if not found).
-        """
-        model = self.model
-        record = (
-            await session.execute(select(model).where(model.id == record_id))  # type: ignore[attr-defined]
-        ).scalar_one_or_none()
-        if record is None:
-            self.logger.warning('%s: record %s not found for marking as failed', self.table_name, record_id)
-            return None
-
-        attempts = record.retry_count + 1
-        now = now_in_utc()
-        if attempts >= record.max_retries:
-            status, next_attempt_at = OutboxStatus.DEAD_LETTER, None
-            self.logger.error(
-                '%s: record %s dead-lettered after %s attempts: %s', self.table_name, record_id, attempts, error
-            )
-        else:
-            status = OutboxStatus.FAILED
-            next_attempt_at = now + timedelta(seconds=self.config.retry_backoff_multiplier**attempts)
-            self.logger.warning(
-                '%s: record %s failed (attempt %s/%s), retry at %s: %s',
-                self.table_name, record_id, attempts, record.max_retries, next_attempt_at.isoformat(), error,
-            )
-
+    async def mark_failed(
+        self, session: AsyncSession, failure: OutboxFailure
+    ) -> OutboxStatus:
+        """Record a failed delivery; returns the new status."""
+        record: Any = failure.record
+        attempts = record.retry_count + 1 if failure.counted else record.retry_count
+        dead = failure.counted and attempts >= record.max_retries
+        status = OutboxStatus.DEAD_LETTER if dead else OutboxStatus.FAILED
+        t: Any = self.model
         await session.execute(
-            update(model)
-            .where(model.id == record_id)  # type: ignore[attr-defined]
+            update(t)
+            .where(t.id == record.id, in_values(t.status, CLAIMABLE_OUTBOX_STATUSES))
             .values(
                 status=status,
                 retry_count=attempts,
-                last_error=error[:1000],
-                next_attempt_at=next_attempt_at,
-                updated_at=now,
+                last_error=clip(failure.error),
+                next_attempt_at=None if dead else db_now_plus_ms(failure.retry_in_ms),
+                updated_at=db_now(),
             )
+            .execution_options(synchronize_session=False)
         )
-        await session.commit()
         return status
 
-    async def reset_stale_processing(self, session: AsyncSession, timeout_seconds: int | None = None) -> int:
-        """Return records stuck in ``PROCESSING`` (crashed poller) to ``PENDING`` (commits)."""
-        model = self.model
-        threshold = now_in_utc() - timedelta(seconds=timeout_seconds or self.config.processing_timeout_seconds)
-        result: CursorResult[Any] = await session.execute(  # type: ignore[assignment]
-            update(model)
-            .where(and_(model.status == OutboxStatus.PROCESSING, model.updated_at < threshold))  # type: ignore[attr-defined]
-            .values(status=OutboxStatus.PENDING, updated_at=now_in_utc())
+    async def requeue_dead_letters(
+        self, session: AsyncSession, ids: list[int] | None = None, limit: int = 1000
+    ) -> int:
+        """Put dead-lettered rows back in the queue with a fresh budget (operator action)."""
+        if ids is not None and not ids:
+            return 0
+        t: Any = self.model
+        dead = t.status == sql_literal(OutboxStatus.DEAD_LETTER.value)
+        scope = (
+            t.id.in_(ids)
+            if ids is not None
+            else t.id.in_(
+                select(t.id)
+                .where(dead)
+                .order_by(t.id.asc())
+                .limit(limit)
+                .scalar_subquery()
+            )
         )
-        count = result.rowcount
-        await session.commit()
-        if count > 0:
-            self.logger.warning('%s: reset %s stale processing records', self.table_name, count)
-        return count
-
-    async def get_stats(self, session: AsyncSession) -> dict[str, Any]:
-        """Counts per status plus the age of the oldest pending record."""
-        model = self.model
         result = await session.execute(
-            select(model.status, func.count(model.id).label('count')).group_by(model.status)  # type: ignore[attr-defined]
+            update(t)
+            .where(scope, dead)
+            .values(
+                status=OutboxStatus.PENDING,
+                retry_count=0,
+                next_attempt_at=None,
+                updated_at=db_now(),
+            )
+            .execution_options(synchronize_session=False)
         )
-        counts = {row.status: row.count for row in result}
-        oldest_pending = (
+        return result.rowcount  # type: ignore[attr-defined]
+
+    async def purge_published(
+        self, session: AsyncSession, older_than_ms: float, limit: int = 10_000
+    ) -> int:
+        """Retention: delete up to ``limit`` rows published more than ``older_than_ms`` ago (call until 0)."""
+        t: Any = self.model
+        doomed = (
+            select(t.id)
+            .where(
+                t.status == sql_literal(OutboxStatus.PUBLISHED.value),
+                t.processed_at < db_now_minus_ms(older_than_ms),
+            )
+            .limit(limit)
+            .scalar_subquery()
+        )
+        result = await session.execute(
+            delete(t).where(t.id.in_(doomed)).returning(t.id)
+        )
+        return len(result.all())
+
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        status: OutboxStatus | None = None,
+        limit: int = 100,
+        before_id: int | None = None,
+    ) -> list[RecordT]:
+        t: Any = self.model
+        stmt = select(t)
+        if status is not None:
+            stmt = stmt.where(t.status == status)
+        if before_id is not None:
+            stmt = stmt.where(t.id < before_id)
+        return list(
+            (await session.execute(stmt.order_by(t.id.desc()).limit(limit)))
+            .scalars()
+            .all()
+        )
+
+    async def oldest_pending_age_ms(self, session: AsyncSession) -> int | None:
+        """Age of the oldest claimable row (the ``_due_idx`` head), ``None`` when the queue is empty."""
+        t: Any = self.model
+        age = (
             await session.execute(
-                select(model.created_at)  # type: ignore[attr-defined]
-                .where(model.status == OutboxStatus.PENDING)
-                .order_by(model.created_at.asc())  # type: ignore[attr-defined]
+                select(
+                    text('(extract(epoch from (now() - created_at)) * 1000)::bigint')
+                )
+                .select_from(t)
+                .where(in_values(t.status, CLAIMABLE_OUTBOX_STATUSES))
+                .order_by(t.id.asc())
                 .limit(1)
             )
-        ).scalar_one_or_none()
+        ).scalar()
+        return None if age is None else max(0, int(age))
+
+    async def stats(
+        self, session: AsyncSession, *, exact_published: bool = False
+    ) -> dict[str, Any]:
+        """Exact counts of the live statuses (partial indexes), ``published`` estimated unless
+        ``exact_published``, and the age of the oldest claimable row."""
+        t: Any = self.model
+        counts = {status.value: 0 for status in OutboxStatus}
+        live = await session.execute(
+            select(t.status, func.count())
+            .where(in_values(t.status, CLAIMABLE_OUTBOX_STATUSES))
+            .group_by(t.status)
+        )
+        for status, count in live:
+            counts[str(getattr(status, 'value', status))] = int(count)
+        counts[OutboxStatus.DEAD_LETTER.value] = int(
+            (
+                await session.execute(
+                    select(func.count())
+                    .select_from(t)
+                    .where(t.status == sql_literal('dead_letter'))
+                )
+            ).scalar()
+            or 0
+        )
+        if exact_published:
+            counts[OutboxStatus.PUBLISHED.value] = int(
+                (
+                    await session.execute(
+                        select(func.count())
+                        .select_from(t)
+                        .where(t.status == sql_literal('published'))
+                    )
+                ).scalar()
+                or 0
+            )
+        else:
+            estimate = (
+                await session.execute(
+                    text(
+                        'select greatest(reltuples, 0)::bigint from pg_class where oid = to_regclass(:name)'
+                    ),
+                    {'name': self.table_name},
+                )
+            ).scalar() or 0
+            others = counts['pending'] + counts['failed'] + counts['dead_letter']
+            counts[OutboxStatus.PUBLISHED.value] = max(0, int(estimate) - others)
         return {
-            'table': self.table_name,
-            **{status.value: counts.get(status, 0) for status in OutboxStatus},
-            'oldest_pending_age_seconds': (
-                (now_in_utc() - oldest_pending).total_seconds() if oldest_pending else None
-            ),
+            'counts': counts,
+            'oldest_pending_age_ms': await self.oldest_pending_age_ms(session),
         }
+
+
+__all__ = ['OUTBOX_INSERT_CHUNK', 'OutboxFailure', 'OutboxRepository']

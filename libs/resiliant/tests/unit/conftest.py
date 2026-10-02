@@ -1,10 +1,11 @@
 """Shared fixtures for the ``resiliant`` unit tests.
 
 These tests run against a **real** PostgreSQL database whose connection string
-is read from ``.env.test`` at the repository root (``DATABASE_URL``). The
-schema is assumed to already be migrated (``python -m db.migrations upgrade``);
-each test starts from a clean slate because the resilience tables are truncated
-after every test.
+is read from ``.env.test`` at the repository root (``DATABASE_URL``), or from
+``RESILIANT_TEST_DATABASE_URL`` when set (an isolated database: parallel runs
+must not share one, the tables are truncated after every test). The
+``resiliant_*`` tables are migrated at session start (``resiliant.migrations``,
+the drizzle migrations shared with taas-server-js).
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ def _repo_root() -> Path:
 
 
 load_dotenv(_repo_root() / ".env.test", override=True)
+if os.environ.get("RESILIANT_TEST_DATABASE_URL"):
+    os.environ["DATABASE_URL"] = os.environ["RESILIANT_TEST_DATABASE_URL"]
 
 # App imports must come *after* the environment has been configured.
 from sqlalchemy import text  # noqa: E402
@@ -55,24 +58,9 @@ def _run_sync[T](coro: Awaitable[T]) -> T:
 # Tables owned by the resilience layer that the tests write to (names come from
 # the models, so they follow RESILIANT_TABLE_PREFIX). Truncated between tests so
 # the suite is isolated and never touches unrelated data.
-from resiliant.models import (  # noqa: E402
-    DLQEventArchiveTable,
-    DLQEventTable,
-    MessagingOutboxTable,
-    ProcessedEventTable,
-    TransactionOutboxTable,
-)
+from resiliant.migrations import resiliant_table_names, run_resiliant_migrations  # noqa: E402
 
-_RESILIANT_TABLES = tuple(
-    model.__tablename__
-    for model in (
-        MessagingOutboxTable,
-        TransactionOutboxTable,
-        DLQEventTable,
-        DLQEventArchiveTable,
-        ProcessedEventTable,
-    )
-)
+_RESILIANT_TABLES = tuple(resiliant_table_names())
 
 
 @pytest.fixture(scope="session")
@@ -94,6 +82,7 @@ def db_engine(db_url: str) -> Generator:
     makes a session-scoped engine compatible with function-scoped async tests.
     """
     engine = create_async_engine(db_url, echo=False, poolclass=NullPool)
+    _run_sync(run_resiliant_migrations(engine))
     yield engine
     _run_sync(engine.dispose())
 

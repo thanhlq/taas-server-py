@@ -5,7 +5,7 @@ protocols) live in ``foundation.resiliant``; the implementations *and* their
 SQLAlchemy models (``resiliant.models``) live in this package.
 """
 
-from .dlq import DLQRepository, DLQService
+from .dlq import DLQHandlerRegistry, DLQRepository, DLQRetryProcessor, DLQService
 from .resiliant_factory import ResiliantServiceFactory
 from .idempotency import IdempotencyRepository, IdempotencyService
 from .outbox import (
@@ -33,7 +33,9 @@ __all__: list[str] = [
     "OutboxService",
     "TransactionOutboxService",
     "register_outbox",
+    "DLQHandlerRegistry",
     "DLQRepository",
+    "DLQRetryProcessor",
     "DLQService",
     "IdempotencyRepository",
     "IdempotencyService",

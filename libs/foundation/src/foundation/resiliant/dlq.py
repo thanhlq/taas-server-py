@@ -1,28 +1,35 @@
 """
-Dead Letter Queue (DLQ) primitive.
+Dead-letter queue — contracts only (implementation: ``resiliant.dlq``).
 
-A DLQ stores messages that could not be processed after exhausting their
-retry/recovery budget so they can be inspected, replayed, or purged.
+Twin of ``@taas/foundation/resiliant`` ``dlq.ts``: both stacks share the
+``resiliant_dlq_events`` tables, so statuses, transitions and policy defaults are
+the same.
 
-Layout:
+Keeps the events a handler could not process after its in-process retry budget,
+with everything needed to replay them (``handler_name`` + payload), so an
+operator can inspect, fix, approve, retry, cancel or abandon them. Nothing is
+ever deleted from the live table except by archiving terminal rows: a financial
+event that failed must stay traceable.
 
-* `DeadLetterMessage`     - persisted envelope for a poison message
-* `DeadLetterConfig`      - policy (max retention)
-* `IDeadLetterRepository` - pluggable storage protocol
-* `IDeadLetterReplayer`   - optional sink used by `replay`
-* `DeadLetterQueueService`- enqueue / list / replay / purge
-* `DeadLetterQueueFactory`- DI helper
+Lifecycle (every change is a compare-and-set on the current status)::
+
+    pending ──claim──> processing ──resolve──> resolved ──archive──> (archive table)
+       │  ^                 │
+       │  └──── fail ───────┤ (budget left)
+       │                    └── fail (budget spent) ──> abandoned
+       ├── approve (operator fixed it) ──> approved ──claim──> processing
+       └── cancel ──> cancelled
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping
+from datetime import datetime
 from enum import StrEnum
-from typing import Any, Dict, Protocol, runtime_checkable
+from types import MappingProxyType
+from typing import Any, Protocol, runtime_checkable
 
 import msgspec
-
-from foundation.serialization import BaseEntity
 
 # --------------------------------------------------------------------------- #
 # Exceptions
@@ -30,191 +37,176 @@ from foundation.serialization import BaseEntity
 
 
 class DeadLetterError(Exception):
-    """Base class for DLQ errors."""
+    """Base class for DLQ errors (illegal transition, missing record, bad input)."""
 
 
 class DeadLetterReplayError(DeadLetterError):
-    """Raised when replaying a message back to its sink fails."""
+    """Replaying a record back to its handler failed."""
 
 
 # --------------------------------------------------------------------------- #
-# Data
+# Statuses and transitions
 # --------------------------------------------------------------------------- #
 
 
 class DLQStatus(StrEnum):
-    """
-    Status of a DLQ event.
-
-    The status represents the current state of a failed event in the DLQ lifecycle.
-
-    Attributes:
-        PENDING: Event is waiting to be retried (initial state)
-        PROCESSING: Event is currently being retried by a worker
-        RESOLVED: Event was successfully reprocessed
-        FAILED: Retry attempt failed (will retry again if within max_retries)
-        ABANDONED: Max retries exceeded, event cannot be retried automatically
-        ARCHIVED: Event has been moved to archive table
-
-    State Transitions:
-        PENDING → PROCESSING → RESOLVED (success)
-                ↓          ↓
-                ↓          → FAILED (retry failed, will retry again)
-                ↓          ↓
-                → ABANDONED (max retries exceeded)
-                  ↓
-                  → ARCHIVED (cleanup)
-
-    Example:
-        >>> status = DLQStatus.PENDING
-        >>> status.value
-        'pending'
-        >>> status == DLQStatus.PENDING
-        True
-    """
+    """Status of a dead letter (``text`` + CHECK in the shared table)."""
 
     PENDING = 'pending'
-    """Event is waiting to be retried."""
+    """Waiting for an (automatic) retry."""
 
     APPROVED = 'approved'
-    """When admin fixed and approved the event."""
+    """An operator fixed the cause and cleared the record for another try."""
 
     CANCELLED = 'cancelled'
-    """When admin does not want to retry the event."""
+    """An operator decided it must not be retried (terminal)."""
 
     PROCESSING = 'processing'
-    """Event is currently being retried by a worker."""
+    """Claimed by a retry worker (lease)."""
 
     RESOLVED = 'resolved'
-    """Event was successfully reprocessed."""
-
-    FAILED = 'failed'
-    """Retry attempt failed (will retry again if within max_retries)."""
+    """A retry succeeded (terminal)."""
 
     ABANDONED = 'abandoned'
-    """Max retries exceeded, event cannot be retried automatically."""
+    """Retry budget exhausted (an operator may still approve or cancel it)."""
 
-    ARCHIVED = 'archived'
-    """Event has been moved to archive table."""
 
-class DeadLetterMessage(BaseEntity):
-    """A poison message persisted in the DLQ."""
+_S = DLQStatus
 
-    id: str
-    source: str           # logical origin (topic, queue, handler name)
-    payload: bytes
-    headers: dict[str, str]
+DLQ_TRANSITIONS: Mapping[DLQStatus, tuple[DLQStatus, ...]] = MappingProxyType(
+    {
+        _S.PENDING: (_S.PROCESSING, _S.APPROVED, _S.CANCELLED, _S.ABANDONED),
+        _S.APPROVED: (_S.PROCESSING, _S.CANCELLED),
+        _S.PROCESSING: (_S.RESOLVED, _S.PENDING, _S.ABANDONED),
+        _S.ABANDONED: (_S.APPROVED, _S.CANCELLED),
+        _S.RESOLVED: (),
+        _S.CANCELLED: (),
+    }
+)
+"""Allowed ``from -> to`` changes; anything else is refused before any SQL."""
+
+ARCHIVABLE_DLQ_STATUSES: tuple[DLQStatus, ...] = (_S.RESOLVED, _S.CANCELLED, _S.ABANDONED)
+"""Terminal rows the archiver may move out of the live table."""
+
+RETRYABLE_DLQ_STATUSES: tuple[DLQStatus, ...] = (_S.PENDING, _S.APPROVED)
+"""Rows a retry worker may claim (the predicate of ``resiliant_dlq_events_due_idx``)."""
+
+
+def can_transition_dlq(from_status: DLQStatus | str, to_status: DLQStatus | str) -> bool:
+    """True when ``from_status -> to_status`` is in :data:`DLQ_TRANSITIONS`."""
+    try:
+        return DLQStatus(to_status) in DLQ_TRANSITIONS[DLQStatus(from_status)]
+    except ValueError:
+        return False
+
+
+# --------------------------------------------------------------------------- #
+# Records
+# --------------------------------------------------------------------------- #
+
+
+class DeadLetterRecord(Protocol):
+    """A stored dead letter (the ``resiliant_dlq_events`` row, e.g. ``DLQEventTable``)."""
+
+    id: int
+    event_id: str
+    event_type: str
+    handler_name: str
+    """The handler that failed; the retry worker routes on it."""
+    source_destination: str | None
+    source_service: str | None
+    payload: dict[str, Any]
+    headers: dict[str, Any] | None
+    status: DLQStatus
+    retry_count: int
+    max_retries: int
+    original_error: str
+    last_error: str | None
+    correlation_id: str | None
+    user_id: str | None
+    tenant_id: str | None
+    failed_at: datetime
+    processed_at: datetime | None
+    next_attempt_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class NewDeadLetter(msgspec.Struct, kw_only=True, frozen=True):
+    """A failed event to park in the DLQ."""
+
+    event_id: str
+    event_type: str
+    handler_name: str
+    """The retry target — keep it stable."""
+    payload: dict[str, Any]
     error: str
-    attempts: int
-    enqueued_at: float
-    original_message_id: str | None = None
+    source_destination: str | None = None
+    """Original topic / queue."""
+    source_service: str | None = None
+    headers: dict[str, Any] | None = None
+    max_retries: int | None = None
+    """Default: the per-handler limit, else ``DeadLetterConfig.max_retries``."""
+    correlation_id: str | None = None
+    user_id: str | None = None
+    tenant_id: str | None = None
+    failed_at: datetime | None = None
+    """Default: now (database clock)."""
+
+
+# --------------------------------------------------------------------------- #
+# Config
+# --------------------------------------------------------------------------- #
 
 
 class DeadLetterConfig(msgspec.Struct, frozen=True):
+    """DLQ policy (``DLQ_*`` environment, see ``resiliant.dlq.dlq_settings``).
+
+    Same fields and defaults as ``DeadLetterConfigT`` in ``@taas/foundation``;
+    invalid values raise ``ValueError`` at construction.
     """
-    Configuration for DLQ (Dead Letter Queue) retry pattern.
-
-    This configuration controls all aspects of DLQ behavior including
-    polling intervals, retry limits, archiving, and metrics.
-
-    Attributes:
-        enabled: Enable/disable DLQ functionality
-        poll_interval_ms: Base polling interval in milliseconds
-        initial_poll_interval_ms: Initial interval for adaptive polling
-        max_poll_interval_ms: Maximum interval for adaptive polling
-        batch_size: Number of events to fetch per poll
-        concurrent_workers: Number of concurrent retry workers
-        max_retries: Default maximum retry attempts per event
-        retry_backoff_multiplier: Multiplier for exponential backoff
-        retry_max_interval_ms: Maximum interval between retries
-        use_skip_locked: Use FOR UPDATE SKIP LOCKED for concurrent safety
-        archive_after_days: Archive events older than N days
-        auto_archive_enabled: Enable automatic archiving
-        enable_metrics: Enable metrics collection
-        handler_retry_enabled: Enable handler-specific retry logic
-        handler_max_retries: Per-handler retry limits
-
-    Example:
-        >>> config = DLQConfig(
-        ...     enabled=True,
-        ...     batch_size=50,
-        ...     max_retries=3,
-        ...     archive_after_days=30,
-        ... )
-        >>> dlq_service = DLQService(config)
-
-    Note:
-        For production, tune poll_interval_ms and batch_size based on
-        your event volume and processing latency requirements.
-    """
-
-    # Enable/disable DLQ
-    enabled: bool = True
-    """Enable or disable DLQ functionality globally."""
-
-    # Polling configuration
-    poll_interval_ms: int = 5000
-    """Base polling interval in milliseconds (5 seconds default)."""
-
-    initial_poll_interval_ms: int = 1000
-    """Initial interval for adaptive polling (1 second default)."""
-
-    max_poll_interval_ms: int = 30000
-    """Maximum interval for adaptive polling (30 seconds default)."""
 
     batch_size: int = 50
-    """Number of events to fetch and process per poll."""
+    """Rows a retry step claims at once."""
 
     page_size: int = 100
-    """Default page size for listing/paginating DLQ messages (``list``)."""
+    """Default ``list`` page size (capped at 1000)."""
 
-    concurrent_workers: int = 2
-    """Number of concurrent retry workers (2 default for safety)."""
-
-    # Retry configuration
     max_retries: int = 3
-    """Default maximum retry attempts per event."""
+    """Default retry budget of a dead letter."""
 
     retry_backoff_multiplier: float = 2.0
-    """Multiplier for exponential backoff (2x each retry)."""
+    """Retry n waits ``multiplier ** n`` seconds, capped by ``retry_max_interval_ms``."""
 
-    retry_max_interval_ms: int = 60000
-    """Maximum interval between retries (60 seconds default)."""
+    retry_max_interval_ms: int = 60_000
 
-    # Database configuration
-    use_skip_locked: bool = True
-    """
-    Use FOR UPDATE SKIP LOCKED for concurrent safety.
+    claim_timeout_ms: int = 300_000
+    """A ``processing`` row older than this belonged to a crashed worker and returns to ``pending``."""
 
-    When True, concurrent workers will skip locked rows instead of waiting,
-    preventing deadlocks and improving throughput.
-    """
-
-    # Archive configuration
     archive_after_days: int = 30
-    """Archive events older than this many days."""
+    """Terminal rows older than this move to the archive table."""
 
-    auto_archive_enabled: bool = True
-    """Enable automatic archiving of old events."""
+    handler_max_retries: dict[str, int] = {}
+    """Per-handler retry limits, e.g. ``{'OrderHandler': 5}``."""
 
-    # Metrics configuration
-    enable_metrics: bool = True
-    """Enable metrics collection and reporting."""
+    def __post_init__(self) -> None:
+        for key in ('batch_size', 'page_size', 'max_retries', 'archive_after_days'):
+            value = getattr(self, key)
+            if not _is_int(value) or value < 1:
+                raise ValueError(f'dlq {key} must be an integer >= 1, got {value!r}')
+        if not (self.retry_backoff_multiplier >= 1):
+            raise ValueError(
+                f'dlq retry_backoff_multiplier must be >= 1, got {self.retry_backoff_multiplier!r}'
+            )
+        for handler, limit in self.handler_max_retries.items():
+            if not _is_int(limit) or limit < 1:
+                raise ValueError(
+                    f'dlq handler_max_retries.{handler} must be an integer >= 1, got {limit!r}'
+                )
 
-    # Handler-specific retry configuration
-    handler_retry_enabled: bool = True
-    """Enable handler-specific retry logic."""
 
-    handler_max_retries: Dict[str, int] = {}
-    """
-    Per-handler maximum retry limits.
-
-    Example:
-        >>> config.handler_max_retries = {
-        ...     'OrderHandler': 5,  # More retries for critical handlers
-        ...     'NotificationHandler': 2,  # Fewer for non-critical
-        ... }
-    """
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 # --------------------------------------------------------------------------- #
@@ -223,78 +215,88 @@ class DeadLetterConfig(msgspec.Struct, frozen=True):
 
 
 @runtime_checkable
-class IDeadLetterRepository(Protocol):
-    """Storage contract for DLQ messages."""
-
-    async def enqueue(self, message: DeadLetterMessage) -> None: ...
-
-    async def get(self, message_id: str) -> DeadLetterMessage | None: ...
-
-    async def list_messages(
-        self, *, source: str | None = None, limit: int = 100
-    ) -> Sequence[DeadLetterMessage]: ...
-
-    async def delete(self, message_id: str) -> None: ...
-
-
-@runtime_checkable
 class IDeadLetterReplayer(Protocol):
-    """Sink used to replay a DLQ message back into the system."""
+    """Re-runs one record, typically through the handler named by ``record.handler_name``."""
 
-    async def replay(self, message: DeadLetterMessage) -> None: ...
+    async def replay(self, record: DeadLetterRecord) -> None: ...
 
 
 @runtime_checkable
 class IDLQService(Protocol):
     """
-    Application-facing contract for the *database-backed* dead letter queue.
+    The database-backed dead-letter queue (implementation: ``resiliant.dlq.DLQService``).
 
-    Distinct from :class:`DeadLetterQueueService` (the in-memory primitive
-    below), this describes the production service that persists poison messages
-    to a relational store so operators can inspect, retry, or abandon them.
-
-    Implementations live in the ``resiliant`` library and are wired through
-    ``ResiliantFactory``. Session/return types are left loose (``Any``) so this
-    definitions module stays free of persistence-layer imports.
+    Every call takes the caller's ``session`` and joins its transaction (nothing is
+    committed here). Session / record types are loose (``Any``) so this module stays
+    free of persistence imports.
     """
+
+    async def save(self, session: Any, event: NewDeadLetter) -> Any:
+        """Persist a failed event inside ``session`` (commits with the caller)."""
+        ...
 
     async def save_event(
         self,
         session: Any,
         *,
-        event_id: str,
-        event_type: str,
         handler_name: str,
-        payload: dict[str, Any],
         error: str,
+        event: Any | None = None,
+        event_id: str | None = None,
+        event_type: str | None = None,
+        payload: dict[str, Any] | None = None,
         source_destination: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int | None = None,
         correlation_id: str | None = None,
+        traceparent: str | None = None,
     ) -> Any:
-        """Persist a failed event to the DLQ."""
+        """Keyword form of :meth:`save`; ``event`` (a ``BaseEvent``) fills the event fields."""
         ...
 
-    async def get(self, session: Any, dlq_id: Any) -> Any:
-        """Return a single DLQ record by id (or ``None``)."""
+    async def get(self, session: Any, dlq_id: int) -> Any:
+        """One record by id (or ``None``)."""
         ...
 
-    async def list_pending(self, session: Any, *, limit: int | None = None) -> Any:
-        """Return pending DLQ records awaiting retry."""
+    async def list(
+        self,
+        session: Any,
+        *,
+        status: DLQStatus | None = None,
+        handler_name: str | None = None,
+        event_type: str | None = None,
+        limit: int | None = None,
+        before_id: int | None = None,
+    ) -> Any:
+        """Newest first, keyset-paginated with ``before_id``."""
         ...
 
-    async def get_stats(self, session: Any) -> dict[str, Any]:
-        """Return counters describing the current DLQ backlog."""
+    async def approve(self, session: Any, dlq_id: int) -> bool: ...
+
+    async def cancel(self, session: Any, dlq_id: int) -> bool: ...
+
+    async def abandon(self, session: Any, dlq_id: int) -> bool: ...
+
+    async def replay(self, session: Any, dlq_id: int, replayer: IDeadLetterReplayer) -> DLQStatus:
+        """Claim, replay and resolve (or count a failure) one record now."""
+        ...
+
+    async def stats(self, session: Any) -> dict[str, Any]:
+        """Per-status counts plus ``oldest_pending_age_ms``."""
         ...
 
 
 __all__ = [
-    "DeadLetterConfig",
-    "DeadLetterError",
-    "DeadLetterMessage",
-    "DeadLetterReplayError",
-    "DLQStatus",
-    "IDeadLetterReplayer",
-    "IDeadLetterRepository",
-    "IDLQService",
+    'ARCHIVABLE_DLQ_STATUSES',
+    'DLQ_TRANSITIONS',
+    'DLQStatus',
+    'DeadLetterConfig',
+    'DeadLetterError',
+    'DeadLetterRecord',
+    'DeadLetterReplayError',
+    'IDLQService',
+    'IDeadLetterReplayer',
+    'NewDeadLetter',
+    'RETRYABLE_DLQ_STATUSES',
+    'can_transition_dlq',
 ]

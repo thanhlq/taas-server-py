@@ -18,13 +18,13 @@ from logging import Logger
 from typing import TYPE_CHECKING, Callable
 
 from foundation.observability.log_factory import LogFactory
-from foundation.resiliant.dlq import DeadLetterConfig
+from foundation.resiliant.dlq import DeadLetterConfig, IDeadLetterReplayer
 from foundation.resiliant.idempotency import IdempotencyConfig, IIdempotencyStore
 from foundation.resiliant.outbox import OutboxConfig, OutboxName, OutboxTarget
 from foundation.resiliant.saga import SagaConfig
 from foundation.resiliant.schedule import ScheduleConfig
 
-from resiliant.dlq import DLQRepository, DLQService
+from resiliant.dlq import DLQRepository, DLQRetryProcessor, DLQService, get_dlq_config
 from resiliant.idempotency import IdempotencyService, get_idempotency_config
 from resiliant.idempotency import factory as idempotency_factory
 from resiliant.outbox import (
@@ -108,22 +108,29 @@ class ResiliantServiceBuilder:
     # -------------------------------------------------------------------- dlq
     @staticmethod
     def build_dlq_repository(config: DeadLetterConfig | None = None) -> DLQRepository:
-        """Return a :class:`DLQRepository` built from ``config``."""
-        if config is None:
-            ResiliantServiceBuilder.logger().debug(
-                'No DeadLetterConfig provided; using defaults.'
-            )
-            config = DeadLetterConfig()
-        return DLQRepository(config)
+        """Return a :class:`DLQRepository` (``DLQ_*`` environment when ``config`` is omitted)."""
+        return DLQRepository(config or get_dlq_config())
 
     @staticmethod
     def build_dlq_service(config: DeadLetterConfig | None = None) -> DLQService:
-        """Return a :class:`DLQService` wired to a fresh repository."""
-        if config is None:
-            config = DeadLetterConfig()
+        """Return a :class:`DLQService` (``DLQ_*`` environment when ``config`` is omitted)."""
+        config = config or get_dlq_config()
         return DLQService(
             config=config,
             repository=ResiliantServiceBuilder.build_dlq_repository(config),
+        )
+
+    @staticmethod
+    def build_dlq_retry_processor(
+        session_factory: 'Callable[[], AsyncSession]',
+        replayer: IDeadLetterReplayer,
+        service: DLQService | None = None,
+    ) -> DLQRetryProcessor:
+        """One-step DLQ retry worker (drive ``process_batch()`` from a schedule job or a loop)."""
+        return DLQRetryProcessor(
+            service=service or ResiliantServiceBuilder.build_dlq_service(),
+            session_factory=session_factory,
+            replayer=replayer,
         )
 
     # ------------------------------------------------------------ idempotency
@@ -199,8 +206,7 @@ class ResiliantServiceBuilder:
         """Return a :class:`SchedulerPoller` (a pure poller driven by a worker)."""
         config = config or get_schedule_config()
         return SchedulerPoller(
-            config=config,
-            session_factory=session_factory,
+            session_factory,
+            service=ResiliantServiceBuilder.build_schedule_service(config),
             publisher=publisher,
-            repository=ResiliantServiceBuilder.build_schedule_repository(config),
         )

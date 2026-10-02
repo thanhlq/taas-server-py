@@ -1,27 +1,35 @@
 """
-Saga primitive (orchestration-based).
+Saga (orchestration) - contracts only (implementation: ``resiliant.saga``).
 
-A saga executes a sequence of local transactions; if any step fails, the
-previously completed steps are compensated in reverse order, leaving the
-system in a consistent state.
+Twin of ``@taas/foundation/resiliant/saga`` (taas-server-js): same statuses,
+same step-record shape, same errors - a saga checkpointed by one language can
+be read, signalled and resumed by the other (shared ``resiliant_saga_state``).
+
+A saga runs local steps in order; when one fails, the steps that already
+completed are compensated in reverse order. The whole instance (status,
+per-step records, accumulated context) is checkpointed after every step and
+every compensation, which makes it durable: after a crash it can be resumed
+from the first step that did not complete, queried, or signalled by its
+business key (``saga_key``, unique per saga name).
+
+Versioning rule (in-flight safety): steps are matched by NAME. Adding a step
+is safe; renaming or removing one while instances may be in flight is not -
+an unknown recorded name makes ``resume`` refuse the instance.
 
 Layout:
 
-* `SagaStatus`         - lifecycle state of a saga instance
-* `SagaStepStatus`     - lifecycle state of an individual step
-* `SagaStep`           - definition of a single step + compensation
-* `SagaDefinition`     - ordered collection of steps
-* `SagaInstance`       - persisted state of a running saga
-* `SagaConfig`         - policy
-* `ISagaRepository`    - pluggable storage protocol
-* `SagaService`        - executor that runs forward / compensates on failure
-* `SagaFactory`        - DI helper
+* ``SagaStatus`` / ``SagaStepStatus``   - lifecycle of an instance / a step
+* ``SagaStep`` / ``SagaDefinition``     - a validated definition (``define_saga``)
+* ``SagaStepRecord`` / ``SagaInstance`` - persisted state (``steps`` jsonb items: ``{name, status, error}``)
+* ``SagaConfig``                        - policy (``raise_on_abort``)
+* ``ISagaRepository`` / ``ISignalableSagaRepository`` / ``ISagaService`` - protocols
 """
 
 from __future__ import annotations
 
 import enum
 from collections.abc import Awaitable, Callable, Sequence
+from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
 import msgspec
@@ -33,28 +41,36 @@ from foundation.serialization import BaseEntity
 # --------------------------------------------------------------------------- #
 
 
+def _describe(error: BaseException | object) -> str:
+    return str(error)
+
+
 class SagaError(Exception):
-    """Base class for saga errors."""
+    """Base class for saga errors (invalid definition, unknown instance, key collision...)."""
 
 
 class SagaAbortedError(SagaError):
-    """Raised when a saga aborted and compensations completed."""
+    """A step failed and every completed step was compensated."""
 
     def __init__(self, saga_id: str, failed_step: str, cause: BaseException) -> None:
-        super().__init__(
-            f"Saga {saga_id!r} aborted at step {failed_step!r}: {cause!r}"
-        )
+        super().__init__(f'saga {saga_id} aborted at step "{failed_step}": {_describe(cause)}')
         self.saga_id = saga_id
         self.failed_step = failed_step
         self.cause = cause
 
 
 class SagaCompensationError(SagaError):
-    """Raised when a compensation step itself fails (manual intervention required)."""
+    """A compensation itself failed: the saga is FAILED and needs manual intervention."""
+
+    def __init__(self, saga_id: str, step: str, cause: BaseException) -> None:
+        super().__init__(f'saga {saga_id}: compensation of "{step}" failed: {_describe(cause)}')
+        self.saga_id = saga_id
+        self.step = step
+        self.cause = cause
 
 
 # --------------------------------------------------------------------------- #
-# Data
+# Statuses
 # --------------------------------------------------------------------------- #
 
 
@@ -63,7 +79,16 @@ class SagaStatus(enum.StrEnum):
     COMPLETED = "completed"
     COMPENSATING = "compensating"
     ABORTED = "aborted"
-    FAILED = "failed"  # compensation itself failed
+    """Failed and fully compensated."""
+    FAILED = "failed"
+    """A compensation failed."""
+
+
+TERMINAL_SAGA_STATUSES: tuple[SagaStatus, ...] = (
+    SagaStatus.COMPLETED,
+    SagaStatus.ABORTED,
+    SagaStatus.FAILED,
+)
 
 
 class SagaStepStatus(enum.StrEnum):
@@ -73,13 +98,21 @@ class SagaStepStatus(enum.StrEnum):
     FAILED = "failed"
 
 
-# Step actions take and return a mutable JSON-serializable context dict.
+# --------------------------------------------------------------------------- #
+# Definition
+# --------------------------------------------------------------------------- #
+
+# The mutable, JSON-serialisable state steps share (bytes are stored as hex,
+# other non-JSON values via ``msgspec.to_builtins``; keep ints < 2**53 or store
+# them as strings so the Node twin reads them exactly).
 SagaContext = dict[str, Any]
 SagaAction = Callable[[SagaContext], Awaitable[None]]
 
 
 class SagaStep:
-    """A single step in a saga definition."""
+    """A single step: ``action`` and its optional, idempotent undo ``compensation``."""
+
+    __slots__ = ("action", "compensation", "name")
 
     def __init__(
         self,
@@ -93,52 +126,94 @@ class SagaStep:
 
 
 class SagaDefinition:
-    """An ordered, named collection of `SagaStep`s."""
+    """Validated definition: a name, at least one step, unique non-empty step names."""
+
+    __slots__ = ("name", "steps")
 
     def __init__(self, name: str, steps: Sequence[SagaStep]) -> None:
+        if not name:
+            raise SagaError("a saga needs a name")
         if not steps:
-            raise ValueError("SagaDefinition must contain at least one step")
+            raise SagaError(f'saga "{name}" must contain at least one step')
+        seen: set[str] = set()
+        for step in steps:
+            if not step.name or step.name in seen:
+                raise SagaError(
+                    f'saga "{name}": step names must be unique and non-empty ("{step.name}")'
+                )
+            seen.add(step.name)
         self.name = name
-        self.steps = list(steps)
+        self.steps: tuple[SagaStep, ...] = tuple(steps)
+
+
+def define_saga(name: str, steps: Sequence[SagaStep]) -> SagaDefinition:
+    """``defineSaga`` of the Node twin: a validated :class:`SagaDefinition`."""
+    return SagaDefinition(name, steps)
+
+
+# --------------------------------------------------------------------------- #
+# Persisted state
+# --------------------------------------------------------------------------- #
 
 
 class SagaStepRecord(BaseEntity):
+    """One item of the ``steps`` jsonb array: ``{"name", "status", "error"}``."""
+
     name: str
     status: SagaStepStatus = SagaStepStatus.PENDING
     error: str | None = None
 
 
-class SagaInstance(BaseEntity):
-    """Persisted state of a running or finished saga."""
+class SagaInstance(BaseEntity, kw_only=True):
+    """Persisted state of a running or finished saga (``id`` is the public ``saga_id``)."""
 
     id: str
     name: str
+    saga_key: str | None = None
+    """Business anchor for signals / queries, e.g. ``solana:mainnet:<tx>``; unique per saga name."""
     status: SagaStatus
     context: SagaContext
     steps: list[SagaStepRecord]
-    created_at: float
-    updated_at: float
+    created_at: datetime
+    updated_at: datetime
 
 
 class SagaConfig(msgspec.Struct, frozen=True):
     """Policy for saga execution."""
 
-    # Re-raise SagaAbortedError after compensating (otherwise return the instance).
     raise_on_abort: bool = True
+    """Raise :class:`SagaAbortedError` after compensating (otherwise return the ABORTED instance)."""
+
+
+SagaStats = dict[str, int]
+"""Instances per status - every :class:`SagaStatus` value is present."""
 
 
 # --------------------------------------------------------------------------- #
-# Repository protocol
+# Protocols
 # --------------------------------------------------------------------------- #
 
 
 @runtime_checkable
 class ISagaRepository(Protocol):
-    """Storage contract for saga instances."""
+    """Storage contract for saga instances (no session: checkpoints are independent of business transactions)."""
 
     async def save(self, instance: SagaInstance) -> None: ...
 
     async def get(self, saga_id: str) -> SagaInstance | None: ...
+
+    async def get_by_key(self, name: str, saga_key: str) -> SagaInstance | None: ...
+
+    async def stats(self) -> SagaStats: ...
+
+
+@runtime_checkable
+class ISignalableSagaRepository(ISagaRepository, Protocol):
+    """A repository :class:`ISagaService` can signal through (both built-ins)."""
+
+    async def merge_context(
+        self, saga_id: str, patch: dict[str, Any], updated_at: datetime
+    ) -> bool: ...
 
 
 @runtime_checkable
@@ -152,14 +227,31 @@ class ISagaService(Protocol):
         context: SagaContext | None = None,
         *,
         saga_id: str | None = None,
+        saga_key: str | None = None,
     ) -> SagaInstance:
         """Execute ``definition`` step by step, compensating completed steps on failure."""
         ...
+
+    async def resume(self, definition: SagaDefinition, saga_id: str) -> SagaInstance:
+        """Continue an interrupted instance (RUNNING / COMPENSATING) from where it stopped."""
+        ...
+
+    async def signal(
+        self, name: str, saga_key: str, patch: SagaContext
+    ) -> SagaInstance | None:
+        """Merge ``patch`` into a live saga's context (external event / signal)."""
+        ...
+
+
+def is_terminal_saga(instance: SagaInstance) -> bool:
+    """COMPLETED, ABORTED or FAILED - nothing left to run."""
+    return instance.status in TERMINAL_SAGA_STATUSES
 
 
 __all__ = [
     "ISagaRepository",
     "ISagaService",
+    "ISignalableSagaRepository",
     "SagaAbortedError",
     "SagaAction",
     "SagaCompensationError",
@@ -168,8 +260,12 @@ __all__ = [
     "SagaDefinition",
     "SagaError",
     "SagaInstance",
+    "SagaStats",
     "SagaStatus",
     "SagaStep",
     "SagaStepRecord",
     "SagaStepStatus",
+    "TERMINAL_SAGA_STATUSES",
+    "define_saga",
+    "is_terminal_saga",
 ]

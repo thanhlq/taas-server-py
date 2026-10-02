@@ -116,6 +116,9 @@ WORKDIR /app
 # Copy the fully built virtual environment (interpreter-compatible with the
 # identical base image) owned by the non-root user.
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
+# Shared resources (e-mail templates, ...): foundation's FSPaths takes the app root from PYTHONPATH.
+COPY --from=builder --chown=app:app /app/resources /app/resources
+ENV PYTHONPATH=/app
 
 USER app
 

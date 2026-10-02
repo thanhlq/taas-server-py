@@ -11,8 +11,8 @@ in `foundation.resiliant`; **every implementation, settings loader and SQLAlchem
 |---|---|---|
 | Transactional outboxes + relay (one table per use case) | reliable event emit | `MessagingOutboxService`, `TransactionOutboxService`, `OutboxPoller` |
 | Idempotency — Postgres (`ON CONFLICT`) or Redis (`SET NX EX`), `IDEMPOTENCY_BACKEND` | exactly-once activity | `IdempotencyService.guard` |
-| Dead-letter queue | poison-message handling | `DLQService` |
-| Durable saga state | durable workflow, signals, queries, compensation | `SagaService` + `SagaRepository` |
+| Dead-letter queue (shared with taas-server-js) | poison-message handling | `DLQService` (save / approve / cancel / abandon / replay / archive), `DLQRetryProcessor` |
+| Durable sagas (shared with taas-server-js) | durable workflow, signals, queries, compensation | `SagaService` (run / resume / signal) + `PgSagaRepository` |
 | Durable timers / schedules / cron | `workflow.sleep`, Schedules | `ScheduleService`, `SchedulerPoller` |
 | Composed guards | activity timeout / retry | `ResilientExecutor` (bulkhead, circuit breaker, timeout, fallback) |
 | Retry policies | activity retry policy | `resiliant.retry` (`TenacityRetry`, `retry`) |
@@ -47,11 +47,12 @@ This is the pattern-stack substitute for `workflow.patched()`. Saga steps are
 looked up by **string name**, never by index, which makes flows safe to evolve
 while instances are in flight — *provided* the following discipline is kept:
 
-- **Add steps freely.** A new step inserted into a `SagaDefinition` is skipped
-  naturally by any in-flight saga whose `current_step` is already past the
-  insertion point (lookup is by name, so unknown/earlier names still resolve).
+- **Add steps freely.** On `resume`, recorded steps are matched by name and a
+  step added since the instance started runs in its definition order (a
+  completed step is never repeated).
 - **Never rename or drop a step name** while sagas referencing it may be in
-  flight. A renamed step reads as a *new* step and an orphaned old record.
+  flight: `resume` refuses an instance with a recorded name the definition no
+  longer has (`SagaError`).
 - **Migrations are additive-only** — add nullable columns; never rename/drop a
   column that a persisted `context`/`steps` JSON payload depends on. This keeps
   old rows decodable across a deploy.

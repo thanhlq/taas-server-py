@@ -1,79 +1,87 @@
 """
-Postgres idempotency store (``IdempotencyBackend.POSTGRES``) — table
-``resiliant_processed_events``.
+Postgres idempotency store (``resiliant_processed_events``) — same protocol as
+``PostgresIdempotencyStore`` of ``@taas/resiliant``.
 
-Design notes
-------------
-Race safety
-    The critical path uses PostgreSQL's
-    ``INSERT … ON CONFLICT (idempotency_key) DO NOTHING``. Two workers racing
-    on the same key both attempt the insert; exactly one sees ``rowcount == 1``
-    (winner) and the other sees ``rowcount == 0`` (duplicate). No
-    application-level locking is required.
+``claim`` inserts the key FIRST (``INSERT … ON CONFLICT DO NOTHING RETURNING``) in a
+savepoint of the caller's session, then the caller runs its work on that session:
 
-TTL cleanup
-    :meth:`cleanup_expired` deletes in bounded batches to avoid long-held locks
-    on large tables. Call it from a low-priority periodic task, never on the
-    hot path.
+* the work raises → the savepoint rolls back, the key is not recorded, the broker
+  redelivers and it runs again;
+* a concurrent duplicate blocks on the unique index until the first commits, then
+  sees the conflict and skips — exactly once relative to the database, no
+  check-then-act race.
 
-Session ownership
-    Like the outbox/DLQ repositories, every method operates on a
-    caller-supplied :class:`AsyncSession` so idempotency writes can participate
-    in the surrounding business transaction.
+The claim only becomes visible when the caller commits, so keep the guarded work
+short: duplicates wait on it.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Any, Optional
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Any
 
-from resiliant.models import ProcessedEventTable
-from foundation import BaseService
-from foundation.utils import now_in_utc
-from sqlalchemy import CursorResult, delete, select
+from foundation.resiliant.idempotency import (
+    IdempotencyBackend,
+    IdempotencyConfig,
+    IIdempotencyStore,
+)
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from foundation.resiliant.idempotency import IdempotencyBackend, IdempotencyConfig, IIdempotencyStore
+from resiliant.models.idempotency import ProcessedEventTable
+from resiliant.sql import interval_days
 
 
-class PostgresIdempotencyStore(IIdempotencyStore, BaseService):
-    """
-    Database operations for the idempotency subsystem.
+def _row(idempotency_key: str, scope: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = scope.get('tenant_id')
+    return {
+        'idempotency_key': idempotency_key,
+        'event_id': scope['event_id'],
+        'event_type': scope.get('event_type') or '',
+        'handler_name': scope['handler_name'],
+        'saga_id': scope.get('saga_id'),
+        'correlation_id': scope.get('correlation_id'),
+        'tenant_id': None if tenant_id is None else str(tenant_id),
+        'extra_metadata': scope.get('metadata'),
+    }
 
-    Intentionally thin — it only translates between Python objects and SQL.
-    Business logic (guard, key construction, metrics) lives in
-    :class:`~resiliant.idempotency.idempotency_service.IdempotencyService`.
-    """
 
+class PostgresIdempotencyStore(IIdempotencyStore):
     backend = IdempotencyBackend.POSTGRES
 
     def __init__(self, config: IdempotencyConfig) -> None:
-        super().__init__()
         self.config = config
 
-    # ------------------------------------------------------------------
-    # Hot-path operations
-    # ------------------------------------------------------------------
-
-    async def is_processed(
-        self,
-        session: AsyncSession,
-        idempotency_key: str,
+    async def _insert(
+        self, session: AsyncSession, idempotency_key: str, scope: dict[str, Any]
     ) -> bool:
-        """
-        Check whether an idempotency key has already been recorded.
-
-        Performs a lightweight ``SELECT id … LIMIT 1``; only presence matters,
-        so the full row is never materialised.
-        """
         stmt = (
+            insert(ProcessedEventTable)
+            .values(**_row(idempotency_key, scope))
+            .on_conflict_do_nothing(
+                index_elements=[ProcessedEventTable.idempotency_key]
+            )
+            .returning(ProcessedEventTable.id)
+        )
+        return (await session.execute(stmt)).first() is not None
+
+    @asynccontextmanager
+    async def claim(
+        self, session: AsyncSession, idempotency_key: str, scope: dict[str, Any]
+    ) -> AsyncIterator[bool]:
+        async with session.begin_nested():
+            claimed = await self._insert(session, idempotency_key, scope)
+            yield claimed
+
+    async def is_processed(self, session: AsyncSession, idempotency_key: str) -> bool:
+        row = await session.execute(
             select(ProcessedEventTable.id)
             .where(ProcessedEventTable.idempotency_key == idempotency_key)
             .limit(1)
         )
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        return row.first() is not None
 
     async def mark_processed(
         self,
@@ -83,123 +91,59 @@ class PostgresIdempotencyStore(IIdempotencyStore, BaseService):
         event_type: str,
         handler_name: str,
         *,
-        saga_id: Optional[str] = None,
-        correlation_id: Optional[str] = None,
-        tenant_id: Optional[str] = None,
-        extra_metadata: Optional[dict] = None,
+        saga_id: str | None = None,
+        correlation_id: str | None = None,
+        tenant_id: str | None = None,
+        extra_metadata: dict[str, Any] | None = None,
     ) -> bool:
-        """
-        Atomically record an idempotency key on successful processing.
-
-        Uses ``INSERT … ON CONFLICT (idempotency_key) DO NOTHING`` so
-        concurrent workers racing on the same key are safe without any
-        application-level mutex. The surrogate primary key is generated by the
-        model (UUIDv7), so it is left unset here.
-
-        The winner is detected via ``RETURNING id`` rather than ``rowcount``:
-        the async psycopg driver reports ``rowcount == -1`` for a plain INSERT,
-        so it cannot distinguish an insert from a skipped conflict. With
-        ``RETURNING``, a real insert yields the new id while a conflict yields
-        no row.
-
-        Returns:
-            ``True``  — this call inserted the row (we won the race).
-            ``False`` — a duplicate key already existed (someone else won).
-        """
-        stmt = (
-            insert(ProcessedEventTable)
-            .values(
-                idempotency_key=idempotency_key,
-                event_id=event_id,
-                event_type=event_type,
-                handler_name=handler_name,
-                saga_id=saga_id,
-                correlation_id=correlation_id,
-                # Events may carry int tenant ids; the column is text.
-                tenant_id=str(tenant_id) if tenant_id is not None else None,
-                extra_metadata=extra_metadata,
-            )
-            .on_conflict_do_nothing(index_elements=['idempotency_key'])
-            .returning(ProcessedEventTable.id)
+        """Record the key in the caller's session; ``True`` when this call inserted it."""
+        return await self._insert(
+            session,
+            idempotency_key,
+            {
+                'event_id': event_id,
+                'event_type': event_type,
+                'handler_name': handler_name,
+                'saga_id': saga_id,
+                'correlation_id': correlation_id,
+                'tenant_id': tenant_id,
+                'metadata': extra_metadata,
+            },
         )
-
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
-    # ------------------------------------------------------------------
-    # Read helpers (non-critical path)
-    # ------------------------------------------------------------------
 
     async def get_by_key(
-        self,
-        session: AsyncSession,
-        idempotency_key: str,
-    ) -> Optional[ProcessedEventTable]:
-        """
-        Fetch the full row for a key (diagnostics / audit).
-
-        Do not call on the hot path — use :meth:`is_processed` instead.
-        """
-        stmt = select(ProcessedEventTable).where(
-            ProcessedEventTable.idempotency_key == idempotency_key
+        self, session: AsyncSession, idempotency_key: str
+    ) -> ProcessedEventTable | None:
+        """The stored row (diagnostics) — never on the hot path."""
+        result = await session.execute(
+            select(ProcessedEventTable)
+            .where(ProcessedEventTable.idempotency_key == idempotency_key)
+            .limit(1)
         )
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    # ------------------------------------------------------------------
-    # Lifecycle / maintenance
-    # ------------------------------------------------------------------
+        return result.scalars().first()
 
     async def cleanup_expired(
         self,
         session: AsyncSession,
         *,
-        ttl_days: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        ttl_days: int | None = None,
+        batch_size: int | None = None,
     ) -> int:
-        """
-        Delete processed-event rows older than the configured TTL.
-
-        Deletes at most ``batch_size`` rows per call to avoid long-running
-        locks. For tables with millions of rows, call in a loop until it
-        returns 0. Commits the deletion so the freed rows are visible to other
-        workers immediately.
-        """
-        effective_ttl = ttl_days if ttl_days is not None else self.config.ttl_days
-        effective_batch = (
-            batch_size if batch_size is not None else self.config.cleanup_batch_size
-        )
-
-        # ``created_at`` is TIMESTAMP WITHOUT TIME ZONE, so compare against a
-        # naive UTC value to keep the predicate unambiguous.
-        threshold = (now_in_utc() - timedelta(days=effective_ttl)).replace(
-            tzinfo=None
-        )
-
-        # Sub-select the oldest expired ids up to the batch limit so the DELETE
-        # touches a bounded, index-ordered set rather than scanning the table.
-        ids_subquery = (
-            select(ProcessedEventTable.id)
-            .where(ProcessedEventTable.created_at < threshold)
-            .order_by(ProcessedEventTable.created_at.asc())
-            .limit(effective_batch)
+        """Oldest expired rows first, at most ``batch_size`` per call; loop until it returns 0."""
+        days = ttl_days or self.config.ttl_days
+        limit = batch_size or self.config.cleanup_batch_size
+        t = ProcessedEventTable
+        expired = (
+            select(t.id)
+            .where(t.created_at < func.now() - interval_days(days))
+            .order_by(t.created_at.asc())
+            .limit(limit)
             .scalar_subquery()
         )
-
-        stmt = delete(ProcessedEventTable).where(
-            ProcessedEventTable.id.in_(ids_subquery)
+        result = await session.execute(
+            delete(t).where(t.id.in_(expired)).returning(t.id)
         )
+        return len(result.all())
 
-        result: CursorResult[Any] = await session.execute(stmt)  # type: ignore[assignment]
-        deleted = result.rowcount or 0
-        await session.commit()
 
-        if deleted:
-            self.logger.debug(
-                'idempotency_cleanup_expired: deleted=%s ttl_days=%s threshold=%s',
-                deleted,
-                effective_ttl,
-                threshold.isoformat(),
-            )
-
-        return deleted
+__all__ = ['PostgresIdempotencyStore']

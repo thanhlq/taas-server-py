@@ -18,16 +18,18 @@ Preferred usage (context manager)::
     ):
         await handle_order_created(event)
 
-The block body runs only once per ``(handler_name, event_id)`` pair. Duplicate
-invocations silently no-op (or raise ``DuplicateEventError`` when
-``raise_on_duplicate=True``). If the body raises, the key is *not* recorded so
-the message can be retried safely.
+The block body runs only once per ``(handler_name, event_id)`` pair: the key is claimed
+before the work (same protocol as ``@taas/resiliant``). Duplicates no-op (or raise
+``DuplicateEventError`` when strict); if the body raises the claim is undone so the
+message can be retried safely.
 """
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, AsyncIterator, Dict, Literal, Optional
 
 from foundation import BaseService
 from foundation.resiliant.idempotency import (
@@ -39,6 +41,13 @@ from foundation.resiliant.idempotency import (
 
 from .idempotency_metrics import IdempotencyMetrics
 from .stores import PostgresIdempotencyStore
+
+
+@dataclass(frozen=True, slots=True)
+class GuardOutcome[T]:
+    status: Literal['processed', 'duplicate']
+    key: str
+    result: T | None
 
 
 class IdempotencyService(IIdempotencyService, BaseService):
@@ -152,96 +161,74 @@ class IdempotencyService(IIdempotencyService, BaseService):
         correlation_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         saga_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         raise_on_duplicate: bool = False,
     ) -> AsyncIterator[bool]:
-        """
-        Async context manager that enforces idempotency around a block.
+        """Run a block at most once per ``(handler_name, event_id)`` — same protocol as JS ``guard``.
 
-        The context manager yields a ``should_process`` flag: run the guarded
-        work only when it is truthy. A context manager's body cannot be skipped
-        implicitly, so callers must branch on the yielded value (or use
-        ``raise_on_duplicate``/``strict_mode`` for exception-based control)::
+        The key is **claimed first** (Postgres: insert in a savepoint of ``session``; Redis:
+        lease), then the block runs; it yields ``should_process``::
 
             async with svc.guard(session, event_id, "OrderHandler") as fresh:
                 if fresh:
                     await handle_order_created(event)
 
-        Lifecycle
-        ---------
-        1. **Entry** — check whether the key is already processed.
-           - fresh                → yield ``True``
-           - duplicate + strict   → raise ``DuplicateEventError`` (body skipped)
-           - duplicate + lenient  → yield ``False`` (caller skips the work)
-        2. **Clean exit (fresh)** — record the key atomically.
-        3. **Exception (fresh)** — do *not* record the key; re-raise so the
-           worker/broker can retry the message safely.
-
-        ``raise_on_duplicate`` overrides ``config.strict_mode`` for this call.
+        * duplicate → yields ``False`` (or raises ``DuplicateEventError`` when strict);
+        * the block raises → the claim is undone (savepoint rollback / lease deleted), the
+          message can be retried;
+        * Redis: another worker holds the lease → ``IdempotencyInProgressError`` (nack).
         """
         key = self.build_key(event_id, handler_name)
-        effective_strict = raise_on_duplicate or self.config.strict_mode
-
-        # -------------------------------------------------------------- entry
+        scope = {
+            'event_id': event_id,
+            'event_type': event_type,
+            'handler_name': handler_name,
+            'saga_id': saga_id,
+            'correlation_id': correlation_id,
+            'tenant_id': tenant_id,
+            'metadata': metadata,
+        }
         if self.config.enable_metrics:
             self.metrics.record_check()
-
-        if await self.store.is_processed(session, key):
-            if self.config.enable_metrics:
-                self.metrics.record_duplicate(key)
-            if self.config.log_duplicates:
-                self.logger.warning(
-                    'idempotency_duplicate_detected key=%s event_id=%s '
-                    'handler=%s type=%s',
-                    key,
-                    event_id,
-                    handler_name,
-                    event_type,
-                )
-            if effective_strict:
-                raise DuplicateEventError(idempotency_key=key)
-            # Lenient duplicate: hand back False so the caller skips the work.
-            yield False
-            return
-
-        # --------------------------------------------------------------- body
-        try:
-            yield True
-        except Exception:
-            # Do NOT mark as processed — let the message be retried.
-            if self.config.enable_metrics:
-                self.metrics.record_error()
-            raise
-
-        # ---------------------------------------------------------- clean exit
-        inserted = await self.store.mark_processed(
-            session=session,
-            idempotency_key=key,
-            event_id=event_id,
-            event_type=event_type,
-            handler_name=handler_name,
-            saga_id=saga_id,
-            correlation_id=correlation_id,
-            tenant_id=tenant_id,
-        )
-
+        async with self.store.claim(session, key, scope) as claimed:
+            if not claimed:
+                if self.config.enable_metrics:
+                    self.metrics.record_duplicate(key)
+                if self.config.log_duplicates:
+                    self.logger.warning(
+                        'duplicate skipped: key=%s event=%s handler=%s type=%s', key, event_id, handler_name, event_type or '-'
+                    )
+                if raise_on_duplicate or self.config.strict_mode:
+                    raise DuplicateEventError(idempotency_key=key)
+                yield False
+                return
+            try:
+                yield True
+            except Exception:
+                if self.config.enable_metrics:
+                    self.metrics.record_error()
+                raise
         if self.config.enable_metrics:
-            if inserted:
-                self.metrics.record_processed()
-            else:
-                self.metrics.record_duplicate(key)
+            self.metrics.record_processed()
 
-        if not inserted:
-            # Another worker raced and won between our check and insert. The
-            # body ran here as well — expected under at-least-once delivery;
-            # handlers must be idempotent at the business-logic level too.
-            self.logger.warning(
-                'idempotency_race_on_mark key=%s event_id=%s handler=%s — '
-                'two workers processed the same event concurrently; the '
-                'handler body ran more than once.',
-                key,
-                event_id,
-                handler_name,
-            )
+    async def run_once[T](
+        self,
+        session: Any,
+        *,
+        event_id: str,
+        handler_name: str,
+        work: Callable[[Any], Awaitable[T]],
+        event_type: str = '',
+        raise_on_duplicate: bool = False,
+        **scope: Any,
+    ) -> GuardOutcome[T]:
+        """JS-style guard: ``work(session)`` at most once; returns ``GuardOutcome(status, key, result)``."""
+        async with self.guard(
+            session, event_id, handler_name, event_type, raise_on_duplicate=raise_on_duplicate, **scope
+        ) as fresh:
+            if fresh:
+                return GuardOutcome('processed', self.build_key(event_id, handler_name), await work(session))
+        return GuardOutcome('duplicate', self.build_key(event_id, handler_name), None)
 
     # ------------------------------------------------------------------
     # Maintenance

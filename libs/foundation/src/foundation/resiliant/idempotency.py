@@ -57,13 +57,14 @@ class IdempotencyBackend(StrEnum):
     """Where idempotency keys are stored (``IDEMPOTENCY_BACKEND``)."""
 
     POSTGRES = 'postgres'
-    """``resiliant_processed_events`` table. The key commits atomically with the
-    caller's business transaction (same session); expiry via ``cleanup_expired``."""
+    """``resiliant_processed_events``: the key is claimed FIRST (``INSERT … ON CONFLICT DO
+    NOTHING`` in a savepoint of the caller's session) and commits with the business work;
+    a concurrent duplicate waits on the unique index. Expiry via ``cleanup_expired``."""
 
     REDIS = 'redis'
-    """``SET key NX EX ttl`` — faster and expires by itself, but recorded outside
-    the business transaction (session ignored): a crash between the business
-    commit and the key write means the handler runs again on redelivery."""
+    """Lease protocol (``SET key lease:<token> NX PX lease_ms`` → work → record with the
+    retention TTL): recorded outside the business transaction (session ignored); a crash
+    leaves a lease that expires, so the event is processed again (never lost)."""
 
 
 # --------------------------------------------------------------------------- #
@@ -94,6 +95,14 @@ class DuplicateEventError(Exception):
             f"Duplicate event detected — key '{idempotency_key}' already processed"
             + (f' at {processed_at}' if processed_at else '')
         )
+
+
+class IdempotencyInProgressError(Exception):
+    """Redis store: another worker holds the lease of this key — nack / retry later, never ack."""
+
+    def __init__(self, idempotency_key: str) -> None:
+        self.idempotency_key = idempotency_key
+        super().__init__(f"Event '{idempotency_key}' is being processed by another worker")
 
 
 # --------------------------------------------------------------------------- #
@@ -140,9 +149,8 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
         skipping on duplicate. The ``guard()`` context manager exposes its own
         ``raise_on_duplicate`` parameter, which takes precedence per-call.
 
-    db_query_timeout_ms:
-        Advisory timeout for idempotency DB queries. Keeps an unhealthy
-        database from stalling event consumers indefinitely.
+    lease_ms:
+        Redis store only: lease of a key while its work runs (``IDEMPOTENCY_LEASE_MS``).
 
     Example
     -------
@@ -177,9 +185,8 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
     strict_mode: bool = False
     """Raise DuplicateEventError instead of silently returning on duplicate."""
 
-    # Performance
-    db_query_timeout_ms: int = 3000
-    """Advisory per-query timeout in milliseconds."""
+    lease_ms: int = 60_000
+    """Redis store: how long a worker owns a key while its work runs (``IDEMPOTENCY_LEASE_MS``)."""
 
     def __post_init__(self) -> None:
         # Validate eagerly so a misconfiguration fails at construction time
@@ -192,6 +199,8 @@ class IdempotencyConfig(msgspec.Struct, frozen=True):
             )
         if not self.key_separator:
             raise ValueError('key_separator cannot be empty')
+        if self.lease_ms < 1000:
+            raise ValueError(f'lease_ms must be >= 1000, got {self.lease_ms}')
 
     @property
     def ttl_seconds(self) -> int:
@@ -214,6 +223,11 @@ class IIdempotencyStore(Protocol):
     """
 
     backend: IdempotencyBackend
+
+    def claim(self, session: Any, idempotency_key: str, scope: dict[str, Any]) -> Any:
+        """Async context manager yielding ``True`` when this caller owns the key (run the work),
+        ``False`` for a duplicate. The key is recorded only if the block exits cleanly."""
+        ...
 
     async def is_processed(self, session: Any, idempotency_key: str) -> bool:
         """Return ``True`` if the key has already been recorded."""

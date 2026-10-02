@@ -45,6 +45,18 @@ from iam.iam_constants import IamEvents
 # ---------------------------------------------------------------------------
 
 
+
+# The same events are published by the Node IAM (taas-server-js `@taas/iam-engine`), whose
+# tenant payload names the human-readable key `alias` (Python: `alias_id`) and may carry
+# fields this side does not declare: read both shapes instead of failing the handler.
+_PAYLOAD_RENAMES = {'alias': 'alias_id'}
+
+
+def _struct_kwargs(struct: Any, data: Any) -> dict[str, Any]:
+    fields = struct.__struct_fields__
+    renamed = {_PAYLOAD_RENAMES.get(k, k): v for k, v in (data or {}).items()}
+    return {k: v for k, v in renamed.items() if k in fields}
+
 class TenantCreatedEvent(BaseEvent, kw_only=True):
     """Fired when a new tenant is created."""
 
@@ -97,7 +109,7 @@ class UserDirectoryCreatedEvent(BaseEvent[UserDirectoryEventPayload]):
         if isinstance(_payload, UserDirectoryEventPayload):
             return _payload.user
         elif isinstance(_payload, dict):
-            return DirectoryUser(**_payload.get('user', {}))
+            return DirectoryUser(**_struct_kwargs(DirectoryUser, _payload.get('user')))
         else:
             raise ValueError('Invalid payload type for user')
 
@@ -108,7 +120,7 @@ class UserDirectoryCreatedEvent(BaseEvent[UserDirectoryEventPayload]):
         if isinstance(_payload, UserDirectoryEventPayload):
             return _payload.tenant
         elif isinstance(_payload, dict):
-            return DirectoryTenant(**_payload.get('tenant', {}))
+            return DirectoryTenant(**_struct_kwargs(DirectoryTenant, _payload.get('tenant')))
         else:
             raise ValueError('Invalid payload type for tenant')
 

@@ -19,7 +19,7 @@ LOG_ADAPTER_ELK = 'elk'
 class LogSettings:
     """Logger configuration"""
 
-    LOG_ADAPTERS: str = 'console,file,otlp-http'
+    LOG_ADAPTERS: str = field(default_factory=get_env('LOG_ADAPTERS', 'console,file,otlp-http'))
     """ Values can be comma-separated list of:
         - console: terminal console
         - file: best for debug or tracing issue in local/dev environment
@@ -37,7 +37,7 @@ class LogSettings:
     LOG_LEVEL: int = field(default_factory=get_env('LOG_LEVEL', 30))
     LOG_FORMAT: str = 'standard'
     LOG_WITH_COLOR: bool = True
-    LOG_FILE_DIR: str = 'logs'
+    LOG_FILE_DIR: str = field(default_factory=get_env('LOG_FILE_DIR', 'logs'))
     LOG_FILE_NAME: str = 'taas.log'
     OBFUSCATE_COOKIES: set[str] = field(
         default_factory=lambda: {'session', 'XSRF-TOKEN'}

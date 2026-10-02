@@ -19,11 +19,18 @@
 4. start nodejs worker (kafkajs client)
 - taas-server-js/demos/messaging_kafka_demo/start-consumer.sh
 
-5. go to taas-server-py/tests/e2e/test-user-register, execute:
+5. go to taas-server-py/apps/ews_api/tests/performance_test/k6/test-signup-user, execute:
 
 ```bash
 uv run python test_register_new_user.py
 ```
+
+Expected: `SUCCESS`, 3 rows in `resiliant_outbox_messages` with status `published`
+(`user.directory_created`, `user.registered`, `tenant.created`) and 3 decoded messages in the
+Node consumer log.
+
+The same services run in Docker: `docker compose up -d --build` at the taas-all root
+(see [docs/local-development-docker-guide.md](../../../../docs/local-development-docker-guide.md)).
 
 ## 1. Test schema-registry-avro serialization
 

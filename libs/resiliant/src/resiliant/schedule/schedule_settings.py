@@ -1,94 +1,103 @@
-"""Load scheduler settings from environment variables (``SCHEDULER_`` prefix)."""
+"""
+Scheduler settings from the environment — same variables as ``@taas/foundation``
+``ResiliantSettings.scheduleConfig``.
+
+| Variable | Default | ``ScheduleConfig`` field |
+| --- | --- | --- |
+| ``SCHEDULE_POLL_STRATEGY`` | ``fixed`` | ``poll_strategy`` (``fixed`` / ``adaptive``) |
+| ``SCHEDULE_FIXED_POLL_INTERVAL_MS`` | ``30000`` | ``fixed_poll_interval_ms`` |
+| ``SCHEDULE_MIN_POLL_INTERVAL_MS`` / ``SCHEDULE_MAX_POLL_INTERVAL_MS`` | ``1000`` / ``60000`` | adaptive bounds |
+| ``SCHEDULE_BATCH_SIZE`` | ``100`` | ``batch_size`` |
+| ``SCHEDULE_CONCURRENT_WORKERS`` | ``1`` | ``concurrent_workers`` |
+| ``SCHEDULE_MAX_RETRIES`` | ``3`` | ``max_retries`` (default per new job) |
+| ``SCHEDULE_RETRY_BACKOFF_MS`` | ``30000`` | ``retry_backoff_ms`` |
+| ``SCHEDULE_CLAIM_TIMEOUT_MS`` | ``300000`` | ``claim_timeout_ms`` (stale lease reset) |
+| ``SCHEDULE_ENABLED`` (Python only) | ``true`` | ``enabled`` (worker hosts the poller) |
+
+Unset or blank means the default. A malformed value (a number that does not parse,
+an unknown strategy, a non-boolean) raises ``ValueError`` — never a silent default.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import os
+from collections.abc import Mapping
 from functools import lru_cache
+from typing import Any
 
-from foundation.resiliant.schedule import ScheduleConfig
-from foundation.utils.env_utils import get_env
+from foundation.resiliant.schedule import ScheduleConfig, resolve_schedule_config
+
+_TRUE = frozenset({'true', '1', 'yes', 'on'})
+_FALSE = frozenset({'false', '0', 'no', 'off'})
 
 
-@dataclass
+def _blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
 class ScheduleSettings:
-    """Durable-timer / scheduler configuration.
+    """Typed view over a settings source (default ``os.environ``)."""
 
-    All values are read from environment variables (prefixed with
-    ``SCHEDULER_``) and mapped onto a :class:`ScheduleConfig` via
-    :meth:`get_config`.
-    """
+    def __init__(self, source: Mapping[str, Any] | None = None) -> None:
+        self._source: Mapping[str, Any] = os.environ if source is None else source
 
-    ENABLED: bool = field(default_factory=get_env('SCHEDULER_ENABLED', True))
-    POLL_STRATEGY: str = field(
-        default_factory=get_env('SCHEDULER_POLL_STRATEGY', 'fixed')
-    )
+    def _num(self, key: str) -> int | float | None:
+        value = self._source.get(key)
+        if _blank(value):
+            return None
+        if isinstance(value, bool):
+            raise ValueError(f'{key} must be a number, got {value!r}')
+        if isinstance(value, int | float):
+            number: float = value
+        else:
+            try:
+                number = float(str(value).strip())
+            except ValueError as exc:
+                raise ValueError(f'{key} must be a number, got {value!r}') from exc
+        if number != number:  # NaN
+            raise ValueError(f'{key} must be a number, got {value!r}')
+        return int(number) if float(number).is_integer() else number
 
-    FIXED_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('SCHEDULER_FIXED_POLL_INTERVAL_MS', 30_000, int)
-    )
-    MIN_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('SCHEDULER_MIN_POLL_INTERVAL_MS', 1_000, int)
-    )
-    MAX_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('SCHEDULER_MAX_POLL_INTERVAL_MS', 60_000, int)
-    )
-    INITIAL_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('SCHEDULER_INITIAL_POLL_INTERVAL_MS', 30_000, int)
-    )
-    BACKOFF_GROWTH_FACTOR: str = field(
-        default_factory=get_env('SCHEDULER_BACKOFF_GROWTH_FACTOR', '2.0')
-    )
-    DRAIN_THRESHOLD_RATIO: str = field(
-        default_factory=get_env('SCHEDULER_DRAIN_THRESHOLD_RATIO', '1.0')
-    )
+    def _bool(self, key: str) -> bool | None:
+        value = self._source.get(key)
+        if _blank(value):
+            return None
+        if isinstance(value, bool):
+            return value
+        text = str(value).strip().lower()
+        if text in _TRUE:
+            return True
+        if text in _FALSE:
+            return False
+        raise ValueError(f'{key} must be a boolean, got "{value}"')
 
-    BATCH_SIZE: int = field(default_factory=get_env('SCHEDULER_BATCH_SIZE', 100, int))
-    CONCURRENT_WORKERS: int = field(
-        default_factory=get_env('SCHEDULER_CONCURRENT_WORKERS', 1, int)
-    )
+    def _str(self, key: str) -> str | None:
+        value = self._source.get(key)
+        return None if _blank(value) else str(value)
 
-    MAX_RETRIES: int = field(default_factory=get_env('SCHEDULER_MAX_RETRIES', 3, int))
-    RETRY_BACKOFF_SECONDS: str = field(
-        default_factory=get_env('SCHEDULER_RETRY_BACKOFF_SECONDS', '30.0')
-    )
-    CLAIM_TIMEOUT_SECONDS: int = field(
-        default_factory=get_env('SCHEDULER_CLAIM_TIMEOUT_SECONDS', 300, int)
-    )
-
-    USE_SKIP_LOCKED: bool = field(
-        default_factory=get_env('SCHEDULER_USE_SKIP_LOCKED', True)
-    )
-
-    ENABLE_METRICS: bool = field(
-        default_factory=get_env('SCHEDULER_ENABLE_METRICS', True)
-    )
-    METRICS_LOG_INTERVAL_SECONDS: int = field(
-        default_factory=get_env('SCHEDULER_METRICS_LOG_INTERVAL_SECONDS', 60, int)
-    )
-
-    def get_config(self) -> ScheduleConfig:
-        """Return the validated :class:`ScheduleConfig`."""
-        return ScheduleConfig(
-            enabled=self.ENABLED,
-            poll_strategy=self.POLL_STRATEGY,
-            fixed_poll_interval_ms=self.FIXED_POLL_INTERVAL_MS,
-            min_poll_interval_ms=self.MIN_POLL_INTERVAL_MS,
-            max_poll_interval_ms=self.MAX_POLL_INTERVAL_MS,
-            initial_poll_interval_ms=self.INITIAL_POLL_INTERVAL_MS,
-            backoff_growth_factor=float(self.BACKOFF_GROWTH_FACTOR),
-            drain_threshold_ratio=float(self.DRAIN_THRESHOLD_RATIO),
-            batch_size=self.BATCH_SIZE,
-            concurrent_workers=self.CONCURRENT_WORKERS,
-            max_retries=self.MAX_RETRIES,
-            retry_backoff_seconds=float(self.RETRY_BACKOFF_SECONDS),
-            claim_timeout_seconds=self.CLAIM_TIMEOUT_SECONDS,
-            use_skip_locked=self.USE_SKIP_LOCKED,
-            enable_metrics=self.ENABLE_METRICS,
-            metrics_log_interval_seconds=self.METRICS_LOG_INTERVAL_SECONDS,
+    def schedule_config(self, **overrides: Any) -> ScheduleConfig:
+        """The validated :class:`ScheduleConfig`; ``overrides`` win over the environment."""
+        return resolve_schedule_config(
+            {
+                'poll_strategy': self._str('SCHEDULE_POLL_STRATEGY'),
+                'fixed_poll_interval_ms': self._num('SCHEDULE_FIXED_POLL_INTERVAL_MS'),
+                'min_poll_interval_ms': self._num('SCHEDULE_MIN_POLL_INTERVAL_MS'),
+                'max_poll_interval_ms': self._num('SCHEDULE_MAX_POLL_INTERVAL_MS'),
+                'batch_size': self._num('SCHEDULE_BATCH_SIZE'),
+                'concurrent_workers': self._num('SCHEDULE_CONCURRENT_WORKERS'),
+                'max_retries': self._num('SCHEDULE_MAX_RETRIES'),
+                'retry_backoff_ms': self._num('SCHEDULE_RETRY_BACKOFF_MS'),
+                'claim_timeout_ms': self._num('SCHEDULE_CLAIM_TIMEOUT_MS'),
+                'enabled': self._bool('SCHEDULE_ENABLED'),
+            },
+            **overrides,
         )
 
 
 @lru_cache(maxsize=1)
-def get_schedule_config(settings: ScheduleSettings | None = None) -> ScheduleConfig:
-    """Build the validated :class:`ScheduleConfig` from settings/environment."""
-    return (settings or ScheduleSettings()).get_config()
+def get_schedule_config() -> ScheduleConfig:
+    """The process-wide :class:`ScheduleConfig` from the environment (cached)."""
+    return ScheduleSettings().schedule_config()
+
+
+__all__ = ['ScheduleSettings', 'get_schedule_config']

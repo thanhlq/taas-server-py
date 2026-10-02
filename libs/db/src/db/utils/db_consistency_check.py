@@ -18,7 +18,9 @@ def _declared_columns(mapper) -> List[str]:
     keys: List[str] = []
     for column_prop in mapper.column_attrs:
         for column in column_prop.columns:
-            keys.append(column.key)
+            # The physical name: an attribute may map a differently named column
+            # (``ProcessedEventTable.extra_metadata`` -> ``metadata``).
+            keys.append(column.name)
     return keys
 
 

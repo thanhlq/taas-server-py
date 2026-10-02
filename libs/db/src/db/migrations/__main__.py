@@ -9,7 +9,8 @@ Commands:
     revision -m "<msg>"           Create an empty revision
     revision --autogenerate -m "<msg>"
                                   Create a revision diffing models vs DB
-    upgrade [revision]            Upgrade to revision (default: head)
+    upgrade [revision]            Apply the resiliant_* migrations (shared with
+                                  taas-server-js), then upgrade to revision (default: head)
     downgrade <revision>          Downgrade to revision (-1 for one step back)
     stamp <revision>              Mark the DB as being at <revision> without
                                   running migrations (use after manual fixes)
@@ -65,6 +66,15 @@ def _build_config() -> AlembicCommandConfig:
     )
 
 
+def _run_resiliant_migrations(config: AlembicCommandConfig) -> None:
+    import asyncio
+
+    from resiliant.migrations import run_resiliant_migrations
+
+    applied = asyncio.run(run_resiliant_migrations(config.engine))  # type: ignore[arg-type]
+    print(f'resiliant migrations: {", ".join(applied) if applied else "up to date"}')
+
+
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='python -m db.migrations',
@@ -111,6 +121,9 @@ def main(argv: list[str] | None = None) -> int:
             config, message=args.message, autogenerate=args.autogenerate,
         )
     elif args.cmd == 'upgrade':
+        if not args.sql:
+            # The resiliant_* tables first: shared drizzle migrations (taas-server-js owns the DDL).
+            _run_resiliant_migrations(config)
         alembic_command.upgrade(config, revision=args.revision, sql=args.sql)
     elif args.cmd == 'downgrade':
         alembic_command.downgrade(config, revision=args.revision, sql=args.sql)

@@ -8,7 +8,7 @@ Definitions (config, backend enum, store/service contracts) live in
 
 from .factory import build_idempotency_service, build_idempotency_store
 from .idempotency_metrics import IdempotencyMetrics
-from .idempotency_service import IdempotencyService
+from .idempotency_service import GuardOutcome, IdempotencyService
 from .idempotency_settings import IdempotencySettings, get_idempotency_config
 from .stores import PostgresIdempotencyStore, RedisIdempotencyStore
 
@@ -16,6 +16,7 @@ from .stores import PostgresIdempotencyStore, RedisIdempotencyStore
 IdempotencyRepository = PostgresIdempotencyStore
 
 __all__ = [
+    "GuardOutcome",
     "IdempotencyMetrics",
     "IdempotencyRepository",
     "IdempotencyService",

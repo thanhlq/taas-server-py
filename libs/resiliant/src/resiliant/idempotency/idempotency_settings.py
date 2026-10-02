@@ -9,7 +9,7 @@
 | ``IDEMPOTENCY_TTL_DAYS`` | ``30`` | Retention (Redis: key TTL; Postgres: cleanup age) |
 | ``IDEMPOTENCY_CLEANUP_BATCH_SIZE`` | ``500`` | Postgres cleanup batch |
 | ``IDEMPOTENCY_ENABLE_METRICS`` / ``_LOG_DUPLICATES`` / ``_STRICT_MODE`` | ``true`` / ``true`` / ``false`` | Behaviour flags |
-| ``IDEMPOTENCY_DB_QUERY_TIMEOUT_MS`` | ``3000`` | Advisory query timeout |
+| ``IDEMPOTENCY_LEASE_MS`` | ``60000`` | Redis: lease of a key while its work runs |
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ class IdempotencySettings:
     ENABLE_METRICS: bool = field(default_factory=get_env('IDEMPOTENCY_ENABLE_METRICS', True))
     LOG_DUPLICATES: bool = field(default_factory=get_env('IDEMPOTENCY_LOG_DUPLICATES', True))
     STRICT_MODE: bool = field(default_factory=get_env('IDEMPOTENCY_STRICT_MODE', False))
-    DB_QUERY_TIMEOUT_MS: int = field(default_factory=get_env('IDEMPOTENCY_DB_QUERY_TIMEOUT_MS', 3000, int))
+    LEASE_MS: int = field(default_factory=get_env('IDEMPOTENCY_LEASE_MS', 60_000, int))
 
     def get_config(self) -> IdempotencyConfig:
         return IdempotencyConfig(
@@ -48,7 +48,7 @@ class IdempotencySettings:
             enable_metrics=self.ENABLE_METRICS,
             log_duplicates=self.LOG_DUPLICATES,
             strict_mode=self.STRICT_MODE,
-            db_query_timeout_ms=self.DB_QUERY_TIMEOUT_MS,
+            lease_ms=self.LEASE_MS,
         )
 
     def get_redis_config(self) -> RedisConfig:

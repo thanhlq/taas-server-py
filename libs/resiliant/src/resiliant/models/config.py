@@ -5,5 +5,5 @@ import os
 RESILIANT_TABLE_PREFIX = os.environ.get('RESILIANT_TABLE_PREFIX', 'resiliant_')
 """Prefix of every resiliant table, e.g. ``resiliant_outbox_messages``."""
 
-type TENANT_ID_COLUMN_TYPE = int
-"""Same tenant id type as the platform models (``db.models.base``)."""
+type TENANT_ID_COLUMN_TYPE = str
+"""Tenant ids are text in the resiliant tables (shared with taas-server-js)."""

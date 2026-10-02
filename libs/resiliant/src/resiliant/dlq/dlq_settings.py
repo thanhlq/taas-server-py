@@ -1,121 +1,107 @@
-"""Load dead letter queue (DLQ) settings from environment variables."""
+"""Dead-letter queue settings from the environment (``DLQ_*``).
+
+Same variables and defaults as ``ResiliantSettings.deadLetterConfig()`` of
+``@taas/foundation`` (taas-server-js). A malformed value raises — it never falls
+back to the default silently. ``DLQ_ENABLED`` / ``DLQ_TOPIC`` belong to messaging
+(the broker's DLQ topic), not to this table-backed queue.
+"""
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 
 from foundation.resiliant.dlq import DeadLetterConfig
 from foundation.utils.env_utils import get_env
 
+_DEFAULT = DeadLetterConfig()
+
+
+def parse_handler_limits(value: str | None) -> dict[str, int]:
+    """``"OrderHandler:5,Other:2"`` (or a JSON object) -> ``{'OrderHandler': 5, 'Other': 2}``.
+
+    Raises:
+        ValueError: an entry that is not ``Handler:limit`` with an integer limit >= 1.
+    """
+    if value is None or not value.strip():
+        return {}
+    if value.strip().startswith('{'):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as error:
+            raise ValueError(f'DLQ_HANDLER_MAX_RETRIES is not valid JSON: {value!r}') from error
+        if not isinstance(parsed, dict):
+            raise ValueError(f'DLQ_HANDLER_MAX_RETRIES must be a JSON object, got {value!r}')
+        entries = [f'{name}:{limit}' for name, limit in parsed.items()]
+    else:
+        entries = [entry for entry in value.split(',') if entry.strip()]
+    limits: dict[str, int] = {}
+    for entry in entries:
+        name, sep, raw = entry.rpartition(':')
+        name = name.strip()
+        try:
+            limit = int(raw.strip())
+        except ValueError:
+            limit = 0
+        if not sep or not name or limit < 1:
+            raise ValueError(
+                f'DLQ_HANDLER_MAX_RETRIES entry must be "Handler:limit", got {entry.strip()!r}'
+            )
+        limits[name] = limit
+    return limits
+
 
 @dataclass
 class DlqSettings:
-    """Dead letter queue configuration.
+    """``DLQ_*`` environment, mapped onto :class:`DeadLetterConfig` by :meth:`get_config`."""
 
-    All values are read from environment variables (prefixed with ``DLQ_``)
-    and mapped onto a :class:`DeadLetterConfig` via :meth:`get_config`.
-    """
-
-    ENABLED: bool = field(default_factory=get_env('DLQ_ENABLED', True))
-    """Enable or disable DLQ functionality globally."""
-
-    # Polling configuration
-    POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('DLQ_POLL_INTERVAL_MS', 5000, int)
+    BATCH_SIZE: int = field(default_factory=get_env('DLQ_BATCH_SIZE', _DEFAULT.batch_size))
+    """Rows one retry step claims."""
+    PAGE_SIZE: int = field(default_factory=get_env('DLQ_PAGE_SIZE', _DEFAULT.page_size))
+    """Default ``list`` page size."""
+    MAX_RETRIES: int = field(default_factory=get_env('DLQ_MAX_RETRIES', _DEFAULT.max_retries))
+    """Default retry budget of a dead letter."""
+    RETRY_BACKOFF_MULTIPLIER: float = field(
+        default_factory=get_env('DLQ_RETRY_BACKOFF_MULTIPLIER', _DEFAULT.retry_backoff_multiplier)
     )
-    """Base polling interval in milliseconds."""
-    INITIAL_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('DLQ_INITIAL_POLL_INTERVAL_MS', 1000, int)
-    )
-    """Initial interval for adaptive polling (ms)."""
-    MAX_POLL_INTERVAL_MS: int = field(
-        default_factory=get_env('DLQ_MAX_POLL_INTERVAL_MS', 30000, int)
-    )
-    """Maximum interval for adaptive polling (ms)."""
-    BATCH_SIZE: int = field(default_factory=get_env('DLQ_BATCH_SIZE', 50, int))
-    """Number of events to fetch and process per poll."""
-    CONCURRENT_WORKERS: int = field(
-        default_factory=get_env('DLQ_CONCURRENT_WORKERS', 2, int)
-    )
-    """Number of concurrent retry workers."""
-
-    # Retry configuration
-    MAX_RETRIES: int = field(default_factory=get_env('DLQ_MAX_RETRIES', 3, int))
-    """Default maximum retry attempts per event."""
-    RETRY_BACKOFF_MULTIPLIER: str = field(
-        default_factory=get_env('DLQ_RETRY_BACKOFF_MULTIPLIER', '2.0')
-    )
-    """Multiplier for exponential backoff (parsed as float in get_config)."""
+    """Retry n waits ``multiplier ** n`` seconds."""
     RETRY_MAX_INTERVAL_MS: int = field(
-        default_factory=get_env('DLQ_RETRY_MAX_INTERVAL_MS', 60000, int)
+        default_factory=get_env('DLQ_RETRY_MAX_INTERVAL_MS', _DEFAULT.retry_max_interval_ms)
     )
-    """Maximum interval between retries (ms)."""
-
-    # Database configuration
-    USE_SKIP_LOCKED: bool = field(
-        default_factory=get_env('DLQ_USE_SKIP_LOCKED', True)
+    """Cap of the retry backoff (ms)."""
+    CLAIM_TIMEOUT_MS: int = field(
+        default_factory=get_env('DLQ_CLAIM_TIMEOUT_MS', _DEFAULT.claim_timeout_ms)
     )
-    """Use FOR UPDATE SKIP LOCKED for concurrent safety."""
-
-    # Archive configuration
+    """A lease (``processing``) older than this returns to ``pending``."""
     ARCHIVE_AFTER_DAYS: int = field(
-        default_factory=get_env('DLQ_ARCHIVE_AFTER_DAYS', 30, int)
+        default_factory=get_env('DLQ_ARCHIVE_AFTER_DAYS', _DEFAULT.archive_after_days)
     )
-    """Archive events older than this many days."""
-    AUTO_ARCHIVE_ENABLED: bool = field(
-        default_factory=get_env('DLQ_AUTO_ARCHIVE_ENABLED', True)
-    )
-    """Enable automatic archiving of old events."""
-
-    # Metrics configuration
-    ENABLE_METRICS: bool = field(
-        default_factory=get_env('DLQ_ENABLE_METRICS', True)
-    )
-    """Enable metrics collection and reporting."""
-
-    # Handler-specific retry configuration
-    HANDLER_RETRY_ENABLED: bool = field(
-        default_factory=get_env('DLQ_HANDLER_RETRY_ENABLED', True)
-    )
-    """Enable handler-specific retry logic."""
+    """Terminal rows older than this move to the archive table."""
     HANDLER_MAX_RETRIES: dict[str, int] = field(
-        default_factory=get_env('DLQ_HANDLER_MAX_RETRIES', {}, dict[str, int])
+        default_factory=lambda: parse_handler_limits(get_env('DLQ_HANDLER_MAX_RETRIES', '')())
     )
-    """Per-handler maximum retry limits (JSON or comma-separated ``name:limit``)."""
+    """Per-handler retry limits: ``OrderHandler:5,Other:2`` (or a JSON object)."""
 
     def get_config(self) -> DeadLetterConfig:
-        """Return the :class:`DeadLetterConfig`.
-
-        Returns:
-            The dead letter queue configuration.
-        """
+        """The validated :class:`DeadLetterConfig` (raises ``ValueError`` when invalid)."""
         return DeadLetterConfig(
-            enabled=self.ENABLED,
-            poll_interval_ms=self.POLL_INTERVAL_MS,
-            initial_poll_interval_ms=self.INITIAL_POLL_INTERVAL_MS,
-            max_poll_interval_ms=self.MAX_POLL_INTERVAL_MS,
             batch_size=self.BATCH_SIZE,
-            concurrent_workers=self.CONCURRENT_WORKERS,
+            page_size=self.PAGE_SIZE,
             max_retries=self.MAX_RETRIES,
             retry_backoff_multiplier=float(self.RETRY_BACKOFF_MULTIPLIER),
             retry_max_interval_ms=self.RETRY_MAX_INTERVAL_MS,
-            use_skip_locked=self.USE_SKIP_LOCKED,
+            claim_timeout_ms=self.CLAIM_TIMEOUT_MS,
             archive_after_days=self.ARCHIVE_AFTER_DAYS,
-            auto_archive_enabled=self.AUTO_ARCHIVE_ENABLED,
-            enable_metrics=self.ENABLE_METRICS,
-            handler_retry_enabled=self.HANDLER_RETRY_ENABLED,
-            handler_max_retries=self.HANDLER_MAX_RETRIES,
+            handler_max_retries=dict(self.HANDLER_MAX_RETRIES),
         )
 
 
-def build_dlq_config(settings: DlqSettings | None = None) -> DeadLetterConfig:
-    """Build the internal :class:`DeadLetterConfig` from settings.
-
-    Args:
-        settings: Optional settings instance. When omitted, a fresh
-            :class:`DlqSettings` is read from the environment.
-
-    Returns:
-        The dead letter queue configuration.
-    """
+def get_dlq_config(settings: DlqSettings | None = None) -> DeadLetterConfig:
+    """The :class:`DeadLetterConfig` of ``settings`` (default: read the environment now)."""
     return (settings or DlqSettings()).get_config()
+
+
+build_dlq_config = get_dlq_config
+"""Alias of :func:`get_dlq_config`."""
+
+__all__ = ['DlqSettings', 'build_dlq_config', 'get_dlq_config', 'parse_handler_limits']

@@ -19,6 +19,7 @@ Layout:
 from __future__ import annotations
 
 import enum
+import re
 from collections.abc import Sequence
 from typing import Any, Literal, Optional, Protocol, runtime_checkable
 
@@ -45,11 +46,20 @@ class OutboxPublishError(OutboxError):
 
 
 class OutboxStatus(enum.StrEnum):
+    """Same values as ``outboxStatuses`` of ``@taas/foundation/resiliant`` (shared tables).
+
+    There is no ``processing`` state: the relay claims rows with row locks held by its
+    transaction (``FOR UPDATE SKIP LOCKED``) and writes the outcome before committing.
+    """
+
     PENDING = 'pending'
-    PROCESSING = 'processing'
     PUBLISHED = 'published'
     FAILED = 'failed'
     DEAD_LETTER = 'dead_letter'
+
+
+CLAIMABLE_OUTBOX_STATUSES: tuple[OutboxStatus, ...] = (OutboxStatus.PENDING, OutboxStatus.FAILED)
+"""Statuses the relay claims (the ``*_due_idx`` partial index predicate)."""
 
 
 class OutboxTarget(enum.StrEnum):
@@ -94,122 +104,95 @@ PollStrategy = Literal['fixed', 'adaptive', 'notify']
 type RoutingStrategy = Literal['outbox', 'direct']
 
 class OutboxConfig(msgspec.Struct, frozen=True):
-    """
-    Configuration for outbox pattern implementation.
-
-    Attributes:
-        enabled: Whether outbox polling is enabled
-        min_poll_interval_ms: Minimum polling interval when busy (ms)
-        max_poll_interval_ms: Maximum polling interval when idle (ms)
-        initial_poll_interval_ms: Starting polling interval (ms)
-        batch_size: Number of events to fetch per poll
-        concurrent_workers: Number of concurrent poller workers
-        max_retries: Maximum retry attempts before moving to DLQ
-        retry_backoff_multiplier: Exponential backoff multiplier for retries
-        processing_timeout_seconds: Timeout for processing events
-        use_skip_locked: Use FOR UPDATE SKIP LOCKED in queries
-        use_read_replica: Use read replica for initial queries
-        archive_after_days: Move published events to archive after N days
-        cleanup_archive_after_days: Delete archived events after N days
-        enable_metrics: Enable metrics collection
+    """Outbox relay policy — same fields, defaults and checks as ``OutboxConfigT``
+    (``@taas/foundation/resiliant``), read from the same ``OUTBOX_*`` variables
+    (``resiliant.outbox.outbox_settings``).
     """
 
     enabled: bool = True
-
-    # Poll strategy selection:
-    #   'fixed'    - sleep `fixed_poll_interval_ms` every cycle (legacy 1s behavior)
-    #   'adaptive' - decorrelated jitter backoff between min/max based on activity
-    #   'notify'   - adaptive backoff PLUS Postgres LISTEN/NOTIFY wake-up
-    poll_strategy: PollStrategy = 'fixed'
-
-    # Polling configuration
-    fixed_poll_interval_ms: int = 3000  # used when poll_strategy == 'fixed'
-    min_poll_interval_ms: int = 100
-    max_poll_interval_ms: int = 20000  # default 2000 (2 seconds)
-    initial_poll_interval_ms: int = 5000  # default 500
-    """ Initial polling interval in milliseconds.
-    This value should be between min_poll_interval_ms and max_poll_interval_ms."""
-
-    # Adaptive backoff tuning (decorrelated jitter: next = U(min, prev * growth))
+    poll_strategy: PollStrategy = 'adaptive'
+    """``fixed`` (constant sleep), ``adaptive`` (decorrelated jitter), ``notify`` (adaptive + LISTEN wake-up)."""
+    fixed_poll_interval_ms: int = 1000
+    min_poll_interval_ms: int = 50
+    max_poll_interval_ms: int = 2000
+    initial_poll_interval_ms: int = 200
     backoff_growth_factor: float = 3.0
+    """Idle sleep = U(min, min(max, previous × factor)); must be > 1."""
     drain_threshold_ratio: float = 1.0
-    """When fetched_count >= batch_size * drain_threshold_ratio, skip sleep
-    and immediately poll again ('drain mode')."""
-
-    # NOTIFY strategy (Postgres LISTEN/NOTIFY)
-    notify_channel: str = 'outbox_new_event'
+    """A poll that claimed >= batch_size × ratio records polls again without sleeping."""
+    notify_channel: str = 'resiliant_outbox'
+    """``LISTEN`` channel of the ``notify`` strategy; writers ``NOTIFY`` it on commit."""
     notify_dsn: Optional[str] = None
-    """Optional asyncpg DSN for the LISTEN connection. If None, only in-process
-    `OutboxPoller.wake()` calls will trigger early polling."""
-
-    # Batch processing
+    """Connection string of the dedicated LISTEN connection (Python only); default = the app database."""
     batch_size: int = 100
-    concurrent_workers: int = 1  # Number of parallel poller workers ()
-
-    # Retry configuration
-    max_retries: int = 3
+    concurrent_workers: int = 1
+    """Parallel relay loops in one process (rows are split by SKIP LOCKED)."""
+    max_retries: int = 10
     retry_backoff_multiplier: float = 2.0
-    processing_timeout_seconds: int = 30
-
-    # Database optimizations
-    use_skip_locked: bool = True
-    use_read_replica: bool = False
-
-    # Archiving configuration
-    archive_after_days: int = 7
-    cleanup_archive_after_days: int = 30
-
-    # Monitoring
+    """Retry n waits multiplier^n seconds, capped by ``retry_max_backoff_ms``."""
+    retry_max_backoff_ms: int = 300_000
+    dispatch_timeout_ms: int = 30_000
+    """A dispatch slower than this is a failure (the record may still have been delivered)."""
+    preserve_ordering: bool = True
+    """Records sharing an ordering key (per target + channel) are delivered in id order."""
+    breaker_failure_threshold: int = 3
+    """Distinct records failing in a row that mean "the target is down"."""
+    breaker_cooldown_ms: int = 5000
+    retention_days: int = 7
+    """Published records older than this are purged by maintenance."""
     enable_metrics: bool = True
-    metrics_log_interval_seconds: int = 60
+    metrics_log_interval_ms: int = 60_000
 
-    # Connection pool
-    db_pool_min_size: int = 5
-    db_pool_max_size: int = 20
-    db_query_timeout_ms: int = 5000
-
-    # Messaging Routing
+    # Messaging routing (Python ``MessageRoutingService``): outbox vs direct publish per channel.
     routing_default: RoutingStrategy = 'outbox'
     direct_channels: dict[str, str] = {}
     outbox_channels: dict[str, str] = {}
 
-    def __post_init__(self):
-        """Validate configuration."""
+    def __post_init__(self) -> None:
+        """Validate like ``resolveOutboxConfig``: a policy that cannot work raises."""
+        if self.poll_strategy not in ('fixed', 'adaptive', 'notify'):
+            raise ValueError(f'outbox poll_strategy must be fixed, adaptive or notify, got {self.poll_strategy!r}')
         if self.min_poll_interval_ms > self.max_poll_interval_ms:
             raise ValueError(
-                f'min_poll_interval_ms ({self.min_poll_interval_ms}) cannot be '
-                f'greater than max_poll_interval_ms ({self.max_poll_interval_ms})'
+                f'outbox min_poll_interval_ms ({self.min_poll_interval_ms}) > max_poll_interval_ms ({self.max_poll_interval_ms})'
             )
+        msgspec.structs.force_setattr(
+            self,
+            'initial_poll_interval_ms',
+            min(max(self.initial_poll_interval_ms, self.min_poll_interval_ms), self.max_poll_interval_ms),
+        )
+        for name, minimum in (
+            ('fixed_poll_interval_ms', 1),
+            ('min_poll_interval_ms', 0),
+            ('batch_size', 1),
+            ('concurrent_workers', 1),
+            ('max_retries', 1),
+            ('retry_backoff_multiplier', 1),
+            ('retry_max_backoff_ms', 0),
+            ('dispatch_timeout_ms', 1),
+            ('breaker_failure_threshold', 1),
+            ('breaker_cooldown_ms', 0),
+            ('retention_days', 1),
+            ('drain_threshold_ratio', 0),
+        ):
+            if getattr(self, name) < minimum:
+                raise ValueError(f'outbox {name} must be >= {minimum}, got {getattr(self, name)}')
+        if not self.backoff_growth_factor > 1:
+            raise ValueError(f'outbox backoff_growth_factor must be > 1, got {self.backoff_growth_factor}')
+        if not re.fullmatch(r'[a-z_][a-z0-9_]{0,62}', self.notify_channel):
+            raise ValueError(f'outbox notify_channel must be a plain lower-case identifier, got {self.notify_channel!r}')
 
-        if self.initial_poll_interval_ms < self.min_poll_interval_ms:
-            self.initial_poll_interval_ms = self.min_poll_interval_ms
 
-        if self.initial_poll_interval_ms > self.max_poll_interval_ms:
-            self.initial_poll_interval_ms = self.max_poll_interval_ms
+class OutboxBatchResult(msgspec.Struct, frozen=True):
+    """Outcome of one relay step (``OutboxBatchResultT``)."""
 
-        if self.batch_size < 1:
-            raise ValueError(f'batch_size must be at least 1, got {self.batch_size}')
-
-        if self.concurrent_workers < 1:
-            raise ValueError(
-                f'concurrent_workers must be at least 1, got {self.concurrent_workers}'
-            )
-
-        if self.poll_strategy not in ('fixed', 'adaptive', 'notify'):
-            raise ValueError(
-                f"poll_strategy must be one of 'fixed', 'adaptive', 'notify', "
-                f"got {self.poll_strategy!r}"
-            )
-
-        if self.fixed_poll_interval_ms < 1:
-            raise ValueError(
-                f'fixed_poll_interval_ms must be >= 1, got {self.fixed_poll_interval_ms}'
-            )
-
-        if self.backoff_growth_factor <= 1.0:
-            raise ValueError(
-                f'backoff_growth_factor must be > 1.0, got {self.backoff_growth_factor}'
-            )
+    claimed: int = 0
+    published: int = 0
+    failed: int = 0
+    dead_lettered: int = 0
+    deferred: int = 0
+    circuit: str = 'closed'
+    """``closed`` | ``open`` | ``half_open`` — the relay's view of its target."""
 
 
 # --------------------------------------------------------------------------- #
@@ -243,9 +226,9 @@ class IOutboxRecord(Protocol):
     Use-case tables add their own columns on top (``resiliant.models.outbox``).
     """
 
-    id: Any
+    id: int
     event_type: str
-    target: OutboxTarget
+    target: OutboxTarget | str
     channel: str | None
     ordering_key: str | None
     payload: dict[str, Any]
@@ -261,8 +244,9 @@ class IOutboxRecord(Protocol):
 class IOutboxDispatcher(Protocol):
     """Delivers claimed outbox records to one :class:`OutboxTarget`.
 
-    Raising marks the record failed (retried until ``max_retries``, then
-    ``DEAD_LETTER``); returning marks it published.
+    Raising marks the record failed (retried with capped backoff until
+    ``max_retries``, then ``dead_letter`` — unless the relay attributes the failure to
+    the target being down); returning marks it published.
     """
 
     target: OutboxTarget
