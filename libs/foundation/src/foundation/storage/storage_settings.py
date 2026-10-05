@@ -25,16 +25,16 @@ class StorageSettings:
         default_factory=get_env('BLOB_STORAGE_PROVIDER', 's3')
     )
     """
-    Values:
-        - 'fs' (default) - file system, 's3' - Amazon S3, 'gcs' - Google Cloud Storage, 'azure' - Azure Blob Storage.
-        - s3: can be Cloudflare R2, MinIO, etc. as long as it supports S3 API.
+    Deprecated here (kept for `StorageConfig.blob_storage_provider`): the blob service reads and validates
+    the same key in `foundation.blob.BlobSettings` — values `s3` (AWS S3, Cloudflare R2, RustFS) | `gcp`
+    (alias `gcs`) | `azure` | `memory`.
     """
 
     TEMPLATE_STORAGE_BUCKET: str = 'eworksuite-templates'
     """📦 GCS bucket for template storage"""
 
     BLOB_STORAGE_BUCKET: str = 'eworksuite-blob'
-    """📦 GCS bucket for blob storage"""
+    """Deprecated, unused: blob buckets are per tenant (`BLOB_BUCKET_PREFIX` + tenant code, see `foundation.blob`)."""
 
     @lru_cache_ignore_1st_arg
     def get_config(self) -> StorageConfig:

@@ -45,6 +45,10 @@ members = [
     "apps/ews_worker",
     "apps/outbox_worker",
     "libs/messaging_nats",
+    "libs/blob_s3",
+    "libs/blob_gcp",
+    "libs/blob_azure",
+    "libs/blob_service",
 ]
 
 # exclude = ["services/nodejs-worker"]
@@ -70,6 +74,10 @@ banking_core = { workspace = true }
 block_kaspa = { workspace = true }
 resiliant = { workspace = true }
 outbox_worker = { workspace = true }
+blob-s3 = { workspace = true }
+blob-gcp = { workspace = true }
+blob-azure = { workspace = true }
+blob-service = { workspace = true }
 
 
 [dependency-groups]

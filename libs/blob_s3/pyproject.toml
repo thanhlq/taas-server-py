@@ -1,0 +1,31 @@
+[project]
+name = "blob-s3"
+version = "0.1.0"
+description = "S3 compatible blob adapter (AWS S3, Cloudflare R2, RustFS) for foundation.blob"
+readme = "README.md"
+authors = [
+    { name = "Thanh LE", email = "thanh@floin.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    'foundation',
+    "aiobotocore>=2.25.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "python-dotenv",
+    "httpx>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]

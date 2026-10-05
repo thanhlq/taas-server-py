@@ -32,6 +32,10 @@
     "libs/block-kaspa/src",
     "libs/messaging_kafka/src",
     "libs/messaging_faststream/src",
+    "libs/blob_s3/src",
+    "libs/blob_gcp/src",
+    "libs/blob_azure/src",
+    "libs/blob_service/src",
     "apps/ews_api/src",
     "apps/ews_api_litestar/src",
     "apps/ews_worker/src",
@@ -110,6 +114,26 @@
     },
     {
       "root": "libs/messaging_faststream",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/blob_s3",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/blob_gcp",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/blob_azure",
+      "pythonVersion": "3.14",
+      "extraPaths": ["src"]
+    },
+    {
+      "root": "libs/blob_service",
       "pythonVersion": "3.14",
       "extraPaths": ["src"]
     },

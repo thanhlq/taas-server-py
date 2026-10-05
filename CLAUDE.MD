@@ -12,6 +12,10 @@ The is the uv workspace which include the following libraries, applications and 
 | libs/db | Platform db models and the single Alembic migration tree (also migrates `resiliant.models`). |
 | libs/ews | Core eworksuite business (ddd patterns): api definitions which can be used for building apps as: `ews_api` (Fastapi, adapter: libs/http_fastapi) and `ews_api_litestar` (Litestar, adapter: libs/http_litestar) |
 | libs/banking_core | Banking domain core, including crypto factory/utilities |
+| libs/blob_service | Tenant-based blob storage: `create_blob_service()` (adapter by `BLOB_STORAGE_PROVIDER`, tenant bucket in `taas_tenants.sys_settings.bucket`), memory adapter. Interfaces in `foundation.blob`. See `docs/developers/blob-storage-guide.md` |
+| libs/blob_s3 | Blob adapter for S3 compatible storage: AWS S3, Cloudflare R2, RustFS (aiobotocore) |
+| libs/blob_gcp | Blob adapter for Google Cloud Storage |
+| libs/blob_azure | Blob adapter for Azure Blob Storage (aio + SAS) |
 | libs/block-kaspa | Kaspa blockchain integration: transactions, fee estimation and typed client |
 | libs/http_fastapi | the Fastapi adatper for deploying of the api (i.e. ews) using Fastapi. |
 | libs/http_litestar | the Fastapi adatper for deploying of the api (i.e. ews) using Litestar. |

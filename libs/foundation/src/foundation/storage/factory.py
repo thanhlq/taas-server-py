@@ -10,7 +10,8 @@ from foundation.utils.singleton import singleton
 class StorageServiceFactory:
     # TODO to move to generic type
     _template_storage_service: FSTemplateStorage | None = None
-    _blob_storage_service: str
+    # Blob storage is not built here: use `blob_service.create_blob_service()` (libs/blob_service), which
+    # registers `foundation.blob.BlobServiceT` (tenant buckets, settings in `foundation.blob.BlobSettings`).
 
     def __init__(self):
         """

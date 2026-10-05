@@ -1,0 +1,38 @@
+[project]
+name = "blob-service"
+version = "0.1.0"
+description = "Tenant-based blob storage service: adapter selection, tenant buckets (taas_tenants.sys_settings.bucket), memory adapter"
+readme = "README.md"
+authors = [
+    { name = "Thanh LE", email = "thanh@floin.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    'foundation',
+    # Default provider (BLOB_STORAGE_PROVIDER=s3): AWS S3, Cloudflare R2, RustFS.
+    'blob-s3',
+    "sqlalchemy==2.0.51",
+]
+
+[project.optional-dependencies]
+gcp = ['blob-gcp']
+azure = ['blob-azure']
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "python-dotenv",
+    "httpx>=0.24.0",
+    "psycopg[binary]>=3.2",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
