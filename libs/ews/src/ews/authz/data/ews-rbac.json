@@ -1,0 +1,82 @@
+{
+  "catalog": "ews",
+  "version": 1,
+  "description": "Business roles and permissions of the EWS apps (PPM, CRM), taas-specs/iam/specs/app-roles-spec.md. Synced into taas_casbin_rule (p rows) at EWS API start-up. Roles with 'extends' are defined by the IAM catalog (iam-rbac.json); this file only adds their business permissions. Permission = '<resource>:<action>', '*' = any.",
+  "namespaces": ["ppm", "crm"],
+  "resources": [
+    { "key": "ppm.project", "name": "Projects", "actions": ["create", "read", "update", "delete"] },
+    { "key": "ppm.project_member", "name": "Project members", "actions": ["create", "read", "update", "delete"] },
+    { "key": "ppm.workflow", "name": "Project workflows and stages", "actions": ["create", "read", "update", "delete"] },
+    { "key": "ppm.task", "name": "Tasks, task lists, iterations", "actions": ["create", "read", "update", "delete"] },
+    { "key": "ppm.task_activity", "name": "Comments and time logs", "actions": ["create", "read", "update", "delete"] },
+    { "key": "crm.account", "name": "CRM accounts", "actions": ["create", "read", "update", "delete", "export"] }
+  ],
+  "roles": [
+    {
+      "key": "project_admin",
+      "name": "Project Admin",
+      "scope": "project",
+      "description": "Full permission on the assigned project.",
+      "permissions": [
+        "ppm.project:read",
+        "ppm.project:update",
+        "ppm.project:delete",
+        "ppm.project_member:*",
+        "ppm.workflow:*",
+        "ppm.task:*",
+        "ppm.task_activity:*"
+      ]
+    },
+    {
+      "key": "project_member",
+      "name": "Project Member",
+      "scope": "project",
+      "description": "Works on the tasks of the assigned project.",
+      "permissions": [
+        "ppm.project:read",
+        "ppm.project_member:read",
+        "ppm.workflow:read",
+        "ppm.task:create",
+        "ppm.task:read",
+        "ppm.task:update",
+        "ppm.task_activity:create",
+        "ppm.task_activity:read",
+        "ppm.task_activity:update"
+      ]
+    },
+    {
+      "key": "project_viewer",
+      "name": "Project Viewer",
+      "scope": "project",
+      "description": "Read-only access to the assigned project (clients, stakeholders).",
+      "permissions": [
+        "ppm.project:read",
+        "ppm.project_member:read",
+        "ppm.workflow:read",
+        "ppm.task:read",
+        "ppm.task_activity:read"
+      ]
+    },
+    {
+      "key": "org_admin",
+      "extends": "iam",
+      "scope": "org",
+      "description": "Organization Admin: full permission on the projects and CRM data of the organization (Iam-0510).",
+      "permissions": [
+        "ppm.project:*",
+        "ppm.project_member:*",
+        "ppm.workflow:*",
+        "ppm.task:*",
+        "ppm.task_activity:*",
+        "crm.account:*"
+      ]
+    },
+    {
+      "key": "org_member",
+      "extends": "iam",
+      "scope": "org",
+      "description": "Organization Member: creates projects (and becomes their Project Admin), works with CRM accounts.",
+      "permissions": ["ppm.project:create", "crm.account:create", "crm.account:read", "crm.account:update"]
+    }
+  ]
+}

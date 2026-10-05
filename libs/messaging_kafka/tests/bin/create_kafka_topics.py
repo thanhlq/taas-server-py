@@ -26,6 +26,7 @@ from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 APP_TOPICS = [
     'iam.user.registered',
     'iam.tenant.created',
+    'iam.admin',
     'iam.auth',
     'iam.authz',
     'dlq.events',

@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -145,6 +146,10 @@ class ResendConfig:
         Raises:
             ValueError: If the API key is not provided.
         """
+        if not self.api_key:
+            # Try to read from os environment variable: EMAIL_SMTP_PASSWORD
+            self.api_key = os.getenv("EMAIL_SMTP_PASSWORD", "")
+
         if not self.api_key:
             raise ValueError("Resend API key must be provided in ResendConfig.")
 

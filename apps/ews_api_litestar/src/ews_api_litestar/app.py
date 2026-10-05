@@ -16,6 +16,7 @@ from typing import Any, Optional
 import socketio
 from db.check_db import a_check_db_consistency
 from ews import get_ews_controllers
+from ews.authz import sync_catalog
 from foundation.cli import cli_print_info
 from foundation.config import Settings
 from foundation.config.wss import WebSocketConfig
@@ -161,6 +162,12 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
             decorator=messaging,
         )
         IamFactory.initialize_iam(IamServiceFactory())
+        await self._init_rbac()
+
+    async def _init_rbac(self) -> None:
+        """Bootstrap the business roles / permissions (``ews/authz/data/ews-rbac.json``), idempotent."""
+        result = await sync_catalog()
+        self.logger.info(f'RBAC catalog ews synced: +{result.added} -{result.removed} policies')
 
     def _get_enabled_app_controllers(self) -> list[Any]:
         return [*get_iam_controllers(), *get_ews_controllers()]

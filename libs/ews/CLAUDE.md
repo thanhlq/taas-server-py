@@ -8,6 +8,11 @@ This project will not be dependent on any api frameworks instead of that it use 
 
 The structure:
 - core: contain all core things as repositories, services,.. for users, team, tenants,...
+- authz: business RBAC — roles / permissions catalog `authz/data/ews-rbac.json` (Project Admin,
+  Project Member, Project Viewer, PPM / CRM rights of `org_admin` / `org_member`), synced into
+  `taas_casbin_rule` at EWS API start-up (`sync_catalog`), decision `can(user, resource_domains(...),
+  'ppm.task', 'update')`, grants `grant` / `revoke`. Same model as the IAM (Node):
+  `taas-specs/iam/specs/authorization-rbac-spec.md`. Edit the JSON, restart; the unit test validates it
 - ews: for eworksuite
 - ....
 
