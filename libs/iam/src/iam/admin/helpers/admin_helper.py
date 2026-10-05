@@ -77,7 +77,7 @@ class IamDataHelper:
             path=f'/{org_id}/',
             depth=0,
             name=tenant.name,
-            slug=f'{tenant.slug}-root',
+            slug=tenant.slug,  # the root organization has the tenant's slug
             directory_id=tenant.directory_id,
         )
         member = OrganizationMember(

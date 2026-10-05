@@ -48,6 +48,15 @@ There are two scripts to start the api service in fastapi and litestar framework
 - start_fastapi_ews_api.sh: start the api service under fastapi framework
 - start_litestar_ews_api.sh: start the api service under litestar framework
 
+## Environment configuration
+
+- Start from `cp .env.example .env`; each key is documented there with default, allowed values
+  and whether it is required. Use `cp .env.test.example .env.test` only for local test overrides.
+- `foundation.config.get_settings()` loads `ENV_FILE` or `.env` with `python-dotenv`; process
+  environment variables take precedence. `.env.local` is not layered automatically.
+- Keep real `.env` / `.env.test` gitignored. Check sync with
+  `python3 ../taas-tools/env-check/check_env.py taas-server-py`.
+
 ### Local run gotchas (FastAPI EWS API — binds :8191)
 
 - **Rate limiter Redis**: `RateLimitConfig.redis_host` defaults to `redis` (a docker-network
@@ -63,4 +72,3 @@ There are two scripts to start the api service in fastapi and litestar framework
   (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `PlatformController`). CRM
   accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
   advanced_alchemy `SlugKey` → set a unique `slug` on create.
-

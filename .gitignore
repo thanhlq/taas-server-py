@@ -60,7 +60,6 @@ config/secrets/*.secret.env
 !.env.*.example
 !config/*.example.toml
 !.env.secrets.example
-!.env.local.example
 
 # ============================================
 # Python Virtual Environments
