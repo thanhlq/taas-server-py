@@ -4,6 +4,7 @@ from ..config import TABLE_PREFIX
 TENANT_TABLE = f'{TABLE_PREFIX}tenants'
 ORGANIZATION_TABLE = f'{TABLE_PREFIX}organizations'
 ORGANIZATION_MEMBER_TABLE = f'{TABLE_PREFIX}organization_members'
+ORGANIZATION_INVITATION_TABLE = f'{TABLE_PREFIX}organization_invitations'
 PERMISSIONS_TABLE = f'{TABLE_PREFIX}permissions'
 ROLES_TABLE = f'{TABLE_PREFIX}roles'
 POLICIES_TABLE = f'{TABLE_PREFIX}policies'

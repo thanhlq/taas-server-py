@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
-from sqlalchemy import String
+from advanced_alchemy.types import GUID
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from foundation.iam.types import TeamType, TeamStatus
 
 from ._team_tag import team_tag
-from .constants import TEAM_TABLE
+from .constants import ORGANIZATION_TABLE, TEAM_TABLE, TENANT_TABLE
 
 if TYPE_CHECKING:
     from ._tag import Tag
@@ -19,13 +21,19 @@ if TYPE_CHECKING:
 
 
 class Team(UUIDv7AuditBase, SlugKey):
-    """A group of users with common permissions.
+    """A group of users inside an organization (RBAC domain ``team:<id>``).
     Users can create and invite users to a team.
     """
 
     __tablename__ = TEAM_TABLE
     __pii_columns__ = {'name', 'description'}
 
+    tenant_id: Mapped[UUID] = mapped_column(
+        GUID(length=16), ForeignKey(f'{TENANT_TABLE}.id', ondelete='cascade'), nullable=False, index=True
+    )
+    organization_id: Mapped[UUID] = mapped_column(
+        GUID(length=16), ForeignKey(f'{ORGANIZATION_TABLE}.id', ondelete='cascade'), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(
         String(length=500), nullable=True, default=None

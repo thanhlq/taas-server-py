@@ -7,6 +7,7 @@ from ._casbin_rule import CasbinRule
 from ._email_verification_token import EmailVerificationToken
 from ._oauth_account import UserOAuthAccount
 from ._organization import Organization
+from ._organization_invitation import OrganizationInvitation
 from ._organization_member import OrganizationMember
 from ._password_reset_token import PasswordResetToken
 from ._refresh_token import RefreshToken
@@ -39,5 +40,6 @@ __all__ = [
     'UserRole',
     'Tenant',
     'Organization',
+    'OrganizationInvitation',
     'OrganizationMember'
 ]

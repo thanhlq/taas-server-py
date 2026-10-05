@@ -4,17 +4,17 @@ from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from advanced_alchemy.types import EncryptedString
+from advanced_alchemy.types import GUID, EncryptedString
 from foundation.config import Settings, get_settings
 from foundation.iam.types import UserStatus
-from sqlalchemy import Enum, Integer, String
+from sqlalchemy import Enum, ForeignKey, Index, String, text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.config import PHONE_LENGTH
 
 from ..base import JSONB, TENANT_ID_COLUMN_TYPE
-from .constants import USER_ACCOUNT_TABLE
+from .constants import TENANT_TABLE, USER_ACCOUNT_TABLE
 
 if TYPE_CHECKING:
     from db.models import (
@@ -40,14 +40,26 @@ settings: Settings = get_settings()
 
 class User(UUIDv7AuditBase):
     __tablename__ = USER_ACCOUNT_TABLE
+    __table_args__ = (
+        # Iam-0170: one account per e-mail on the platform.
+        Index('ux_taas_user_account_email_lower', text('lower(email)'), unique=True),
+        Index(
+            'ux_taas_user_account_directory_id',
+            'directory_id',
+            unique=True,
+            postgresql_where=text('directory_id IS NOT NULL'),
+        ),
+    )
     """Hashed backup codes for MFA recovery."""
     email: Mapped[str] = mapped_column(unique=False, index=True, nullable=False)
     name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     first_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     last_name: Mapped[str | None] = mapped_column(nullable=True, default=None)
     username: Mapped[str] = mapped_column(
-        String(length=30), unique=False, index=True, nullable=False, default=None
+        String(length=255), unique=False, index=True, nullable=False, default=None
     )
+    # Subject at the identity provider (Keycloak user id; the built-in provider uses the user id).
+    directory_id: Mapped[str | None] = mapped_column(String(length=64), nullable=True, default=None)
     # phone: Mapped[str | None] = mapped_column(
     #     String(length=20), nullable=True, default=None
     # )
@@ -82,8 +94,13 @@ class User(UUIDv7AuditBase):
     password_reset_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     failed_reset_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
     reset_locked_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    # Home tenant (Iam-0110); further organizations: taas_organization_members.
     tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
-        Integer, index=True, nullable=True, default=None
+        GUID(length=16),
+        ForeignKey(f'{TENANT_TABLE}.id', ondelete='set null'),
+        index=True,
+        nullable=True,
+        default=None,
     )
     totp_secret: Mapped[str | None] = mapped_column(
         EncryptedString(key=settings.app.SECRET_KEY),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    Index,
     Integer,
     String,
 )
@@ -11,7 +12,11 @@ from .constants import CASBIN_RULE_TABLE
 
 
 class CasbinRule(BaseDBModel):
+    """Casbin policies (RBAC with domains, see @taas/iam-db `rbac`): `p, role, domain, obj, act` and
+    `g, user_id, role, domain` with domain `tenant:<id>` / `org:<id>` / `team:<id>`."""
+
     __tablename__ = CASBIN_RULE_TABLE
+    __table_args__ = (Index('ix_taas_casbin_rule_ptype_v0', 'ptype', 'v0'),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ptype = mapped_column(String(255))

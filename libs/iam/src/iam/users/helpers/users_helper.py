@@ -1,7 +1,5 @@
 from db.models import User
 from db.models.core import Tenant
-from foundation.iam.types import UserStatus
-from foundation.utils.id import generate_tenant_id
 from iam.auth.auth_events import (
     TenantCreatedEvent,
     UserDirectoryEventPayload,
@@ -17,29 +15,10 @@ class IamDataHelper:
     def build_root_account(
         directory_user: DirectoryUser, directory_tenant: DirectoryTenant
     ) -> tuple[User, Tenant]:
+        # One builder for root accounts (uuid tenant id, tenant_code, onboarding status).
+        from iam.admin.helpers.admin_helper import IamDataHelper as AdminIamDataHelper
 
-        # Build tenant
-        tenant: Tenant = Tenant()
-        tenant.name = directory_tenant.name
-        tenant.description = directory_tenant.description
-        tenant.alias_id = directory_tenant.alias_id
-        tenant.directory_id = directory_tenant.id
-        # tenant.realm_name = event.realm_name
-        tenant.id = generate_tenant_id()
-
-        # Build user
-        user: User = User()
-        user.username = directory_user.username
-        user.email = directory_user.email
-        user.first_name = directory_user.first_name
-        user.last_name = directory_user.last_name
-        user.status = (
-            UserStatus.ACTIVE if directory_user.enabled else UserStatus.INACTIVE
-        )
-        user.tenant_id = tenant.id
-        tenant.root_account_id = user.id
-
-        return (user, tenant)
+        return AdminIamDataHelper.build_root_account(directory_user, directory_tenant)
 
     @staticmethod
     def build_user_registered_event(

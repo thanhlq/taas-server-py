@@ -4,12 +4,16 @@ from datetime import datetime
 from typing import Optional
 
 from advanced_alchemy.mixins import AuditColumns
-from foundation.iam.types import TenantStatus
+from advanced_alchemy.types import GUID, DateTimeUTC
+from foundation.iam.types import TenantAccountType, TenantStatus
+from foundation.utils.id import generate_db_id
 from sqlalchemy import (
     TEXT,
     TIMESTAMP,
     Boolean,
+    CheckConstraint,
     Enum,
+    Index,
     Integer,
     Numeric,
     String,
@@ -34,16 +38,33 @@ class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey, AuditColumns, ArchivedColu
     """Tenant model representing a Keycloak realm"""
 
     __tablename__ = TENANT_TABLE
-    __table_args__ = (UniqueConstraint('id', 'slug'),)
+    __table_args__ = (
+        UniqueConstraint('id', 'slug'),
+        Index('ux_taas_tenants_slug', 'slug', unique=True),
+        Index('ux_taas_tenants_tenant_code', 'tenant_code', unique=True),
+        # Iam-0100: exactly one root tenant (the platform owner).
+        Index('ux_taas_tenants_is_root', 'is_root', unique=True, postgresql_where=text('is_root')),
+        CheckConstraint("account_type in ('organization', 'personal')", name='ck_taas_tenants_account_type'),
+    )
 
-    # id: Mapped[str] = mapped_column(
-    #     Text,
-    #     server_default=text('gen_random_uuid()'),
-    #     primary_key=True,
-    # )
     id: Mapped[TENANT_ID_COLUMN_TYPE] = mapped_column(
-        Integer,
-        primary_key=True,
+        GUID(length=16), primary_key=True, default=generate_db_id
+    )
+    # Human / billing code (8 digits), never the primary key.
+    tenant_code: Mapped[str] = mapped_column(TEXT, nullable=False)
+    account_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=TenantAccountType.ORGANIZATION.value
+    )
+    is_root: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text('false')
+    )
+    # Platform-managed flags, e.g. sub_organizations_enabled (Iam-0140, set by the billing plan).
+    sys_settings: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    country_code: Mapped[Optional[str]] = mapped_column(String(2), nullable=True)
+    onboarded_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTimeUTC(timezone=True), nullable=True
     )
     # Id that stored in Keycloak i.e. organization_id in Keycloak
     directory_id: Mapped[Optional[str]] = mapped_column(
@@ -100,8 +121,8 @@ class Tenant(BaseDBModel, SoftDeleteColumns, SlugKey, AuditColumns, ArchivedColu
     status: Mapped[TenantStatus] = mapped_column(
         Enum(TenantStatus), nullable=False, default=TenantStatus.ACTIVE, index=True
     )
-    root_account_id: Mapped[ID_COLUMN_TYPE] = mapped_column(
-        nullable=False,
+    root_account_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        nullable=True,
         index=True,
     )
 

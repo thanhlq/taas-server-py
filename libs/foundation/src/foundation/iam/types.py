@@ -39,6 +39,22 @@ class TenantStatus(IntEnum):
     SUSPENDED = 3
     CLOSED = 4
     DELETED = 5
+    # Organization account registered, first-login onboarding not completed yet (Iam-0400).
+    ONBOARDING = 6
+
+
+class TenantAccountType(StrEnum):
+    """Iam-0130: a personal account can later be upgraded to an organization."""
+
+    ORGANIZATION = 'organization'
+    PERSONAL = 'personal'
+
+
+class MembershipJoinedVia(StrEnum):
+    REGISTRATION = 'registration'
+    ADMIN = 'admin'
+    JOIN_LINK = 'join_link'
+    SSO = 'sso'
 
 
 class OrganizationStatus(IntEnum):
@@ -85,10 +101,16 @@ class TeamRoles(StrEnum):
 
 
 class OrganizationRoles(StrEnum):
-    """Valid Values for Organization Roles."""
+    """Coarse organization roles (Iam-0500..0520); also the casbin role names."""
 
-    ADMIN = 'ADMIN'
-    MEMBER = 'MEMBER'
+    TENANT_ADMIN = 'tenant_admin'
+    ORG_ADMIN = 'org_admin'
+    ORG_MEMBER = 'org_member'
+
+
+def rbac_domain(kind: str, entity_id: object) -> str:
+    """Casbin domain of an RBAC grant: ``tenant:<id>``, ``org:<id>`` or ``team:<id>``."""
+    return f'{kind}:{entity_id}'
 
 
 class AuthUser(BaseModel):

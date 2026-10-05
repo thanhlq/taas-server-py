@@ -13,7 +13,7 @@ from sqlalchemy.sql import text
 # from advanced_alchemy.types import DateTimeUTC
 
 type ID_COLUMN_TYPE = UUID
-type TENANT_ID_COLUMN_TYPE = int
+type TENANT_ID_COLUMN_TYPE = UUID
 
 
 __all__ = [

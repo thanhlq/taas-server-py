@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
+from advanced_alchemy.types import GUID
 from sqlalchemy import (
     TEXT,
     TIMESTAMP,
@@ -33,7 +34,7 @@ class Project(UUIDv7Base, SoftDeleteColumns):
 
     org_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
     tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
-        Integer, index=True, nullable=True, default=None
+        GUID(length=16), index=True, nullable=True, default=None
     )
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)

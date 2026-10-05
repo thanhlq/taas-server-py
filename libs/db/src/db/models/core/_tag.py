@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey, UniqueMixin
+from advanced_alchemy.types import GUID
 from advanced_alchemy.utils.text import slugify
 from foundation.models.common import ObjectScope, ObjectStatus
 from sqlalchemy import (
@@ -56,7 +57,7 @@ class Tag(UUIDv7AuditBase, SlugKey, UniqueMixin):
     )
 
     tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
-        Integer, index=True, nullable=True, default=None
+        GUID(length=16), index=True, nullable=True, default=None
     )
     org_id: Mapped[ID_COLUMN_TYPE | None] = mapped_column(
         String(length=36), index=True, nullable=True, default=None

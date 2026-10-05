@@ -1,7 +1,14 @@
 from db.models import User
-from db.models.core import Tenant
-from foundation.iam.types import UserStatus
-from foundation.utils.id import generate_tenant_id, generate_uuid
+from db.models.core import CasbinRule, Organization, OrganizationMember, Tenant
+from foundation.iam.types import (
+    MembershipJoinedVia,
+    OrganizationRoles,
+    TenantAccountType,
+    TenantStatus,
+    UserStatus,
+    rbac_domain,
+)
+from foundation.utils.id import generate_otp, generate_tenant_id_str, generate_uuid
 from foundation.utils.str_utils import slugify
 from iam.auth.auth_events import (
     TenantCreatedEvent,
@@ -20,14 +27,19 @@ class IamDataHelper:
     ) -> tuple[User, Tenant]:
         # Build tenant
         tenant: Tenant = Tenant()
+        tenant.id = generate_uuid()
+        tenant.tenant_code = generate_tenant_id_str()
         tenant.name = directory_tenant.name
         tenant.description = directory_tenant.description
         tenant.alias_id = directory_tenant.alias_id
         tenant.directory_id = directory_tenant.id
-        # tenant.realm_name = directory_tenant.name
-        # tenant.realm_name = event.realm_name
-        tenant.slug = slugify(value=directory_tenant.name)
-        tenant.id = generate_tenant_id()
+        # Unique: the directory alias when there is one, else the name plus a short suffix.
+        tenant.slug = directory_tenant.alias_id or f'{slugify(value=directory_tenant.name)}-{generate_otp(6)}'
+        tenant.is_root = directory_tenant.is_root_tenant
+        tenant.account_type = TenantAccountType.ORGANIZATION.value
+        # Iam-0400: organization accounts complete the onboarding at first login.
+        tenant.status = TenantStatus.ONBOARDING
+        tenant.sys_settings = {}
 
         # Build user
         user: User = User()
@@ -35,8 +47,9 @@ class IamDataHelper:
         # e.g. as the tenant's root_account_id below. The DB-side default would
         # otherwise only populate user.id at INSERT time, leaving it None here.
         user.id = generate_uuid()
+        user.directory_id = directory_user.id
         user.username = directory_user.username
-        user.email = directory_user.email
+        user.email = directory_user.email.lower()
         user.first_name = directory_user.first_name
         user.last_name = directory_user.last_name
         user.status = (
@@ -44,10 +57,45 @@ class IamDataHelper:
         )
         user.name = f'{directory_user.first_name} {directory_user.last_name}'.strip()
         user.email_verified = directory_user.email_verified
+        user.is_root_account = True
         user.tenant_id = tenant.id
         tenant.root_account_id = user.id
 
         return (user, tenant)
+
+    @staticmethod
+    def build_root_organization(
+        user: User, tenant: Tenant
+    ) -> tuple[Organization, OrganizationMember, CasbinRule]:
+        """Root organization of the tenant (Iam-0120), its owner membership and the
+        Tenant Admin grant (``g, <user>, tenant_admin, tenant:<tenant>``)."""
+        org_id = generate_uuid()
+        organization = Organization(
+            id=org_id,
+            tenant_id=tenant.id,
+            parent_id=None,
+            path=f'/{org_id}/',
+            depth=0,
+            name=tenant.name,
+            slug=f'{tenant.slug}-root',
+            directory_id=tenant.directory_id,
+        )
+        member = OrganizationMember(
+            id=generate_uuid(),
+            tenant_id=tenant.id,
+            user_id=user.id,
+            organization_id=org_id,
+            role=OrganizationRoles.TENANT_ADMIN.value,
+            is_owner=True,
+            joined_via=MembershipJoinedVia.REGISTRATION.value,
+        )
+        grant = CasbinRule(
+            ptype='g',
+            v0=str(user.id),
+            v1=OrganizationRoles.TENANT_ADMIN.value,
+            v2=rbac_domain('tenant', tenant.id),
+        )
+        return organization, member, grant
 
     @staticmethod
     def build_user_registered_event(

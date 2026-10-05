@@ -9,24 +9,61 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
+from uuid import UUID
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
+from advanced_alchemy.types import GUID
 from foundation.iam.types import OrganizationStatus
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, Enum, Integer, Numeric, text
+from sqlalchemy import (
+    TEXT,
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.models.base import JSONB, SoftDeleteColumns
-from db.models.core.constants import ORGANIZATION_TABLE
+from db.models.base import JSONB, TENANT_ID_COLUMN_TYPE, SoftDeleteColumns
+from db.models.core.constants import ORGANIZATION_TABLE, TENANT_TABLE
 
 if TYPE_CHECKING:
     from ._organization_member import OrganizationMember
 
 
 class Organization(UUIDv7AuditBase, SlugKey, SoftDeleteColumns):
-    """Organization"""
+    """Organization: the tree of a tenant. Root (parent_id NULL) = the tenant itself (Iam-0120)."""
 
     __tablename__ = ORGANIZATION_TABLE
+    __table_args__ = (
+        # SlugKey's own constraints (overridden by this __table_args__).
+        UniqueConstraint('slug', name='uq_taas_organizations_slug'),
+        Index('ix_taas_organizations_slug_unique', 'slug', unique=True),
+        Index('ux_taas_organizations_root', 'tenant_id', unique=True, postgresql_where=text('parent_id IS NULL')),
+        Index('ix_taas_organizations_path', 'path', postgresql_ops={'path': 'text_pattern_ops'}),
+        CheckConstraint('depth BETWEEN 0 AND 5', name='ck_taas_organizations_depth'),
+        CheckConstraint('(parent_id IS NULL) = (depth = 0)', name='ck_taas_organizations_root_depth'),
+    )
+
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE] = mapped_column(
+        GUID(length=16), ForeignKey(f'{TENANT_TABLE}.id', ondelete='cascade'), nullable=False, index=True
+    )
+    parent_id: Mapped[Optional[UUID]] = mapped_column(
+        GUID(length=16), ForeignKey(f'{ORGANIZATION_TABLE}.id', ondelete='cascade'), nullable=True
+    )
+    # Materialized path of ids, '/<root>/<child>/': subtree = path LIKE '<path>%'.
+    path: Mapped[str] = mapped_column(TEXT, nullable=False)
+    depth: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default=text('0'))
+    # Keycloak group / organization id when the provider mirrors it.
+    directory_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     campaign_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)

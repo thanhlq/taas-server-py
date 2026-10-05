@@ -2,13 +2,14 @@ from typing import Union
 
 from advanced_alchemy.filters import StatementFilter
 from db.models import User
-from db.models.core import Tenant
+from db.models.core import CasbinRule, Tenant
 from foundation.db.advanced_db_manager import MainDatabase, db_context_session
 from foundation.db.types import DBAsyncSession
+from foundation.iam.types import rbac_domain
 from iam.auth.types import DirectoryTenant, DirectoryUser
 from iam.common.base import BaseIamService
 from iam.iam_constants import IamEvents, TestMode, get_iam_topic_for_event
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, delete, or_
 
 from ..helpers.admin_helper import IamDataHelper
 
@@ -43,10 +44,12 @@ class AdminService(BaseIamService):
         tenant_repo = self.get_tenant_repository(session)
 
         # 01. Check if the user already exists in the system
-        existing_user = await user_repo.get_one_or_none(
-            email=directory_user.email, username=directory_user.username
-        )
+        existing_user = await user_repo.get_one_or_none(email=directory_user.email.lower())
         if existing_user:
+            if existing_user.directory_id and existing_user.directory_id == directory_user.id:
+                # Already provisioned (e.g. by the Node.js IAM worker, which writes the shared directory).
+                self.logger.info(f'Root account {directory_user.email} already provisioned, skipping')
+                return existing_user
             if TestMode.SIGNUP_TEST_MODE:
                 await self.delete_root_account(user=existing_user)
             else:
@@ -57,16 +60,17 @@ class AdminService(BaseIamService):
         _user, _tenant = IamDataHelper.build_root_account(
             directory_user, directory_tenant
         )
-
-        # self.logger.debug(f'Building root account from directory user and tenant {_user.id}')
-        # self.logger.debug(f'user: {_user}')
-        # self.logger.debug(f'tenant: {_tenant}')
+        _organization, _member, _grant = IamDataHelper.build_root_organization(_user, _tenant)
 
         # Create the tenant first
         new_tenant = await tenant_repo.add(_tenant)
 
         # Create the user and associate it with the newly created tenant
         new_user = await user_repo.add(_user)
+
+        # Root organization (= the tenant), owner membership and the Tenant Admin grant
+        session.add_all([_organization, _member, _grant])
+        await session.flush()
 
         #
         # 2. Publish the UserRegisteredEvent to the IAM_AUTH topic
@@ -136,7 +140,14 @@ class AdminService(BaseIamService):
 
         # Delete the user
         # await user_repo.delete(user.id)
+        # Casbin grants are not foreign keys: remove the user's and the tenant's explicitly.
+        await _session.execute(
+            delete(CasbinRule).where(
+                or_(CasbinRule.v0 == str(user.id), CasbinRule.v2 == rbac_domain('tenant', tenant.id))
+            )
+        )
         await _session.delete(user)
+        # Cascades to the tenant's organizations, memberships, join links and teams.
         await _session.delete(tenant)
 
         if session is None:
