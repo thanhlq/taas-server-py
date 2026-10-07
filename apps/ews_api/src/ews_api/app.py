@@ -121,6 +121,19 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         )
         IamFactory.initialize_iam(IamServiceFactory())
         await self._init_rbac()
+        self._init_blob_service()
+
+    def _init_blob_service(self) -> None:
+        """Private storage (resolver: pooled / dedicated, ``STORAGE_*``) and the public CDN store (``CDN_*``).
+
+        Contract: taas-specs/storage/storage-architecture-spec.md.
+        """
+        from blob_service import create_blob_service, create_public_store, create_storage_resolver
+        from foundation.db.advanced_db_manager import MainDatabase
+
+        blob = create_blob_service(engine=MainDatabase.get_instance().get_engine())
+        create_storage_resolver(blob, blob.registry)
+        create_public_store()
 
     async def _init_rbac(self) -> None:
         """Bootstrap the business roles / permissions (``ews/authz/data/ews-rbac.json``), idempotent."""

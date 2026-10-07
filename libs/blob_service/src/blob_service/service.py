@@ -124,6 +124,11 @@ class DefaultBlobService(BlobServiceT):
         return self._adapter
 
     @property
+    def registry(self) -> TenantBucketRegistryT:
+        """The tenant lookup (shared with the storage resolver)."""
+        return self._registry
+
+    @property
     def bucket_prefix(self) -> str:
         return self._bucket_prefix
 

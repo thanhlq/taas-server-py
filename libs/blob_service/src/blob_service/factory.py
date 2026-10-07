@@ -62,7 +62,7 @@ def create_blob_service(
     *,
     engine: AsyncEngine | None = None,
     register: bool = True,
-) -> BlobServiceT:
+) -> DefaultBlobService:
     """Build a `DefaultBlobService` and (by default) register it as `BlobServiceT` in `foundation.state`.
 
     Args:

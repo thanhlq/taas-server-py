@@ -145,7 +145,10 @@ class AppSettings:
         return self._compression_config
 
     def get_cors_config(self) -> CORSConfig:
-        return CORSConfig(allow_origins=cast('list[str]', self.ALLOWED_CORS_ORIGINS))
+        # Credentialed requests (session cookie of the web apps: sites, media, …) need an explicit
+        # origin list; with '*' browsers refuse credentials, so they stay off.
+        origins = self.get_allowed_cors_origins()
+        return CORSConfig(allow_origins=origins, allow_credentials='*' not in origins)
 
     def get_csrf_config(self) -> CSRFConfig:
         # TODO: implement CSRFConfig and return an instance here

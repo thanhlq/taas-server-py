@@ -12,7 +12,7 @@ The is the uv workspace which include the following libraries, applications and 
 | libs/db | Platform db models and the single Alembic migration tree (also migrates `resiliant.models`). |
 | libs/ews | Core eworksuite business (ddd patterns): api definitions which can be used for building apps as: `ews_api` (Fastapi, adapter: libs/http_fastapi) and `ews_api_litestar` (Litestar, adapter: libs/http_litestar) |
 | libs/banking_core | Banking domain core, including crypto factory/utilities |
-| libs/blob_service | Tenant-based blob storage: `create_blob_service()` (adapter by `BLOB_STORAGE_PROVIDER`, tenant bucket in `taas_tenants.sys_settings.bucket`), memory adapter. Interfaces in `foundation.blob`. See `docs/developers/blob-storage-guide.md` |
+| libs/blob_service | Tenant-based blob storage: `create_blob_service()` (adapter by `BLOB_STORAGE_PROVIDER`, tenant bucket in `taas_tenants.sys_settings.bucket`), memory adapter; **storage resolver** `create_storage_resolver()` (pooled / dedicated private storage, kinds `uploads/` `derived/` `knowledge/` `documents/`) and **public CDN store** `create_public_store()` (`CDN_*`). Interfaces in `foundation.blob`. See `docs/developers/blob-storage-guide.md`, `taas-specs/storage` |
 | libs/blob_s3 | Blob adapter for S3 compatible storage: AWS S3, Cloudflare R2, RustFS (aiobotocore) |
 | libs/blob_gcp | Blob adapter for Google Cloud Storage |
 | libs/blob_azure | Blob adapter for Azure Blob Storage (aio + SAS) |
@@ -73,6 +73,20 @@ There are two scripts to start the api service in fastapi and litestar framework
   (`http://localhost:7101`). Browser SPA clients (web web-vite) need this; Next server-side
   fetches do not.
 - **EWS controllers** are registered in `libs/ews/src/ews/__init__.py:get_ews_controllers`
-  (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `PlatformController`). CRM
+  (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `media` + `sites.get_sites_controllers` +
+  `PlatformController`). CRM
   accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
   advanced_alchemy `SlugKey` → set a unique `slug` on create.
+
+## Business apps: auth, Site Builder, Media library
+
+- **Auth** (`libs/ews/src/ews/security`): `await current_scope()` → user + tenant + organization,
+  `authorize(...)` → `ews.authz.can`. `EWS_AUTH_MODE=iam` introspects the IAM session; `dev` trusts the web's
+  development sign-in cookie (all permissions). Sites + media use it; PPM / CRM routes adopt it next.
+- **Site Builder** (`ews/sites`, `/api/v1/sites/*`, tables `taas_site_*`) and **Media library** (`ews/media`,
+  `/api/v1/media/*`, tables `taas_media_*`, private storage through `StorageResolverT`: `uploads/media/…`,
+  `derived/media/…`); publishing copies media to the public CDN (`ews/sites/_cdn.py`, `PublicStoreT`); AI gateway `ews/ai`.
+  Never pick buckets in app code — always the resolver (`taas-specs/storage`).
+  `ews/sites/data/blocks.json` is the block catalog source of truth (copied to taas-web-official `@taas/site-blocks`).
+- Guide: [docs/developers/sites-media-guide.md](docs/developers/sites-media-guide.md). Env: `.env.example` §11.
+

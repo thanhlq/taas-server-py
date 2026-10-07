@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "description": "Block catalog of the site builder (taas-specs/site-builder/editor-spec.md §2): the server validates every saved document against it (Site-0103). Copied to taas-web-official packages/site-blocks/src/catalog/blocks.gen.json (pnpm --filter @taas/site-blocks sync-catalog) — never edit the copy. Prop types: string, text, number, boolean, enum, asset, url, icon, list, richtext.",
+  "limits": { "maxBlocks": 400, "maxDepth": 4, "maxDocBytes": 524288, "maxListItems": 24, "maxTextLength": 20000 },
+  "groups": ["layout", "text", "media", "marketing", "contact"],
+  "blocks": {
+    "section": {
+      "group": "layout",
+      "container": true,
+      "accepts": "content",
+      "ai": "Full-width band that groups blocks, with a background and vertical spacing.",
+      "props": {
+        "background": { "type": "enum", "options": ["none", "muted", "primary", "dark", "image"], "default": "none" },
+        "image": { "type": "asset" },
+        "spacing": { "type": "enum", "options": ["sm", "md", "lg", "xl"], "default": "md" },
+        "width": { "type": "enum", "options": ["narrow", "normal", "wide", "full"], "default": "normal" },
+        "anchor": { "type": "string", "max": 60 }
+      }
+    },
+    "columns": {
+      "group": "layout",
+      "container": true,
+      "accepts": "column",
+      "maxChildren": 4,
+      "ai": "Side-by-side columns (1 to 4, stacked on mobile); each child is a column block.",
+      "props": {
+        "gap": { "type": "enum", "options": ["sm", "md", "lg"], "default": "md" },
+        "align": { "type": "enum", "options": ["start", "center", "end", "stretch"], "default": "start" }
+      }
+    },
+    "column": {
+      "group": "layout",
+      "container": true,
+      "accepts": "content",
+      "parent": "columns",
+      "ai": "One column of a columns block.",
+      "props": {
+        "span": { "type": "number", "min": 1, "max": 3, "default": 1 }
+      }
+    },
+    "spacer": {
+      "group": "layout",
+      "ai": "Vertical white space.",
+      "props": { "size": { "type": "enum", "options": ["sm", "md", "lg", "xl"], "default": "md" } }
+    },
+    "divider": {
+      "group": "layout",
+      "ai": "Horizontal rule between blocks.",
+      "props": { "style": { "type": "enum", "options": ["line", "dashed", "dots"], "default": "line" } }
+    },
+    "heading": {
+      "group": "text",
+      "ai": "A heading (level 1 to 4); keep one level 1 heading per page.",
+      "props": {
+        "text": { "type": "string", "max": 200, "required": true },
+        "level": { "type": "number", "min": 1, "max": 4, "default": 2 },
+        "align": { "type": "enum", "options": ["start", "center", "end"], "default": "start" }
+      }
+    },
+    "richText": {
+      "group": "text",
+      "content": true,
+      "ai": "Formatted text: paragraphs, headings 2-4, bold, italic, links, lists, quotes, code.",
+      "props": {
+        "align": { "type": "enum", "options": ["start", "center", "end"], "default": "start" }
+      }
+    },
+    "button": {
+      "group": "text",
+      "ai": "A call-to-action link styled as a button.",
+      "props": {
+        "label": { "type": "string", "max": 80, "required": true },
+        "href": { "type": "url", "required": true },
+        "variant": { "type": "enum", "options": ["primary", "secondary", "outline", "link"], "default": "primary" },
+        "align": { "type": "enum", "options": ["start", "center", "end"], "default": "start" },
+        "newTab": { "type": "boolean", "default": false }
+      }
+    },
+    "image": {
+      "group": "media",
+      "ai": "One image from the media library with alt text and an optional caption / link.",
+      "props": {
+        "image": { "type": "asset" },
+        "alt": { "type": "string", "max": 300 },
+        "caption": { "type": "string", "max": 300 },
+        "size": { "type": "enum", "options": ["small", "medium", "large", "full"], "default": "large" },
+        "rounded": { "type": "boolean", "default": true },
+        "href": { "type": "url" }
+      }
+    },
+    "gallery": {
+      "group": "media",
+      "ai": "Grid of images with captions.",
+      "props": {
+        "columns": { "type": "number", "min": 2, "max": 4, "default": 3 },
+        "items": {
+          "type": "list",
+          "item": "image",
+          "max": 24,
+          "fields": {
+            "image": { "type": "asset", "required": true },
+            "alt": { "type": "string", "max": 300 },
+            "caption": { "type": "string", "max": 200 }
+          }
+        }
+      }
+    },
+    "video": {
+      "group": "media",
+      "ai": "Embedded YouTube / Vimeo video or a video file from the media library.",
+      "props": {
+        "url": { "type": "url" },
+        "video": { "type": "asset" },
+        "title": { "type": "string", "max": 200 },
+        "aspect": { "type": "enum", "options": ["16:9", "4:3", "1:1", "9:16"], "default": "16:9" }
+      }
+    },
+    "iconList": {
+      "group": "media",
+      "ai": "Short list of lines each with an icon (benefits, opening hours, …).",
+      "props": {
+        "items": {
+          "type": "list",
+          "item": "line",
+          "max": 24,
+          "fields": {
+            "icon": { "type": "icon", "default": "check" },
+            "text": { "type": "string", "max": 200, "required": true }
+          }
+        }
+      }
+    },
+    "hero": {
+      "group": "marketing",
+      "ai": "Top-of-page banner: eyebrow, title, subtitle, up to two buttons and an image.",
+      "props": {
+        "eyebrow": { "type": "string", "max": 80 },
+        "title": { "type": "string", "max": 160, "required": true },
+        "subtitle": { "type": "text", "max": 500 },
+        "image": { "type": "asset" },
+        "layout": { "type": "enum", "options": ["centered", "split", "background"], "default": "centered" },
+        "align": { "type": "enum", "options": ["start", "center"], "default": "center" },
+        "height": { "type": "enum", "options": ["auto", "medium", "tall"], "default": "auto" },
+        "primaryLabel": { "type": "string", "max": 60 },
+        "primaryHref": { "type": "url" },
+        "secondaryLabel": { "type": "string", "max": 60 },
+        "secondaryHref": { "type": "url" }
+      }
+    },
+    "features": {
+      "group": "marketing",
+      "ai": "Grid of features or benefits, each with an icon, a title and a short text.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "subtitle": { "type": "text", "max": 400 },
+        "columns": { "type": "number", "min": 2, "max": 4, "default": 3 },
+        "items": {
+          "type": "list",
+          "item": "feature",
+          "max": 12,
+          "fields": {
+            "icon": { "type": "icon", "default": "sparkles" },
+            "title": { "type": "string", "max": 100, "required": true },
+            "text": { "type": "text", "max": 400 }
+          }
+        }
+      }
+    },
+    "testimonials": {
+      "group": "marketing",
+      "ai": "Customer quotes with name, role and optional photo.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "items": {
+          "type": "list",
+          "item": "quote",
+          "max": 12,
+          "fields": {
+            "quote": { "type": "text", "max": 600, "required": true },
+            "name": { "type": "string", "max": 100, "required": true },
+            "role": { "type": "string", "max": 100 },
+            "avatar": { "type": "asset" }
+          }
+        }
+      }
+    },
+    "pricing": {
+      "group": "marketing",
+      "ai": "Pricing plans side by side; one can be highlighted. Plan features are one per line.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "subtitle": { "type": "text", "max": 400 },
+        "items": {
+          "type": "list",
+          "item": "plan",
+          "max": 6,
+          "fields": {
+            "name": { "type": "string", "max": 60, "required": true },
+            "price": { "type": "string", "max": 30, "required": true },
+            "period": { "type": "string", "max": 30 },
+            "description": { "type": "text", "max": 300 },
+            "features": { "type": "text", "max": 1500 },
+            "ctaLabel": { "type": "string", "max": 60 },
+            "ctaHref": { "type": "url" },
+            "highlighted": { "type": "boolean", "default": false }
+          }
+        }
+      }
+    },
+    "faq": {
+      "group": "marketing",
+      "ai": "Frequently asked questions as an accordion.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "items": {
+          "type": "list",
+          "item": "question",
+          "max": 24,
+          "fields": {
+            "question": { "type": "string", "max": 300, "required": true },
+            "answer": { "type": "text", "max": 2000, "required": true }
+          }
+        }
+      }
+    },
+    "logos": {
+      "group": "marketing",
+      "ai": "Row of partner or customer logos.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "grayscale": { "type": "boolean", "default": true },
+        "items": {
+          "type": "list",
+          "item": "logo",
+          "max": 16,
+          "fields": {
+            "image": { "type": "asset", "required": true },
+            "name": { "type": "string", "max": 100, "required": true },
+            "href": { "type": "url" }
+          }
+        }
+      }
+    },
+    "stats": {
+      "group": "marketing",
+      "ai": "Key numbers with labels (e.g. 12k customers).",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "items": {
+          "type": "list",
+          "item": "stat",
+          "max": 8,
+          "fields": {
+            "value": { "type": "string", "max": 20, "required": true },
+            "label": { "type": "string", "max": 80, "required": true }
+          }
+        }
+      }
+    },
+    "cta": {
+      "group": "marketing",
+      "ai": "Call-to-action banner: title, text and one button.",
+      "props": {
+        "title": { "type": "string", "max": 160, "required": true },
+        "text": { "type": "text", "max": 400 },
+        "buttonLabel": { "type": "string", "max": 60 },
+        "buttonHref": { "type": "url" },
+        "style": { "type": "enum", "options": ["primary", "muted", "dark"], "default": "primary" }
+      }
+    },
+    "form": {
+      "group": "contact",
+      "ai": "Contact form: fields, submit label, success message; submissions are e-mailed to the site's notification address.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "description": { "type": "text", "max": 400 },
+        "submitLabel": { "type": "string", "max": 40, "default": "Send" },
+        "successMessage": { "type": "text", "max": 300, "default": "Thank you! We will get back to you soon." },
+        "notifyEmail": { "type": "string", "max": 254 },
+        "items": {
+          "type": "list",
+          "item": "field",
+          "max": 20,
+          "fields": {
+            "name": { "type": "string", "max": 40, "required": true },
+            "label": { "type": "string", "max": 100, "required": true },
+            "type": { "type": "enum", "options": ["text", "email", "phone", "textarea", "select", "checkbox"], "default": "text" },
+            "required": { "type": "boolean", "default": false },
+            "options": { "type": "text", "max": 1000 },
+            "placeholder": { "type": "string", "max": 100 }
+          }
+        }
+      }
+    },
+    "map": {
+      "group": "contact",
+      "ai": "Embedded map of an address.",
+      "props": {
+        "address": { "type": "string", "max": 300, "required": true },
+        "zoom": { "type": "number", "min": 3, "max": 20, "default": 15 },
+        "height": { "type": "enum", "options": ["small", "medium", "large"], "default": "medium" }
+      }
+    },
+    "contact": {
+      "group": "contact",
+      "ai": "Contact details: e-mail, phone, address and opening hours.",
+      "props": {
+        "title": { "type": "string", "max": 160 },
+        "email": { "type": "string", "max": 254 },
+        "phone": { "type": "string", "max": 40 },
+        "address": { "type": "text", "max": 300 },
+        "hours": { "type": "text", "max": 300 }
+      }
+    }
+  }
+}

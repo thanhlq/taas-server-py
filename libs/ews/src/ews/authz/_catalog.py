@@ -33,6 +33,15 @@ class ProjectRoles(StrEnum):
     PROJECT_VIEWER = 'project_viewer'
 
 
+class SiteRoles(StrEnum):
+    """Site builder roles granted on ``site:<id>`` (``ews-rbac.json``), highest first."""
+
+    SITE_ADMIN = 'site_admin'
+    SITE_EDITOR = 'site_editor'
+    SITE_AUTHOR = 'site_author'
+    SITE_VIEWER = 'site_viewer'
+
+
 class EwsResources(StrEnum):
     """Resources the EWS code checks; every value exists in ``ews-rbac.json`` (unit-tested)."""
 
@@ -42,6 +51,18 @@ class EwsResources(StrEnum):
     TASK = 'ppm.task'
     TASK_ACTIVITY = 'ppm.task_activity'
     CRM_ACCOUNT = 'crm.account'
+    SITE = 'sites.site'
+    SITE_THEME = 'sites.theme'
+    SITE_DOMAIN = 'sites.domain'
+    SITE_PAGE = 'sites.page'
+    SITE_MENU = 'sites.menu'
+    SITE_REDIRECT = 'sites.redirect'
+    SITE_SEO = 'sites.seo'
+    SITE_MEMBER = 'sites.member'
+    SITE_SUBMISSION = 'sites.submission'
+    SITE_AI = 'sites.ai'
+    MEDIA_ASSET = 'media.asset'
+    MEDIA_FOLDER = 'media.folder'
 
 
 @dataclass(frozen=True)
@@ -181,11 +202,17 @@ def evaluate(
 
 
 def resource_domains(
-    *, tenant_id: object, org_path: str | None = None, project_id: object | None = None
+    *,
+    tenant_id: object,
+    org_path: str | None = None,
+    project_id: object | None = None,
+    site_id: object | None = None,
 ) -> list[str]:
-    """RBAC domains of a business object, most specific first: ``project:<id>``, its organization and
-    ancestors (from the materialized ``path`` ``/<root>/<child>/``), then ``tenant:<id>``."""
+    """RBAC domains of a business object, most specific first: ``project:<id>`` / ``site:<id>``, its
+    organization and ancestors (from the materialized ``path`` ``/<root>/<child>/``), then ``tenant:<id>``."""
     domains = [f'project:{project_id}'] if project_id else []
+    if site_id:
+        domains.append(f'site:{site_id}')
     if org_path:
         domains += [f'org:{o}' for o in reversed([o for o in org_path.split('/') if o])]
     domains.append(f'tenant:{tenant_id}')

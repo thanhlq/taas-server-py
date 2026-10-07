@@ -42,6 +42,7 @@ def _stored_bucket(tenant_id: TenantId, has_bucket: bool, bucket: Any) -> str | 
 class _MemoryTenant:
     tenant_code: str
     bucket: str | None = None
+    storage_mode: str | None = None
 
 
 class MemoryTenantBucketRegistry(TenantBucketRegistryT):
@@ -54,10 +55,14 @@ class MemoryTenantBucketRegistry(TenantBucketRegistryT):
             self.add_tenant(tenant_id, tenant_code)
 
     def add_tenant(
-        self, tenant_id: TenantId, tenant_code: str, bucket: str | None = None
+        self,
+        tenant_id: TenantId,
+        tenant_code: str,
+        bucket: str | None = None,
+        storage_mode: str | None = None,
     ) -> None:
         self._tenants[str(tenant_id)] = _MemoryTenant(
-            tenant_code=tenant_code, bucket=bucket
+            tenant_code=tenant_code, bucket=bucket, storage_mode=storage_mode
         )
 
     def remove_tenant(self, tenant_id: TenantId) -> None:
@@ -67,7 +72,11 @@ class MemoryTenantBucketRegistry(TenantBucketRegistryT):
         tenant = self._tenants.get(str(tenant_id))
         if tenant is None:
             return None
-        return TenantBucketRecord(tenant_code=tenant.tenant_code, bucket=tenant.bucket)
+        return TenantBucketRecord(
+            tenant_code=tenant.tenant_code,
+            bucket=tenant.bucket,
+            storage_mode=tenant.storage_mode,
+        )
 
     async def set_if_absent(self, tenant_id: TenantId, bucket: str) -> str:
         tenant = self._tenants.get(str(tenant_id))
@@ -79,7 +88,8 @@ class MemoryTenantBucketRegistry(TenantBucketRegistryT):
 
 
 _SELECT_SQL: Final = text(
-    "SELECT tenant_code, sys_settings ? 'bucket' AS has_bucket, sys_settings -> 'bucket' AS bucket "
+    "SELECT tenant_code, sys_settings ? 'bucket' AS has_bucket, sys_settings -> 'bucket' AS bucket, "
+    "sys_settings -> 'storage' ->> 'mode' AS storage_mode "
     'FROM taas_tenants WHERE id = :tenant_id'
 )
 _SET_IF_ABSENT_SQL: Final = text(
@@ -109,6 +119,7 @@ class SqlTenantBucketRegistry(TenantBucketRegistryT):
         return TenantBucketRecord(
             tenant_code=str(row.tenant_code),
             bucket=_stored_bucket(tenant_id, bool(row.has_bucket), row.bucket),
+            storage_mode=row.storage_mode,
         )
 
     async def set_if_absent(self, tenant_id: TenantId, bucket: str) -> str:

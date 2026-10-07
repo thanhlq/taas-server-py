@@ -156,3 +156,79 @@ async def revoke(
             CasbinRule.v2 == domain,
         )
     )
+
+
+async def _grants(
+    session: DBAsyncScopedSession, domains: Sequence[str], user_id: object | None
+) -> list[tuple[str, str, str]]:
+    if not domains:
+        return []
+    stmt = select(CasbinRule.v0, CasbinRule.v1, CasbinRule.v2).where(
+        CasbinRule.ptype == 'g', CasbinRule.v2.in_(list(domains))
+    )
+    if user_id is not None:
+        stmt = stmt.where(CasbinRule.v0 == str(user_id))
+    rows = await session.execute(stmt)
+    return [(u, r, d) for u, r, d in rows.all() if u and r and d]
+
+
+@db_context_session
+async def grants_in(
+    domains: Sequence[str],
+    *,
+    user_id: object | None = None,
+    session: DBAsyncScopedSession | None = None,
+) -> list[tuple[str, str, str]]:
+    """``(user_id, role, domain)`` grants on ``domains`` (optionally of one user)."""
+    assert session is not None  # injected by db_context_session
+    return await _grants(session, domains, user_id)
+
+
+@db_context_session
+async def user_domains(
+    user_id: object, prefix: str, *, session: DBAsyncScopedSession | None = None
+) -> dict[str, str]:
+    """``{domain: role}`` of a user's grants whose domain starts with ``prefix`` (e.g. ``site:``)."""
+    assert session is not None  # injected by db_context_session
+    rows = await session.execute(
+        select(CasbinRule.v2, CasbinRule.v1).where(
+            CasbinRule.ptype == 'g', CasbinRule.v0 == str(user_id), CasbinRule.v2.like(f'{prefix}%')
+        )
+    )
+    return {d: r for d, r in rows.all() if d and r}
+
+
+@db_context_session
+async def granted_permissions(
+    user_id: object,
+    domains: Sequence[str],
+    namespace: str,
+    *,
+    session: DBAsyncScopedSession | None = None,
+) -> set[str]:
+    """Every ``<resource>:<action>`` of the catalog's ``namespace`` the user holds on ``domains``."""
+    assert session is not None  # injected by db_context_session
+    grants = [(r, d) for _, r, d in await _grants(session, domains, user_id)]
+    if not grants:
+        return set()
+    policies = await _load_policies(session)
+    catalog = ews_catalog()
+    return {
+        f'{resource}:{action}'
+        for resource, actions in catalog.resources.items()
+        if resource.startswith(f'{namespace}.')
+        for action in actions
+        if evaluate(grants, policies, domains, resource, action)
+    }
+
+
+@db_context_session(auto_commit=True)
+async def revoke_domain(
+    domain: str, *, user_id: object | None = None, session: DBAsyncScopedSession | None = None
+) -> None:
+    """Remove every grant on ``domain`` (of one user, or all: the object was deleted)."""
+    assert session is not None  # injected by db_context_session
+    stmt = delete(CasbinRule).where(CasbinRule.ptype == 'g', CasbinRule.v2 == domain)
+    if user_id is not None:
+        stmt = stmt.where(CasbinRule.v0 == str(user_id))
+    await session.execute(stmt)

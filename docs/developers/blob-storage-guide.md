@@ -60,7 +60,7 @@ await store.put(f'tasks/{task_id}/attachments/{name}', data, BlobPutOptions(cont
 url = await store.presign(f'tasks/{task_id}/attachments/{name}', BlobPresignOptions(download_name=name))
 ```
 
-- Key layout per domain: `projects/<id>/…`, `tasks/<id>/attachments/…`, `documents/<id>/…`, `sites/<id>/media/…`.
+- **Apps use the storage resolver, not raw tenant buckets** (next section); `for_tenant` is the low-level contract.
 - Keys: 1..1024 UTF-8 bytes, relative, no `.` / `..` / empty segment, no control characters. Metadata keys
   `^[a-z][a-z0-9_]{0,62}$` after lower-casing. Errors: `BlobValidationError`, `BlobNotFoundError`,
   `BlobConflictError`, `BlobTenantNotFoundError`, `BlobProviderError` (stable `code`).
@@ -68,6 +68,34 @@ url = await store.presign(f'tasks/{task_id}/attachments/{name}', BlobPresignOpti
   `head` / `exists` → `None` / `False`, `delete` / `delete_many` → no-op.
 - Browser uploads: presign a PUT with `content_type`; the client must send exactly that `Content-Type`
   (Azure also `x-ms-blob-type: BlockBlob`).
+
+## Storage resolver and public CDN (taas-specs/storage)
+
+```python
+from blob_service import create_blob_service, create_public_store, create_storage_resolver   # app startup
+from foundation.blob import PublicStoreT, StorageResolverT, kind_key
+
+blob = create_blob_service(engine=db_engine)
+create_storage_resolver(blob, blob.registry)   # STORAGE_PRIVATE_MODE (pooled | dedicated), STORAGE_PRIVATE_BUCKET
+create_public_store()                           # CDN_* — DisabledPublicStore when not configured
+
+storage = get_service(StorageResolverT)
+docs = await storage.store(tenant_id, 'document')        # keys relative to {tenantId}/documents/ (pooled) or documents/
+await docs.put(f'drives/{drive_id}/{file_id}/1', data)
+root = await storage.root(tenant_id)                     # keys like kind_key('upload', 'media/…') = 'uploads/media/…'
+
+cdn = get_service(PublicStoreT)
+obj = await cdn.publish(tenant_id, f'site/{site_id}', ext='webp', content_type='image/webp', load=read_bytes, sha256=digest)
+obj.url    # CDN_BUCKET_PUBLIC_URL/{tenantId}/site/{siteId}/{sha256}.webp — immutable
+await cdn.delete_scope(tenant_id, f'site/{site_id}')
+```
+
+- Pooled tenants share `STORAGE_PRIVATE_BUCKET` under `{tenantId}/`; dedicated tenants (`sys_settings.storage.mode`,
+  or a stored `sys_settings.bucket`) keep `<BLOB_BUCKET_PREFIX><tenant_code>`.
+- Kinds: `upload` → `uploads/`, `derived` → `derived/`, `knowledge` → `knowledge/`, `document` → `documents/`.
+- Cloudflare R2: private storage on `AWS_ENDPOINT_URL` (`https://<account>.r2.cloudflarestorage.com`, region `auto`);
+  the public bucket may live in another jurisdiction (`CDN_BUCKET_SERVICE_URL=https://<account>.eu.r2.cloudflarestorage.com`).
+  Public URL: a custom media domain in production (`r2.dev` is rate-limited, development only).
 
 ## Tests
 

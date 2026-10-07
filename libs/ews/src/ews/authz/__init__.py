@@ -7,6 +7,7 @@ from ._catalog import (
     ProjectRoles,
     RbacCatalog,
     RbacRole,
+    SiteRoles,
     catalog_owns_policy,
     catalog_policies,
     evaluate,
@@ -15,7 +16,17 @@ from ._catalog import (
     resource_domains,
     validate_catalog,
 )
-from ._store import SyncResult, can, grant, revoke, sync_catalog
+from ._store import (
+    SyncResult,
+    can,
+    grant,
+    granted_permissions,
+    grants_in,
+    revoke,
+    revoke_domain,
+    sync_catalog,
+    user_domains,
+)
 
 __all__ = [
     'EwsResources',
@@ -23,6 +34,7 @@ __all__ = [
     'ProjectRoles',
     'RbacCatalog',
     'RbacRole',
+    'SiteRoles',
     'SyncResult',
     'can',
     'catalog_owns_policy',
@@ -30,9 +42,13 @@ __all__ = [
     'evaluate',
     'ews_catalog',
     'grant',
+    'granted_permissions',
+    'grants_in',
     'key_match',
     'resource_domains',
     'revoke',
+    'revoke_domain',
     'sync_catalog',
+    'user_domains',
     'validate_catalog',
 ]

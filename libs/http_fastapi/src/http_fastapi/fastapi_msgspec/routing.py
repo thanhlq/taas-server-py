@@ -114,7 +114,7 @@ def _rewrite_struct_params(
     return sync_wrapper, body_type
 
 
-def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
+def _wrap_endpoint(endpoint: Callable[..., Any], status_code: int | None = None) -> Callable[..., Any]:
     """Wrap *endpoint* so its return value is converted to a ``Response``.
 
     Returning a ``Response`` instance from the handler short-circuits
@@ -129,7 +129,10 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
     re-pinning, FastAPI would read that stale signature and expose ``self`` as
     a required query parameter. ``inspect.signature(endpoint)`` resolves the
     bound method's clean signature (``self`` stripped) and overrides it.
+
+    ``status_code`` is the route's declared success status (e.g. 201 on create).
     """
+    success = status_code or 200
     clean_sig = inspect.signature(endpoint)
     if inspect.iscoroutinefunction(endpoint):
 
@@ -138,7 +141,7 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
             result = await endpoint(*args, **kwargs)
             if isinstance(result, Response):
                 return result
-            return MsgSpecJSONResponse(result)
+            return MsgSpecJSONResponse(result, status_code=success)
 
         async_wrapper.__signature__ = clean_sig  # type: ignore[attr-defined]
         return async_wrapper
@@ -148,7 +151,7 @@ def _wrap_endpoint(endpoint: Callable[..., Any]) -> Callable[..., Any]:
         result = endpoint(*args, **kwargs)
         if isinstance(result, Response):
             return result
-        return MsgSpecJSONResponse(result)
+        return MsgSpecJSONResponse(result, status_code=success)
 
     sync_wrapper.__signature__ = clean_sig  # type: ignore[attr-defined]
     return sync_wrapper
@@ -218,7 +221,7 @@ class MsgSpecRoute(APIRoute):
                 }
             kwargs['openapi_extra'] = merged
 
-            endpoint = _wrap_endpoint(endpoint)
+            endpoint = _wrap_endpoint(endpoint, kwargs.get('status_code'))
 
         if body_type is not None:
             body_extra = msgspec_request_body(body_type)

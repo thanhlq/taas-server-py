@@ -89,3 +89,5 @@ class TenantBucketRecord:
 
     tenant_code: str
     bucket: str | None = None
+    storage_mode: str | None = None
+    """`sys_settings.storage.mode` (`pooled` · `dedicated`); `None` = the platform default (storage spec §2.1)."""

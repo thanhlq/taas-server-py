@@ -7,6 +7,7 @@ from ews.authz import (
     EwsResources,
     ProjectRoles,
     RbacCatalog,
+    SiteRoles,
     catalog_owns_policy,
     catalog_policies,
     evaluate,
@@ -43,6 +44,7 @@ def test_resources_and_roles_exist_in_the_catalog():
     assert {r.value for r in ProjectRoles} <= {
         r.key for r in catalog.roles if r.scope == 'project'
     }
+    assert {r.value for r in SiteRoles} == {r.key for r in catalog.roles if r.scope == 'site'}
 
 
 def test_extended_roles_are_iam_roles():
@@ -109,6 +111,36 @@ def test_organization_and_tenant_roles_flow_down():
     assert not evaluate(
         [('org_admin', 'tenant:T')], _policies(), doms, 'ppm.task', 'read'
     )
+
+
+def test_site_roles():
+    doms = resource_domains(tenant_id='T', org_path='/R/', site_id='W')
+    assert doms == ['site:W', 'org:R', 'tenant:T']
+    editor = [('site_editor', 'site:W')]
+    author = [('site_author', 'site:W')]
+    viewer = [('site_viewer', 'site:W')]
+    assert evaluate([('site_admin', 'site:W')], _policies(), doms, 'sites.theme', 'update')
+    assert evaluate(editor, _policies(), doms, 'sites.page', 'publish')
+    assert not evaluate(editor, _policies(), doms, 'sites.theme', 'update')
+    assert evaluate(author, _policies(), doms, 'sites.page', 'update')
+    assert not evaluate(author, _policies(), doms, 'sites.page', 'publish')
+    assert evaluate(viewer, _policies(), doms, 'sites.page', 'read')
+    assert not evaluate(viewer, _policies(), doms, 'sites.ai', 'use')
+    # a site role never reaches another site nor creates sites
+    other = resource_domains(tenant_id='T', org_path='/R/', site_id='X')
+    assert not evaluate(editor, _policies(), other, 'sites.page', 'read')
+    assert not evaluate([('site_admin', 'site:W')], _policies(), ['org:R', 'tenant:T'], 'sites.site', 'create')
+
+
+def test_organization_roles_on_sites_and_media():
+    doms = resource_domains(tenant_id='T', org_path='/R/', site_id='W')
+    assert evaluate([('org_admin', 'org:R')], _policies(), doms, 'sites.page', 'publish')
+    assert evaluate([('org_admin', 'org:R')], _policies(), ['org:R', 'tenant:T'], 'sites.site', 'create')
+    assert not evaluate([('org_member', 'org:R')], _policies(), doms, 'sites.page', 'read')
+    org = ['org:R', 'tenant:T']
+    assert evaluate([('org_member', 'org:R')], _policies(), org, 'media.asset', 'create')
+    assert not evaluate([('org_member', 'org:R')], _policies(), org, 'media.asset', 'delete')
+    assert evaluate([('org_admin', 'org:R')], _policies(), org, 'media.folder', 'delete')
 
 
 @pytest.mark.skipif(

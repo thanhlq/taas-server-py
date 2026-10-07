@@ -60,6 +60,22 @@ from .ews import (
     WorkflowStage,
 )
 
+# Media library (app ``media``)
+from .media import MediaAsset, MediaFavorite, MediaFolder, MediaUsage
+
+# Site builder (app ``sites``)
+from .sites import (
+    Site,
+    SiteAiUsage,
+    SiteAudit,
+    SiteFormSubmission,
+    SiteMenu,
+    SitePage,
+    SitePageRevision,
+    SiteRedirect,
+    SiteRelease,
+)
+
 # from sqlalchemy.orm import DeclarativeBase
 
 
@@ -113,6 +129,23 @@ __all__ = [
     'Timelog',
     'Workflow',
     'WorkflowStage',
+
+    # Media
+    'MediaAsset',
+    'MediaFavorite',
+    'MediaFolder',
+    'MediaUsage',
+
+    # Sites
+    'Site',
+    'SiteAiUsage',
+    'SiteAudit',
+    'SiteFormSubmission',
+    'SiteMenu',
+    'SitePage',
+    'SitePageRevision',
+    'SiteRedirect',
+    'SiteRelease',
 
     # Banking
     'CryptoToken',

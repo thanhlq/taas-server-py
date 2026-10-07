@@ -1,0 +1,11 @@
+from ..config import TABLE_PREFIX
+
+SITE_SITES_TABLE = f'{TABLE_PREFIX}site_sites'
+SITE_PAGES_TABLE = f'{TABLE_PREFIX}site_pages'
+SITE_PAGE_REVISIONS_TABLE = f'{TABLE_PREFIX}site_page_revisions'
+SITE_RELEASES_TABLE = f'{TABLE_PREFIX}site_releases'
+SITE_MENUS_TABLE = f'{TABLE_PREFIX}site_menus'
+SITE_REDIRECTS_TABLE = f'{TABLE_PREFIX}site_redirects'
+SITE_FORM_SUBMISSIONS_TABLE = f'{TABLE_PREFIX}site_form_submissions'
+SITE_AUDIT_TABLE = f'{TABLE_PREFIX}site_audit'
+SITE_AI_USAGE_TABLE = f'{TABLE_PREFIX}site_ai_usage'

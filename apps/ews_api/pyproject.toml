@@ -18,6 +18,8 @@ dependencies = [
   'fastapi==0.136.1',
   'uvicorn==0.34.0',
   'redis==7.4.0',
+  "python-multipart>=0.0.32",
+  "blob-service",
 ]
 
 [project.scripts]
@@ -26,3 +28,6 @@ ews_api = "ews_api.main:main"
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+blob-service = { workspace = true }
