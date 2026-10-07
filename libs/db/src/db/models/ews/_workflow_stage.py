@@ -29,7 +29,7 @@ class WorkflowStage(UUIDv7Base, SoftDeleteColumns):
 
     stage_type: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     status: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'active'::character")
+        TEXT, nullable=True, server_default=text("'active'")
     )
 
     workflow_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
@@ -76,10 +76,10 @@ class WorkflowStage(UUIDv7Base, SoftDeleteColumns):
     )
 
     sort_by: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'manual'::character ")
+        TEXT, nullable=True, server_default=text("'manual'")
     )
     sort_order: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'asc'::character")
+        TEXT, nullable=True, server_default=text("'asc'")
     )
     user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     assignees_ids: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

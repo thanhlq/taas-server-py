@@ -17,8 +17,13 @@ from advanced_alchemy.filters import LimitOffset, OrderBy, SearchFilter, Stateme
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.http import BaseController, delete, get, patch, post, status
+from foundation.exceptions import NotFoundException
 from foundation.http.response import PaginatedResponse, create_paginated_response
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, and_, select
+
+from ews.authz import EwsResources
+from ews.security import RequestScope, authorize, current_scope
+from ews.shared import parse_uuid
 
 from .._account_status import ACCOUNT_STATUS_COLORS, account_status, account_status_color
 from ..repos import CrmAccountRepository, RepoFactory
@@ -37,12 +42,6 @@ _METADATA_FIELDS = ('arr', 'open_pipeline', 'health_score', 'renewal_date', 'pri
 # Business fields that live elsewhere: tier → ``account_rank``, currency → ``currency_id``,
 # country / city → the default address.
 _BUSINESS_FIELDS = (*_METADATA_FIELDS, 'tier', 'currency', 'country', 'city')
-
-
-def _to_uuid(value: Optional[str]) -> Optional[UUID]:
-    if not value:
-        return None
-    return value if isinstance(value, UUID) else UUID(str(value))
 
 
 def _slugify(name: str) -> str:
@@ -122,7 +121,6 @@ def _to_response(
         commercial_name=a.commercial_name,
         employees=a.employees,
         annual_revenue=a.annual_revenue,
-        org_id=a.org_id,
         settings=a.settings,
         account_metadata=a.account_metadata,
     )
@@ -192,6 +190,31 @@ async def _apply_business(
             address.address_city = data.city or None
 
 
+CRM_ACCOUNT = EwsResources.CRM_ACCOUNT.value
+
+
+async def _scope(action: str) -> RequestScope:
+    """The caller, with ``crm.account:<action>`` on the request's organization chain (403 otherwise)."""
+    scope = await current_scope()
+    await authorize(scope, CRM_ACCOUNT, action)
+    return scope
+
+
+def _in_scope(scope: RequestScope) -> ColumnElement[bool]:
+    """Accounts belong to the request's tenant and organization (``/<org>/crm``)."""
+    a = ews_models.CrmAccount
+    return and_(a.tenant_id == scope.tenant_id, a.organization_id == scope.organization_id)
+
+
+async def _load(session: DBAsyncScopedSession, scope: RequestScope, account_id: str) -> ews_models.CrmAccount:
+    """An account of the request's organization (404 otherwise, also for a malformed id)."""
+    a = ews_models.CrmAccount
+    account = await session.scalar(select(a).where(a.id == parse_uuid(account_id, 'account'), _in_scope(scope)))
+    if account is None:
+        raise NotFoundException(detail='account not found')
+    return account
+
+
 class CrmAccountController(BaseController):
     """CRM accounts: create, list, detail, update, delete."""
 
@@ -207,11 +230,14 @@ class CrmAccountController(BaseController):
         offset: int = 0,
         q: Optional[str] = None,
     ) -> PaginatedResponse[CrmAccountListItem]:
-        """List accounts; ``q`` searches name, display name, code and email (case-insensitive)."""
+        """Accounts of the request's organization; ``q`` searches name, display name, code and email
+        (case-insensitive)."""
+        scope = await _scope('read')
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        filters: list[StatementFilter] = [
+        filters: list[StatementFilter | ColumnElement[bool]] = [
             LimitOffset(limit=limit, offset=offset),
             OrderBy(field_name='id', sort_order='desc'),
+            _in_scope(scope),
         ]
         if q and q.strip():
             filters.append(
@@ -230,6 +256,7 @@ class CrmAccountController(BaseController):
     @get('/statuses')
     async def list_account_statuses(self) -> list[CrmAccountStatusOption]:
         """The account status catalog: every status with its badge colour."""
+        await current_scope()
         return [
             CrmAccountStatusOption(value=s.value, color=c.value) for s, c in ACCOUNT_STATUS_COLORS.items()
         ]
@@ -239,8 +266,7 @@ class CrmAccountController(BaseController):
     async def get_account(
         self, account_id: str, session: DBAsyncScopedSession
     ) -> CrmAccountResponse:
-        repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        a = await repo.get(_to_uuid(account_id))
+        a = await _load(session, await _scope('read'), account_id)
         addresses = await _addresses(session, [a.id])
         return _to_response(a, addresses.get(a.id))
 
@@ -249,8 +275,11 @@ class CrmAccountController(BaseController):
     async def create_account(
         self, data: CrmAccountCreateRequest, session: DBAsyncScopedSession
     ) -> CrmAccountResponse:
+        scope = await _scope('create')
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
         account = ews_models.CrmAccount(
+            tenant_id=scope.tenant_id,
+            organization_id=scope.organization_id,
             name=data.name,
             code=data.code,
             slug=_slugify(data.display_name or data.name),
@@ -269,7 +298,6 @@ class CrmAccountController(BaseController):
             is_individual=data.is_individual if data.is_individual is not None else False,
             color=data.color,
             avatar_url=data.avatar_url,
-            org_id=data.org_id,
             user_id=data.user_id,
         )
         created = await repo.add(account)
@@ -285,7 +313,7 @@ class CrmAccountController(BaseController):
         self, account_id: str, data: CrmAccountUpdateRequest, session: DBAsyncScopedSession
     ) -> CrmAccountResponse:
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        a = await repo.get(_to_uuid(account_id))
+        a = await _load(session, await _scope('update'), account_id)
         fields = data.as_dict()
         provided = {f for f in _BUSINESS_FIELDS if f in fields}
         for field, value in fields.items():
@@ -302,4 +330,5 @@ class CrmAccountController(BaseController):
         self, account_id: str, session: DBAsyncScopedSession
     ) -> None:
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        await repo.delete(_to_uuid(account_id))
+        account = await _load(session, await _scope('delete'), account_id)
+        await repo.delete(account.id)

@@ -29,6 +29,8 @@ from foundation.exceptions import ClientException, NotFoundException
 from foundation.types.types import SimpleStatus
 from sqlalchemy import func, select, update
 
+from ews.shared import parse_uuid
+
 from . import workflow_catalog as catalog
 
 PRIVACY_ALL = 'all'
@@ -508,21 +510,12 @@ async def get_workflow(
     session: DBAsyncScopedSession, project: ews_models.Project, workflow_id: str
 ) -> ews_models.Workflow:
     await ensure_workflows(session, project)
-    workflow = await session.get(ews_models.Workflow, to_uuid(workflow_id))
+    workflow = await session.get(ews_models.Workflow, parse_uuid(workflow_id, 'workflow'))
     if workflow is None or workflow.project_id != project.id:
         raise NotFoundException(
             detail=f'Workflow {workflow_id} not found in this project.'
         )
     return workflow
-
-
-async def get_project(
-    session: DBAsyncScopedSession, project_id: str
-) -> ews_models.Project:
-    project = await session.get(ews_models.Project, to_uuid(project_id))
-    if project is None:
-        raise NotFoundException(detail=f'Project {project_id} not found.')
-    return project
 
 
 async def set_default_workflow(

@@ -51,6 +51,10 @@ class DirectoryT(ABC):
     async def organization(self, organization_id: UUID) -> DirectoryOrganization | None: ...
 
     @abstractmethod
+    async def organization_by_slug(self, slug: str) -> DirectoryOrganization | None:
+        """The organization of the URL ``/<slug>/…`` (slugs are unique across tenants)."""
+
+    @abstractmethod
     async def first_root_organization(self, slug: str | None = None) -> DirectoryOrganization | None:
         """Development fallback: the organization with ``slug`` (else the oldest root organization)."""
 
@@ -117,6 +121,19 @@ class SqlDirectory(DirectoryT):
             await session.execute(
                 text(f'select {_ORG_COLUMNS} from taas_organizations o where o.id = :id and o.deleted_at is null'),
                 {'id': organization_id},
+            )
+        ).first()
+        return _org(row) if row else None
+
+    @db_context_session
+    async def organization_by_slug(
+        self, slug: str, *, session: DBAsyncScopedSession | None = None
+    ) -> DirectoryOrganization | None:
+        assert session is not None
+        row = (
+            await session.execute(
+                text(f'select {_ORG_COLUMNS} from taas_organizations o where o.slug = :s and o.deleted_at is null'),
+                {'s': slug},
             )
         ).first()
         return _org(row) if row else None

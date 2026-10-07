@@ -1,20 +1,27 @@
 """Task activity HTTP controllers (EWS PPM): comments and time logs of a task.
 
 - Comments are ``ProjectComment`` rows with ``object_type='task'`` and
-  ``object_id=<task id>`` (newest first).
+  ``object_id=<task id>`` (newest first); the author is the session user.
 - Time logs are ``Timelog`` rows; every change refreshes ``Task.actual_minutes``.
+- Both are reached through their task's project (``ppm.task_activity``, Ppm-0002); deletes are soft (Ppm-0011):
+  own entries, or with ``ppm.task_activity:delete``.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import db.models.ews as ews_models
-from advanced_alchemy.exceptions import NotFoundError
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
+from foundation.exceptions import NotFoundException
 from foundation.http import BaseController, delete, get, post, status
 from sqlalchemy import select
+
+from ews.security import RequestScope, current_scope
+from ews.shared import parse_uuid
+
+from .. import _access as access
 
 from ..repos import (
     ProjectCommentRepository,
@@ -32,9 +39,17 @@ from ._project_api import _now, _touch_project
 from ._task_support import (
     TASK_COMMENT_OBJECT_TYPE,
     refresh_actual_minutes,
-    to_uuid,
     uuid7_time,
 )
+
+ACTIVITY = access.TASK_ACTIVITY
+
+
+async def _require_own_or_delete(scope: RequestScope, project_id, owner: str | None) -> None:
+    """Own comment / time log, or ``ppm.task_activity:delete`` (project admins)."""
+    if owner and owner == access.author(scope):
+        return
+    await access.require(scope, project_id, ACTIVITY, 'delete')
 
 
 def _comment_to_response(c: ews_models.ProjectComment) -> TaskCommentResponse:
@@ -92,12 +107,13 @@ class TaskCommentController(BaseController):
     async def list_task_comments(
         self, task_id: str, session: DBAsyncScopedSession
     ) -> list[TaskCommentResponse]:
+        task, _ = await access.load_task(session, await current_scope(), task_id, ACTIVITY, 'read')
         c = ews_models.ProjectComment
         rows = await session.scalars(
             select(c)
             .where(
                 c.object_type == TASK_COMMENT_OBJECT_TYPE,
-                c.object_id == str(to_uuid(task_id)),
+                c.object_id == str(task.id),
                 c.deleted_at.is_(None),
             )
             .order_by(c.id.desc())
@@ -112,11 +128,12 @@ class TaskCommentController(BaseController):
         data: TaskCommentCreateRequest,
         session: DBAsyncScopedSession,
     ) -> TaskCommentResponse:
-        task = await RepoFactory.get_repo(TaskRepository, session).get(to_uuid(task_id))
+        scope = await current_scope()
+        task, _ = await access.load_task(session, scope, task_id, ACTIVITY, 'create')
         repo = RepoFactory.get_repo(ProjectCommentRepository, session)
         created = await repo.add(
             ews_models.ProjectComment(
-                user_id=data.user_id,
+                user_id=access.author(scope),
                 comment_text=data.text.strip(),
                 content_type='text',
                 project_id=str(task.project_id) if task.project_id else None,
@@ -132,13 +149,22 @@ class TaskCommentController(BaseController):
     async def delete_task_comment(
         self, task_id: str, comment_id: str, session: DBAsyncScopedSession
     ) -> None:
-        repo = RepoFactory.get_repo(ProjectCommentRepository, session)
-        comment = await repo.get(to_uuid(comment_id))
-        if comment.object_id != str(to_uuid(task_id)):
-            raise NotFoundError(
-                f'Comment {comment_id} does not belong to task {task_id}'
+        scope = await current_scope()
+        task, project = await access.load_task(session, scope, task_id, ACTIVITY, 'read')
+        c = ews_models.ProjectComment
+        comment = await session.scalar(
+            select(c).where(
+                c.id == parse_uuid(comment_id, 'comment'),
+                c.object_type == TASK_COMMENT_OBJECT_TYPE,
+                c.object_id == str(task.id),
+                c.deleted_at.is_(None),
             )
-        await repo.delete(comment.id)
+        )
+        if comment is None:
+            raise NotFoundException(detail='comment not found')
+        await _require_own_or_delete(scope, project.id, comment.user_id)
+        comment.deleted_at = datetime.now(UTC)
+        await session.flush()
 
 
 class TaskTimelogController(BaseController):
@@ -152,10 +178,11 @@ class TaskTimelogController(BaseController):
     async def list_task_timelogs(
         self, task_id: str, session: DBAsyncScopedSession
     ) -> list[TimelogResponse]:
+        task, _ = await access.load_task(session, await current_scope(), task_id, ACTIVITY, 'read')
         t = ews_models.Timelog
         rows = await session.scalars(
             select(t)
-            .where(t.task_id == to_uuid(task_id), t.deleted_at.is_(None))
+            .where(t.task_id == task.id, t.deleted_at.is_(None))
             .order_by(t.log_date.desc().nulls_last(), t.id.desc())
         )
         return [_timelog_to_response(row) for row in rows.all()]
@@ -165,15 +192,18 @@ class TaskTimelogController(BaseController):
     async def create_task_timelog(
         self, task_id: str, data: TimelogCreateRequest, session: DBAsyncScopedSession
     ) -> TimelogResponse:
+        scope = await current_scope()
+        task, _ = await access.load_task(session, scope, task_id, ACTIVITY, 'create')
         task_repo = RepoFactory.get_repo(TaskRepository, session)
-        task = await task_repo.get(to_uuid(task_id))
         repo = RepoFactory.get_repo(TimelogRepository, session)
+        # "Who" is a business field (log time for a colleague); it defaults to the session user.
+        who = (data.user_id or '').strip() or access.author(scope)
         created = await repo.add(
             ews_models.Timelog(
                 task_id=task.id,
                 project_id=task.project_id,
-                user_id=data.user_id,
-                email=data.user_id if data.user_id and '@' in data.user_id else None,
+                user_id=who,
+                email=who if '@' in who else None,
                 log_date=_naive(data.log_date) or _now(),
                 start_time=_naive(data.start_time),
                 end_time=_naive(data.end_time),
@@ -192,14 +222,19 @@ class TaskTimelogController(BaseController):
     async def delete_task_timelog(
         self, task_id: str, timelog_id: str, session: DBAsyncScopedSession
     ) -> None:
-        repo = RepoFactory.get_repo(TimelogRepository, session)
-        log = await repo.get(to_uuid(timelog_id))
-        if str(log.task_id) != str(to_uuid(task_id)):
-            raise NotFoundError(
-                f'Time log {timelog_id} does not belong to task {task_id}'
+        scope = await current_scope()
+        task, project = await access.load_task(session, scope, task_id, ACTIVITY, 'read')
+        t = ews_models.Timelog
+        log = await session.scalar(
+            select(t).where(
+                t.id == parse_uuid(timelog_id, 'time log'), t.task_id == task.id, t.deleted_at.is_(None)
             )
-        await repo.delete(log.id)
+        )
+        if log is None:
+            raise NotFoundException(detail='time log not found')
+        await _require_own_or_delete(scope, project.id, log.user_id)
+        log.deleted_at = datetime.now(UTC)
+        await session.flush()
         task_repo = RepoFactory.get_repo(TaskRepository, session)
-        task = await task_repo.get(to_uuid(task_id))
         await refresh_actual_minutes(session, task)
         await task_repo.update(task)

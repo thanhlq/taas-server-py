@@ -65,6 +65,7 @@ class CrmAccountCreateRequest(_CrmBusinessInput):
     is_individual: Optional[bool] = None
     color: Optional[str] = None
     avatar_url: Optional[str] = None
+    # Ignored (legacy): the account belongs to the request's organization (X-Organization-Slug / -Id).
     org_id: Optional[str] = None
     # Account owner: the user who manages this account (``CrmAccount.user_id``).
     user_id: Optional[str] = None

@@ -6,6 +6,7 @@ from typing import Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
 from advanced_alchemy.mixins import SlugKey
+from advanced_alchemy.types import GUID
 from sqlalchemy import (
     TEXT,
     TIMESTAMP,
@@ -16,7 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.models.base import ID_COLUMN_TYPE, JSONB
+from db.models.base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE
 from db.models.ews._crm_account_address import CrmAccountAddress
 from db.models.ews.constants import CRM_ACCOUNTS_TABLE
 
@@ -32,6 +33,14 @@ class CrmAccount(UUIDv7AuditBase, SlugKey):
         nullable=True,
         index=True,
     )
+    """Legacy, unused: the organization is ``organization_id``."""
+    tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        GUID(length=16), index=True, nullable=True, default=None
+    )
+    organization_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        GUID(length=16), index=True, nullable=True, default=None
+    )
+    """Tenant and organization of the account (``taas_organizations``); every request is scoped to them."""
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
     code: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)

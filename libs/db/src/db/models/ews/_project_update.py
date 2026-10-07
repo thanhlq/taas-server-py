@@ -21,7 +21,7 @@ class ProjectUpdate(UUIDv7Base, SoftDeleteColumns):
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     content_type: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'md'::character")
+        TEXT, nullable=True, server_default=text("'md'")
     )
     html_text: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     attachments: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

@@ -18,9 +18,11 @@ from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.http import BaseController, delete, get, patch, post, status
 from foundation.http.response import PaginatedResponse, create_paginated_response
-from sqlalchemy import delete as sql_delete
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import ColumnElement, func, or_, select, update
 
+from ews.security import current_scope
+
+from .. import _access as access
 from .. import _workflow_service as wfs
 from .. import workflow_catalog as catalog
 from .._project_status import PROJECT_STATUS_CATALOG, project_status_color
@@ -110,7 +112,6 @@ def _project_to_response(
     template = catalog.get_template(process.template_id, locale) if process.template_id else None
     return ProjectResponse(
         **_with_progress(_project_fields(p), stats),
-        org_id=p.org_id,
         workflow=p.workflow,
         settings=p.settings,
         properties=p.properties,
@@ -181,11 +182,14 @@ class ProjectController(BaseController):
         offset: int = 0,
         q: Optional[str] = None,
     ) -> PaginatedResponse[ProjectListItem]:
-        """List projects; ``q`` searches name, code and description (case-insensitive)."""
+        """Projects of the request's organization the caller may read; ``q`` searches name, code and
+        description (case-insensitive)."""
+        scope = await current_scope()
         repo = RepoFactory.get_repo(ProjectRepository, session)
-        filters: list[StatementFilter] = [
+        filters: list[StatementFilter | ColumnElement[bool]] = [
             LimitOffset(limit=limit, offset=offset),
             OrderBy(field_name='id', sort_order='desc'),
+            await access.readable_projects(scope),
         ]
         if q and q.strip():
             filters.append(
@@ -204,6 +208,7 @@ class ProjectController(BaseController):
     @get('/statuses')
     async def list_project_statuses(self) -> list[ProjectStatusOption]:
         """The project status catalog: every status with its badge colour and group."""
+        await current_scope()
         return [
             ProjectStatusOption(value=status.value, color=color.value, group=group.value)
             for status, (color, group) in PROJECT_STATUS_CATALOG.items()
@@ -214,7 +219,7 @@ class ProjectController(BaseController):
     async def get_project(
         self, project_id: str, session: DBAsyncScopedSession, locale: Optional[str] = None
     ) -> ProjectResponse:
-        p = await wfs.get_project(session, project_id)
+        p = await access.load_project(session, await current_scope(), project_id)
         # Projects made before workflows existed get their process + default workflow now.
         await wfs.ensure_workflows(session, p)
         stats = await _task_stats(session, [p.id])
@@ -225,8 +230,12 @@ class ProjectController(BaseController):
     async def create_project(
         self, data: ProjectCreateRequest, session: DBAsyncScopedSession
     ) -> ProjectResponse:
+        scope = await current_scope()
+        await access.require_create_project(scope)
         repo = RepoFactory.get_repo(ProjectRepository, session)
         project = ews_models.Project(
+            tenant_id=scope.tenant_id,
+            organization_id=scope.organization_id,
             name=data.name,
             description=data.description,
             code=data.code,
@@ -236,7 +245,6 @@ class ProjectController(BaseController):
             color=data.color,
             icon_name=data.icon_name,
             default_view=data.default_view,
-            org_id=data.org_id,
             client_id=data.client_id,
             user_id=data.user_id,
             last_activity_at=_now(),
@@ -256,6 +264,7 @@ class ProjectController(BaseController):
             is_default=True,
             template_id=seed.process.template_id,
         )
+        await access.grant_creator(scope, created.id)
         return _project_to_response(created, locale=data.locale)
 
     @patch('/{project_id}')
@@ -264,7 +273,7 @@ class ProjectController(BaseController):
         self, project_id: str, data: ProjectUpdateRequest, session: DBAsyncScopedSession
     ) -> ProjectResponse:
         repo = RepoFactory.get_repo(ProjectRepository, session)
-        p = await repo.get(_to_uuid(project_id))
+        p = await access.load_project(session, await current_scope(), project_id, access.PROJECT, 'update')
         fields = data.as_dict()
         _with_labels(p, fields.pop('labels', None))
         work_item_types = fields.pop('work_item_types', None)
@@ -285,37 +294,12 @@ class ProjectController(BaseController):
     async def delete_project(
         self, project_id: str, session: DBAsyncScopedSession
     ) -> None:
-        repo = RepoFactory.get_repo(ProjectRepository, session)
-        pid = _to_uuid(project_id)
-        # Detach tasks from the project's task lists / iterations / workflows, then drop those.
-        await session.execute(
-            update(ews_models.Task)
-            .where(ews_models.Task.project_id == pid)
-            .values(task_list_id=None, iteration_id=None, workflow_id=None, stage_id=None)
-        )
-        workflow_ids = select(ews_models.Workflow.id).where(ews_models.Workflow.project_id == pid)
-        await session.execute(
-            sql_delete(ews_models.ProjectWorkflowAssignment).where(
-                ews_models.ProjectWorkflowAssignment.project_id == pid
-            )
-        )
-        await session.execute(
-            sql_delete(ews_models.WorkflowStage).where(
-                ews_models.WorkflowStage.workflow_id.in_(workflow_ids)
-            )
-        )
-        await session.execute(
-            sql_delete(ews_models.Workflow).where(ews_models.Workflow.project_id == pid)
-        )
-        await session.execute(
-            sql_delete(ews_models.TaskList).where(ews_models.TaskList.project_id == pid)
-        )
-        await session.execute(
-            sql_delete(ews_models.ProjectIteration).where(
-                ews_models.ProjectIteration.project_id == pid
-            )
-        )
-        await repo.delete(pid)
+        project = await access.load_project(session, await current_scope(), project_id, access.PROJECT, 'delete')
+        # Soft delete (audit, Ppm-0011): the project and everything in it stay in the database, unreachable.
+        project.deleted_at = datetime.now(UTC)
+        await session.flush()
+        pid = project.id
+        await access.forget_project(pid)
 
 
 class TaskController(BaseController):
@@ -333,11 +317,11 @@ class TaskController(BaseController):
         limit: int = 200,
         offset: int = 0,
         q: Optional[str] = None,
-        user_id: Optional[str] = None,
     ) -> PaginatedResponse[TaskResponse]:
         """List a project's tasks (oldest first); ``q`` searches name, code and description
-        (case-insensitive); ``user_id`` leaves out tasks of ``assigned`` workflows the user is not on."""
-        project = await wfs.get_project(session, project_id)
+        (case-insensitive). Tasks of ``assigned`` workflows the caller is not on are left out."""
+        scope = await current_scope()
+        project = await access.load_project(session, scope, project_id, access.TASK, 'read')
         workflows = await wfs.ensure_workflows(session, project)
         repo = RepoFactory.get_repo(TaskRepository, session)
         filters: list[StatementFilter] = [
@@ -352,15 +336,17 @@ class TaskController(BaseController):
                     ignore_case=True,
                 )
             )
-        if user_id:
+        viewer = await access.workflow_viewer(scope, project.id)
+        if viewer:
             assigned = await wfs.load_assignments(session, [w.id for w in workflows])
             hidden = [
-                w.id for w in workflows if not wfs.visible_to(w, assigned.get(w.id, []), user_id, project)
+                w.id for w in workflows if not wfs.visible_to(w, assigned.get(w.id, []), viewer, project)
             ]
             if hidden:
                 filters.append(
                     or_(ews_models.Task.workflow_id.is_(None), ews_models.Task.workflow_id.not_in(hidden))
                 )
+        filters.append(ews_models.Task.deleted_at.is_(None))
         rows, total = await repo.list_and_count(
             *filters,
             project_id=project.id,
@@ -372,8 +358,7 @@ class TaskController(BaseController):
     @get('/{task_id}')
     @db_context_session
     async def get_task(self, task_id: str, session: DBAsyncScopedSession) -> TaskResponse:
-        repo = RepoFactory.get_repo(TaskRepository, session)
-        t = await repo.get(_to_uuid(task_id))
+        t, _ = await access.load_task(session, await current_scope(), task_id)
         return task_to_response(t)
 
     @post('/', status_code=status.HTTP_201_CREATED)
@@ -382,8 +367,15 @@ class TaskController(BaseController):
         self, data: TaskCreateRequest, session: DBAsyncScopedSession
     ) -> TaskResponse:
         repo = RepoFactory.get_repo(TaskRepository, session)
-        project = await wfs.get_project(session, data.project_id)
+        project = await access.load_project(session, await current_scope(), data.project_id, access.TASK, 'create')
         project_id = project.id
+        refs = await access.task_refs(
+            session,
+            project_id,
+            parent_id=data.parent_id,
+            task_list_id=data.task_list_id,
+            iteration_id=data.iteration_id,
+        )
         process = wfs.ProjectProcess.of(project)
         placement = await wfs.place_task(
             session,
@@ -408,11 +400,11 @@ class TaskController(BaseController):
             stage_id=placement.stage_id,
             stage_type=placement.stage_type,
             work_item_type=work_item_type,
-            parent_id=_to_uuid(data.parent_id),
+            parent_id=refs['parent_id'],
             requested_user_id=data.requested_user_id,
             user_id=data.user_id or None,
-            task_list_id=_to_uuid(data.task_list_id),
-            iteration_id=_to_uuid(data.iteration_id),
+            task_list_id=refs['task_list_id'],
+            iteration_id=refs['iteration_id'],
             tags={'labels': clean_list(data.labels)} if data.labels else None,
             priority=clamp_priority(data.priority),
             start_date=data.start_date,
@@ -430,13 +422,18 @@ class TaskController(BaseController):
         self, task_id: str, data: TaskUpdateRequest, session: DBAsyncScopedSession
     ) -> TaskResponse:
         repo = RepoFactory.get_repo(TaskRepository, session)
-        t = await repo.get(_to_uuid(task_id))
+        t, project = await access.load_task(session, await current_scope(), task_id, access.TASK, 'update')
         fields = data.as_dict()
+        refs = await access.task_refs(
+            session, project.id, task_list_id=fields.get('task_list_id'), iteration_id=fields.get('iteration_id')
+        )
+        for key in ('task_list_id', 'iteration_id'):
+            if key in fields:
+                fields[key] = refs[key]
         workflow_id = fields.pop('workflow_id', None)
         stage_id = fields.pop('stage_id', None)
         stage_type = fields.pop('stage_type', None)
         if workflow_id or stage_id or stage_type or fields.get('work_item_type'):
-            project = await wfs.get_project(session, str(t.project_id))
             if fields.get('work_item_type'):
                 wfs.ProjectProcess.of(project).check_work_item_type(fields['work_item_type'])
             if workflow_id or stage_id or stage_type:
@@ -464,17 +461,23 @@ class TaskController(BaseController):
     @delete('/{task_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session(auto_commit=True)
     async def delete_task(self, task_id: str, session: DBAsyncScopedSession) -> None:
-        repo = RepoFactory.get_repo(TaskRepository, session)
-        tid = _to_uuid(task_id)
-        # Time logs reference the task; comments are linked by id.
+        task, _ = await access.load_task(session, await current_scope(), task_id, access.TASK, 'delete')
+        now = datetime.now(UTC)
+        # Soft delete (audit, Ppm-0011): the task, its time logs and its comments are kept, flagged deleted.
         await session.execute(
-            sql_delete(ews_models.Timelog).where(ews_models.Timelog.task_id == tid)
+            update(ews_models.Timelog)
+            .where(ews_models.Timelog.task_id == task.id, ews_models.Timelog.deleted_at.is_(None))
+            .values(deleted_at=now)
         )
         await session.execute(
-            sql_delete(ews_models.ProjectComment).where(
+            update(ews_models.ProjectComment)
+            .where(
                 ews_models.ProjectComment.object_type == TASK_COMMENT_OBJECT_TYPE,
-                ews_models.ProjectComment.object_id == str(tid),
+                ews_models.ProjectComment.object_id == str(task.id),
+                ews_models.ProjectComment.deleted_at.is_(None),
             )
+            .values(deleted_at=now)
         )
-        deleted = await repo.delete(tid)
-        await _touch_project(session, deleted.project_id)
+        task.deleted_at = now
+        await session.flush()
+        await _touch_project(session, task.project_id)

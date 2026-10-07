@@ -23,15 +23,15 @@ class Workflow(UUIDv7AuditBase):
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     content_type: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'md'::character")
+        TEXT, nullable=True, server_default=text("'md'")
     )
     html_text: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
 
     workflow_type: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'kanban'::character")
+        TEXT, nullable=True, server_default=text("'kanban'")
     )
     scope: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'project'::character")
+        TEXT, nullable=True, server_default=text("'project'")
     )
 
     project_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
@@ -54,7 +54,7 @@ class Workflow(UUIDv7AuditBase):
     )
 
     privacy: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'project'::character")
+        TEXT, nullable=True, server_default=text("'project'")
     )
 
     allowed_work_item_types: Mapped[Optional[dict]] = mapped_column(

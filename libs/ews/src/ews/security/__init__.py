@@ -5,6 +5,7 @@
 Spec: taas-specs/iam/specs/authorization-rbac-spec.md §2, §5.
 """
 
+from ._csrf import allowed_web_origins, check_origin
 from ._directory import (
     DirectoryMembership,
     DirectoryOrganization,
@@ -37,7 +38,9 @@ __all__ = [
     'SqlDirectory',
     'VerifiedSession',
     'auth_settings',
+    'allowed_web_origins',
     'authorize',
+    'check_origin',
     'configure_security',
     'current_scope',
     'current_settings',

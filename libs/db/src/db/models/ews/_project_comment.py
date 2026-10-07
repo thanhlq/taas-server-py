@@ -28,7 +28,7 @@ class ProjectComment(UUIDv7Base, SoftDeleteColumns):
     comment_text: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     """Original comment text"""
     content_type: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'md'::character")
+        TEXT, nullable=True, server_default=text("'md'")
     )
     html_text: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
@@ -38,9 +38,9 @@ class ProjectComment(UUIDv7Base, SoftDeleteColumns):
     object_type: Mapped[Optional[str]] = mapped_column(
         TEXT,
         nullable=True,
-        server_default=text("'project'::character"),
+        server_default=text("'project'"),
         index=True,
     )
     privacy: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'object'::character")
+        TEXT, nullable=True, server_default=text("'object'")
     )

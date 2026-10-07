@@ -15,9 +15,14 @@ from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
 from foundation.exceptions import ClientException, NotFoundException
 from foundation.http import BaseController, delete, get, patch, post, put, status
+
+from ews.shared import parse_uuid
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select, update
 
+from ews.security import current_scope
+
+from .. import _access as access
 from .. import _workflow_service as wfs
 from .. import workflow_catalog as catalog
 from ..schemas._workflow_api import (
@@ -110,12 +115,14 @@ class WorkflowTemplateController(BaseController):
         self, locale: Optional[str] = None
     ) -> list[TemplateCategoryResponse]:
         """Categories in UI order, each with its template summaries."""
+        await current_scope()
         return [TemplateCategoryResponse(**c) for c in catalog.list_categories(locale)]
 
     @get('/{template_id}')
     async def get_workflow_template(
         self, template_id: str, locale: Optional[str] = None
     ) -> TemplateDetail:
+        await current_scope()
         template = catalog.get_template(template_id, locale)
         if template is None:
             raise NotFoundException(
@@ -138,6 +145,7 @@ class WorkflowStageTypeController(BaseController):
 
     @get('/')
     async def list_workflow_stage_types(self) -> list[StageTypeResponse]:
+        await current_scope()
         return [
             StageTypeResponse(
                 key=s.key,
@@ -162,12 +170,13 @@ class ProjectWorkflowController(BaseController):
         self,
         project_id: str,
         session: DBAsyncScopedSession,
-        user_id: Optional[str] = None,
     ) -> list[WorkflowResponse]:
-        """The default workflow first; ``user_id`` hides ``assigned`` workflows the user is not on."""
-        project = await wfs.get_project(session, project_id)
+        """The default workflow first; ``assigned`` workflows the caller is not on are left out."""
+        scope = await current_scope()
+        project = await access.load_project(session, scope, project_id, access.WORKFLOW, 'read')
         workflows = await wfs.ensure_workflows(session, project)
-        return await _workflows_response(session, project, workflows, user_id)
+        viewer = await access.workflow_viewer(scope, project.id)
+        return await _workflows_response(session, project, workflows, viewer)
 
     @post('/{project_id}/workflows', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
@@ -177,7 +186,7 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowCreateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'create')
         workflows = await wfs.ensure_workflows(session, project)
         process = wfs.ProjectProcess.of(project)
         if data.copy_from_workflow_id:
@@ -226,7 +235,7 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowUpdateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         if data.name is not None:
             if not data.name.strip():
@@ -254,7 +263,7 @@ class ProjectWorkflowController(BaseController):
         self, project_id: str, workflow_id: str, session: DBAsyncScopedSession
     ) -> None:
         """Delete a workflow; its tasks move to the default workflow (same stage type when possible)."""
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'delete')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         if workflow.is_default:
             raise ClientException(
@@ -291,7 +300,7 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowStageCreateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'create')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         wfs.ProjectProcess.of(project).check_stage_type(data.stage_type)
         if not data.name.strip():
@@ -334,7 +343,7 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowStageUpdateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stage = await self._stage(session, workflow, stage_id)
         if data.name is not None:
@@ -375,7 +384,7 @@ class ProjectWorkflowController(BaseController):
         move_to: Optional[str] = None,
     ) -> WorkflowResponse:
         """Delete a stage; its tasks move to ``move_to`` (required when it has tasks)."""
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'delete')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stage = await self._stage(session, workflow, stage_id)
         stages = (await wfs.load_stages(session, [workflow.id]))[workflow.id]
@@ -421,7 +430,7 @@ class ProjectWorkflowController(BaseController):
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
         """Reorder the stages (``stage_ids`` = every stage id of the workflow, in the new order)."""
-        project = await wfs.get_project(session, project_id)
+        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stages = (await wfs.load_stages(session, [workflow.id]))[workflow.id]
         by_id = {str(s.id): s for s in stages}
@@ -438,7 +447,7 @@ class ProjectWorkflowController(BaseController):
     async def _stage(
         session: DBAsyncScopedSession, workflow: ews_models.Workflow, stage_id: str
     ) -> ews_models.WorkflowStage:
-        stage = await session.get(ews_models.WorkflowStage, wfs.to_uuid(stage_id))
+        stage = await session.get(ews_models.WorkflowStage, parse_uuid(stage_id, 'stage'))
         if stage is None or stage.workflow_id != workflow.id:
             raise NotFoundException(
                 detail=f'Stage {stage_id} not found in this workflow.'

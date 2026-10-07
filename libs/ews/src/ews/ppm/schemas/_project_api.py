@@ -28,6 +28,7 @@ class ProjectCreateRequest(ApiRequest):
     color: Optional[str] = None
     icon_name: Optional[str] = None
     default_view: Optional[str] = None
+    # Ignored (legacy): the project belongs to the request's organization (X-Organization-Slug / -Id).
     org_id: Optional[str] = None
     client_id: Optional[str] = None
     # Main responsible user (id / email until IAM users exist).

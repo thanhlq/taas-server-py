@@ -13,6 +13,7 @@ from foundation.http.context_state import require_request_context
 
 from ews.authz import can
 
+from ._csrf import allowed_web_origins, check_origin
 from ._directory import DirectoryT, SqlDirectory
 from ._scope import IamSessionVerifier, RequestScope, SessionVerifierT, resolve_scope
 from ._settings import EwsAuthSettings, auth_settings
@@ -48,7 +49,8 @@ def _deps() -> tuple[DirectoryT, SessionVerifierT | None]:
 
 
 async def current_scope() -> RequestScope:
-    """The verified caller of the current request (401 signed out, 403 / 404 outside its tenants)."""
+    """The verified caller of the current request (401 signed out, 403 / 404 outside its tenants; 403 for a
+    cookie-authenticated write from a foreign origin — CSRF, ``_csrf.py``)."""
     try:
         ctx = require_request_context()
     except RuntimeError as error:
@@ -59,6 +61,8 @@ async def current_scope() -> RequestScope:
         return cached
     directory, verifier = _deps()
     headers = {k.lower(): v for k, v in req.headers.items()}
+    url = req.url
+    check_origin(req.method, headers, f'{url.scheme}://{url.netloc}', allowed_web_origins())
     scope = await resolve_scope(current_settings(), directory, verifier, headers, dict(req.cookies))
     req.state.ews_scope = scope
     return scope

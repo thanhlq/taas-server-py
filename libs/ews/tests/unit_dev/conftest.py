@@ -1,4 +1,4 @@
-"""API tests of the EWS business apps (media, sites) on the local Postgres of ``.env.test``.
+"""API tests of the EWS business apps (media, sites, ppm, crm) on the local Postgres of ``.env.test``.
 
 Each session creates its own tenant + root organization (+ a sub-organization) and removes them at the
 end (``ON DELETE CASCADE``). Blobs go to the in-memory adapter. Authentication: development mode
@@ -107,8 +107,25 @@ async def test_org() -> AsyncIterator[TestOrg]:
         {'id': org.user_id, 'email': org.email, 't': org.tenant_id, 'sub': f'sub-{suffix}'},
     )
     yield org
-    await _execute("delete from taas_casbin_rule where ptype = 'g' and (v2 like :t or v2 like 'site:%' and v0 = :u)", {
-        't': f'%{org.tenant_id}%', 'u': str(org.user_id)})
+    projects = 'select id from taas_projects where tenant_id = :t'
+    for statement in (
+        f'delete from taas_timelogs where project_id in ({projects})',
+        'delete from taas_projects_comments where project_id in (select id::text from taas_projects where tenant_id = :t)',
+        f'delete from taas_tasks_lists where project_id in ({projects})',
+        f'delete from taas_projects_iterations where project_id in ({projects})',
+        f'delete from taas_projects_workflows_assignments where project_id in ({projects})',
+        f'delete from taas_tasks where project_id in ({projects})',
+        'delete from taas_projects_workflows_stages where workflow_id in '
+        f'(select id from taas_projects_workflows where project_id in ({projects}))',
+        f'delete from taas_projects_workflows where project_id in ({projects})',
+        'delete from taas_projects where tenant_id = :t',
+    ):
+        await _execute(statement, {'t': org.tenant_id})
+    await _execute('delete from taas_crm_accounts where tenant_id = :t', {'t': org.tenant_id})
+    await _execute(
+        "delete from taas_casbin_rule where ptype = 'g' and (v2 like :t or (v2 like 'site:%' or v2 like 'project:%') and v0 = :u)",
+        {'t': f'%{org.tenant_id}%', 'u': str(org.user_id)},
+    )
     await _execute('delete from taas_user_account where id = :id', {'id': org.user_id})
     await _execute('delete from taas_tenants where id = :id', {'id': org.tenant_id})
 
@@ -141,7 +158,10 @@ async def app(test_org: TestOrg) -> FastAPI:
     api = FastAPI()
     api.add_middleware(RequestContextMiddleware)
     setup_fastapi_app(api)
-    controllers = list(get_media_controllers())
+    from ews.crm import get_crm_controllers
+    from ews.ppm import get_project_controllers
+
+    controllers = [*get_media_controllers(), *get_project_controllers(), *get_crm_controllers()]
     try:
         from ews.sites import get_sites_controllers
 
@@ -160,6 +180,11 @@ async def client(app: FastAPI, test_org: TestOrg) -> AsyncIterator[httpx.AsyncCl
         transport=transport,
         base_url='http://testserver',
         cookies={'taas_dev_session': dev_cookie(test_org.email)},
-        headers={'X-Tenant-ID': str(test_org.tenant_id), 'X-Organization-Id': str(test_org.organization_id)},
+        # Origin: cookie-authenticated writes must come from an allowed origin (CSRF guard, ews.security._csrf).
+        headers={
+            'X-Tenant-ID': str(test_org.tenant_id),
+            'X-Organization-Id': str(test_org.organization_id),
+            'Origin': 'http://testserver',
+        },
     ) as c:
         yield c

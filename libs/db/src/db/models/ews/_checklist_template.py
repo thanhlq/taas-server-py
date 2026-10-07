@@ -26,7 +26,7 @@ class ChecklistTemplate(UUIDv7Base, SoftDeleteColumns):
     scope: Mapped[Optional[str]] = mapped_column(
         TEXT,
         nullable=True,
-        server_default=text("'task'::character"),
+        server_default=text("'task'"),
         index=True,
     )
 

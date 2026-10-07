@@ -844,7 +844,7 @@ wheels = [
 
 [[package]]
 name = "db"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "libs/db" }
 dependencies = [
     { name = "advanced-alchemy", extra = ["cryptography"] },
@@ -948,7 +948,7 @@ wheels = [
 
 [[package]]
 name = "ews"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "libs/ews" }
 dependencies = [
     { name = "anthropic" },
@@ -1661,7 +1661,7 @@ wheels = [
 
 [[package]]
 name = "iam"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "libs/iam" }
 dependencies = [
     { name = "db" },

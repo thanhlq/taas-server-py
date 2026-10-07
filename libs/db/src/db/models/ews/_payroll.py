@@ -26,7 +26,7 @@ class Payroll(UUIDv7Base, SoftDeleteColumns):
     period_from: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     period_to: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     pay_status: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'NA'::character")
+        TEXT, nullable=True, server_default=text("'NA'")
     )
     paycode_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     paycode_rate: Mapped[Optional[Decimal]] = mapped_column(

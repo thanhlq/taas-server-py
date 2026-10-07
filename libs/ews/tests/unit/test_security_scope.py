@@ -46,6 +46,9 @@ class Directory(DirectoryT):
     async def organization(self, organization_id):
         return next((o for o in (ROOT, CHILD, OTHER) if o.id == organization_id), None)
 
+    async def organization_by_slug(self, slug):
+        return next((o for o in (ROOT, CHILD, OTHER) if o.slug == slug), None)
+
     async def first_root_organization(self, slug=None):
         return ROOT
 
@@ -87,6 +90,32 @@ async def test_foreign_organization_or_tenant_is_404_and_mismatch_400():
         await _resolve(member, {'x-organization-id': 'not-a-uuid'})
 
 
+async def test_organization_slug_of_the_url_selects_organization_and_tenant():
+    scope = await _resolve([DirectoryMembership(ROOT, 'org_member')], {'x-organization-slug': 'acme-eu'})
+    assert scope.organization == CHILD and scope.tenant_id == T1
+    # The id wins over the slug; a foreign or unknown slug is a 404, a malformed one a 400.
+    scope = await _resolve(
+        [DirectoryMembership(ROOT, 'org_member')], {'x-organization-id': str(ROOT.id), 'x-organization-slug': 'acme-eu'}
+    )
+    assert scope.organization == ROOT
+    with pytest.raises(NotFoundException):
+        await _resolve([DirectoryMembership(ROOT, 'org_member')], {'x-organization-slug': 'beta'})
+    with pytest.raises(NotFoundException):
+        await _resolve([DirectoryMembership(ROOT, 'org_member')], {'x-organization-slug': 'nope'})
+    with pytest.raises(ClientException):
+        await _resolve([DirectoryMembership(ROOT, 'org_member')], {'x-organization-slug': 'Bad Slug!'})
+
+
+async def test_development_sign_in_follows_the_url_slug():
+    cookie = base64.urlsafe_b64encode(json.dumps({'email': USER.email}).encode()).decode().rstrip('=')
+    dev = EwsAuthSettings(mode='dev')
+    scope = await resolve_scope(dev, Directory([]), None, {'x-organization-slug': 'beta'}, {'taas_dev_session': cookie})
+    assert scope.organization == OTHER and scope.tenant_id == T2
+    # Unknown slug (e.g. `demo` on a fresh database): the development fallback organization.
+    scope = await resolve_scope(dev, Directory([]), None, {'x-organization-slug': 'demo'}, {'taas_dev_session': cookie})
+    assert scope.organization == ROOT
+
+
 async def test_tenant_admin_reaches_every_organization_of_its_tenant():
     scope = await _resolve([DirectoryMembership(CHILD, 'tenant_admin')], {'x-organization-id': str(ROOT.id)})
     assert scope.organization == ROOT
@@ -120,3 +149,20 @@ async def test_iam_session_verifier_forwards_and_caches():
     assert await verifier.verify({'cookie': 'sid=2'}) is None
     assert await verifier.verify({}) is None
     assert calls == ['sid=1', 'sid=2']
+
+
+def test_csrf_origin_check_on_cookie_writes():
+    from ews.security import check_origin
+    from foundation.exceptions import PermissionDeniedException
+
+    allowed = {'http://localhost:7101'}
+    own = 'http://localhost:8191'
+    cookie = {'cookie': 'taas_dev_session=x'}
+    check_origin('GET', cookie, own, allowed)  # reads are safe
+    check_origin('POST', {}, own, allowed)  # not cookie-authenticated
+    check_origin('POST', {**cookie, 'authorization': 'Bearer t'}, own, allowed)  # bearer token
+    check_origin('POST', {**cookie, 'origin': 'http://localhost:7101'}, own, allowed)
+    check_origin('PATCH', {**cookie, 'origin': own}, own, allowed)  # same origin
+    for headers in ({**cookie}, {**cookie, 'origin': 'https://evil.test'}):
+        with pytest.raises(PermissionDeniedException):
+            check_origin('DELETE', headers, own, allowed)

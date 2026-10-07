@@ -7,13 +7,19 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import db.models.ews as ews_models
-from advanced_alchemy.exceptions import NotFoundError
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
+from foundation.exceptions import NotFoundException
 from foundation.http import BaseController, delete, get, patch, post, status
 from sqlalchemy import func, select, update
 
+from ews.security import current_scope
+from ews.shared import parse_uuid
+
+from .. import _access as access
 from ..repos import ProjectIterationRepository, RepoFactory, TaskListRepository
 from ..schemas._task_api import (
     IterationCreateRequest,
@@ -23,7 +29,6 @@ from ..schemas._task_api import (
     TaskListResponse,
     TaskListUpdateRequest,
 )
-from ._task_support import to_uuid
 
 _ITERATION_STATUSES = frozenset({'planned', 'active', 'completed'})
 
@@ -55,11 +60,21 @@ def _iteration_status(value: str | None) -> str:
     return value if value in _ITERATION_STATUSES else 'planned'
 
 
-async def _get_owned(repo, project_id: str, item_id: str):
-    """The record ``item_id`` of project ``project_id`` (404 otherwise)."""
-    item = await repo.get(to_uuid(item_id))
-    if str(item.project_id) != str(to_uuid(project_id)):
-        raise NotFoundError(f'{item_id} does not belong to project {project_id}')
+async def _project_id(session: DBAsyncScopedSession, project_id: str, action: str) -> UUID:
+    """The project of the path, checked for ``ppm.task:<action>`` (task lists and iterations, Ppm-0002)."""
+    project = await access.load_project(session, await current_scope(), project_id, access.TASK, action)
+    return project.id
+
+
+async def _get_owned(session: DBAsyncScopedSession, model: type, project_id: UUID, item_id: str, what: str):
+    """The record ``item_id`` of project ``project_id`` (404 otherwise, also for a malformed id)."""
+    item = await session.scalar(
+        select(model).where(
+            model.id == parse_uuid(item_id, what), model.project_id == project_id, model.deleted_at.is_(None)
+        )
+    )
+    if item is None:
+        raise NotFoundException(detail=f'{what} not found')
     return item
 
 
@@ -74,10 +89,11 @@ class ProjectTaskListController(BaseController):
     async def list_task_lists(
         self, project_id: str, session: DBAsyncScopedSession
     ) -> list[TaskListResponse]:
+        pid = await _project_id(session, project_id, 'read')
         rows = await session.scalars(
             select(ews_models.TaskList)
             .where(
-                ews_models.TaskList.project_id == to_uuid(project_id),
+                ews_models.TaskList.project_id == pid,
                 ews_models.TaskList.deleted_at.is_(None),
             )
             .order_by(ews_models.TaskList.display_order, ews_models.TaskList.id)
@@ -92,7 +108,7 @@ class ProjectTaskListController(BaseController):
         data: TaskListCreateRequest,
         session: DBAsyncScopedSession,
     ) -> TaskListResponse:
-        pid = to_uuid(project_id)
+        pid = await _project_id(session, project_id, 'create')
         order = data.display_order
         if order is None:
             last = await session.scalar(
@@ -123,7 +139,8 @@ class ProjectTaskListController(BaseController):
         session: DBAsyncScopedSession,
     ) -> TaskListResponse:
         repo = RepoFactory.get_repo(TaskListRepository, session)
-        item = await _get_owned(repo, project_id, task_list_id)
+        pid = await _project_id(session, project_id, 'update')
+        item = await _get_owned(session, ews_models.TaskList, pid, task_list_id, 'task list')
         for field, value in data.as_dict().items():
             setattr(item, field, value.strip() if field == 'name' else value)
         return _task_list_to_response(await repo.update(item))
@@ -138,7 +155,8 @@ class ProjectTaskListController(BaseController):
     ) -> None:
         """Delete a task list; its tasks stay in the project without a list."""
         repo = RepoFactory.get_repo(TaskListRepository, session)
-        item = await _get_owned(repo, project_id, task_list_id)
+        pid = await _project_id(session, project_id, 'delete')
+        item = await _get_owned(session, ews_models.TaskList, pid, task_list_id, 'task list')
         await session.execute(
             update(ews_models.Task)
             .where(ews_models.Task.task_list_id == item.id)
@@ -159,9 +177,10 @@ class ProjectIterationController(BaseController):
         self, project_id: str, session: DBAsyncScopedSession
     ) -> list[IterationResponse]:
         it = ews_models.ProjectIteration
+        pid = await _project_id(session, project_id, 'read')
         rows = await session.scalars(
             select(it)
-            .where(it.project_id == to_uuid(project_id), it.deleted_at.is_(None))
+            .where(it.project_id == pid, it.deleted_at.is_(None))
             .order_by(it.start_date.nulls_last(), it.id)
         )
         return [_iteration_to_response(i) for i in rows.all()]
@@ -175,9 +194,10 @@ class ProjectIterationController(BaseController):
         session: DBAsyncScopedSession,
     ) -> IterationResponse:
         repo = RepoFactory.get_repo(ProjectIterationRepository, session)
+        pid = await _project_id(session, project_id, 'create')
         created = await repo.add(
             ews_models.ProjectIteration(
-                project_id=to_uuid(project_id),
+                project_id=pid,
                 name=data.name.strip(),
                 goal=data.goal,
                 status=_iteration_status(data.status),
@@ -197,7 +217,8 @@ class ProjectIterationController(BaseController):
         session: DBAsyncScopedSession,
     ) -> IterationResponse:
         repo = RepoFactory.get_repo(ProjectIterationRepository, session)
-        item = await _get_owned(repo, project_id, iteration_id)
+        pid = await _project_id(session, project_id, 'update')
+        item = await _get_owned(session, ews_models.ProjectIteration, pid, iteration_id, 'iteration')
         fields = data.as_dict()
         if 'status' in fields:
             fields['status'] = _iteration_status(fields['status'])
@@ -215,7 +236,8 @@ class ProjectIterationController(BaseController):
     ) -> None:
         """Delete an iteration; its tasks become unplanned."""
         repo = RepoFactory.get_repo(ProjectIterationRepository, session)
-        item = await _get_owned(repo, project_id, iteration_id)
+        pid = await _project_id(session, project_id, 'delete')
+        item = await _get_owned(session, ews_models.ProjectIteration, pid, iteration_id, 'iteration')
         await session.execute(
             update(ews_models.Task)
             .where(ews_models.Task.iteration_id == item.id)

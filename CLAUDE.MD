@@ -37,6 +37,20 @@ The is the uv workspace which include the following libraries, applications and 
 | apps/ews_worker | Background worker for ews |
 | apps/outbox_worker | Outbox relay: one poller per outbox table + scheduler (`start_outbox.sh`, health port 7110) |
 
+## Changelog & versions
+
+Every change (feature, fix, breaking change, security fix) updates, in the same commit:
+
+1. [CHANGELOG.md](CHANGELOG.md) — an entry under `## [Unreleased]` in its group (Added · Changed · Deprecated ·
+   Removed · Fixed · Security) that names the package and its new version, e.g. `` `<pkg>` 0.3.0 — what changed ``;
+   mark **breaking** changes. Simple, concise, for the people who use the package.
+2. The version of every package / app it changes (SemVer: fix → patch, feature → minor, breaking → major; below 1.0
+   a breaking change → minor). Python: `version` in the package's `pyproject.toml` (`libs/<pkg>`, `apps/<app>`),
+   then `uv lock --offline` (only the version lines of `uv.lock` change). One bump per package per release: if
+   `[Unreleased]` already bumped it, bump again only for a bigger change (a feature after a fix).
+3. Release: `[Unreleased]` becomes `## [x.y.z] - YYYY-MM-DD` with x.y.z = the project version (`version` of the root
+   `pyproject.toml`, bumped the same way), a new empty `[Unreleased]`, compare links updated, tag `vx.y.z`.
+
 ## Rules
 
 
@@ -82,7 +96,13 @@ There are two scripts to start the api service in fastapi and litestar framework
 
 - **Auth** (`libs/ews/src/ews/security`): `await current_scope()` → user + tenant + organization,
   `authorize(...)` → `ews.authz.can`. `EWS_AUTH_MODE=iam` introspects the IAM session; `dev` trusts the web's
-  development sign-in cookie (all permissions). Sites + media use it; PPM / CRM routes adopt it next.
+  development sign-in cookie (all permissions). The organization comes from `X-Organization-Id`, else
+  `X-Organization-Slug` (the web URL's `/<org>/`, slugs are unique). `current_scope()` also rejects cookie writes from
+  an `Origin` outside `ALLOWED_CORS_ORIGINS` (CSRF, `_csrf.py`). Every business route uses it: sites, media, PPM
+  (`ews/ppm/_access.py`: `load_project` / `load_task`, 404 outside the scope) and CRM. Never load a business record by
+  id without the scope. Demo routes `/api/v1/test-apis` mount only for `ENVIRONMENT` local / test / development; the
+  legacy `/api/v1/users` (`iam.accounts`) is not mounted.
+- **Tests**: `libs/ews/tests/unit_dev/test_ppm_crm_api.py` (scoping, permissions, CSRF, soft deletes) on the local DB.
 - **Site Builder** (`ews/sites`, `/api/v1/sites/*`, tables `taas_site_*`) and **Media library** (`ews/media`,
   `/api/v1/media/*`, tables `taas_media_*`, private storage through `StorageResolverT`: `uploads/media/…`,
   `derived/media/…`); publishing copies media to the public CDN (`ews/sites/_cdn.py`, `PublicStoreT`); AI gateway `ews/ai`.

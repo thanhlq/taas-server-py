@@ -1,3 +1,4 @@
+from foundation.config import get_settings
 from foundation.http import BaseController
 
 from .controllers._project_api import ProjectController, TaskController
@@ -29,8 +30,10 @@ def get_project_controllers() -> list[BaseController]:
         WorkflowTemplateController(),
         WorkflowStageTypeController(),
         ProjectWorkflowController(),
-        TestController(),
     ]
+    # Demo routes (`/api/v1/test-apis`): local / test / development only, never staging or production.
+    if get_settings().environment in ('local', 'test', 'development'):
+        project_controllers.append(TestController())
     return project_controllers
 
 

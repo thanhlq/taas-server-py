@@ -5,8 +5,10 @@
 1. Identity — ``iam``: the IAM verifies the session cookie / bearer token (``SessionVerifier``);
    ``dev``: the web's development sign-in cookie ``taas_dev_session`` (``{email, name}``).
 2. User — ``taas_user_account.directory_id = sub`` (``iam``) or by e-mail (``dev``, optional).
-3. Organization — ``X-Organization-Id`` (member of it, of an ancestor, or Tenant Admin of its tenant),
-   else the root organization of ``X-Tenant-ID`` / the home tenant, else the first membership.
+3. Organization — ``X-Organization-Id``, else ``X-Organization-Slug`` (the ``/<org>/…`` segment of the web
+   URL; slugs are unique, so the slug alone yields the organization and its tenant). The caller must be a
+   member of it, of an ancestor, or Tenant Admin of its tenant. Without either: the root organization of
+   ``X-Tenant-ID`` / the home tenant, else the first membership.
    ``X-Tenant-ID`` only selects among the caller's tenants: foreign → 404; mismatch with the
    organization → 400.
 """
@@ -16,6 +18,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -141,6 +144,31 @@ def _uuid(value: str | None, header: str) -> UUID | None:
         raise ClientException(detail=f'{header} must be a UUID') from error
 
 
+_SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,39}$')
+"""Organization slug of the web URL (``ORGANIZATION_SLUG_RE`` in ``@taas/auth``, lenient on length)."""
+
+
+def _slug(value: str | None) -> str | None:
+    slug = (value or '').strip().lower()
+    if not slug:
+        return None
+    if not _SLUG_RE.match(slug):
+        raise ClientException(detail='X-Organization-Slug is not a valid organization slug')
+    return slug
+
+
+async def _organization_id_of(
+    directory: DirectoryT, organization_id: UUID | None, slug: str | None
+) -> UUID | None:
+    """``X-Organization-Id`` wins; else the organization of ``X-Organization-Slug`` (unknown → 404)."""
+    if organization_id or not slug:
+        return organization_id
+    org = await directory.organization_by_slug(slug)
+    if org is None:
+        raise NotFoundException(detail='organization not found')
+    return org.id
+
+
 def _pick(
     memberships: list[DirectoryMembership], home_tenant: UUID | None, tenant: UUID | None
 ) -> DirectoryMembership | None:
@@ -185,12 +213,13 @@ async def resolve_scope(
     """Resolve and verify the caller of a request; raises 401 / 403 / 404 / 400 like the IAM."""
     tenant_id = _uuid(headers.get('x-tenant-id'), 'X-Tenant-ID')
     organization_id = _uuid(headers.get('x-organization-id'), 'X-Organization-Id')
+    slug = _slug(headers.get('x-organization-slug'))
 
     if settings.mode == 'dev':
         session = decode_dev_session(cookies.get(DEV_SESSION_COOKIE))
         if session is None:
             raise NotAuthorizedException(detail='sign in required')
-        return await _dev_scope(settings, directory, session, tenant_id, organization_id)
+        return await _dev_scope(settings, directory, session, tenant_id, organization_id, slug)
 
     if verifier is None:
         raise ServiceUnavailableException(detail='identity service not configured')
@@ -201,6 +230,7 @@ async def resolve_scope(
     if user is None:
         raise PermissionDeniedException(detail='no directory account')
     memberships = await directory.memberships(user.id)
+    organization_id = await _organization_id_of(directory, organization_id, slug)
     if organization_id:
         org = await _organization_for(directory, memberships, organization_id)
         if tenant_id and tenant_id != org.tenant_id:
@@ -225,12 +255,17 @@ async def _dev_scope(
     session: VerifiedSession,
     tenant_id: UUID | None,
     organization_id: UUID | None,
+    slug: str | None = None,
 ) -> RequestScope:
-    """Development sign-in: trust the headers, else ``EWS_DEV_ORGANIZATION_ID``, else ``demo`` / the
-    oldest root organization. The user is the directory account with that e-mail, if any."""
+    """Development sign-in: trust the headers (organization id, else slug), else ``EWS_DEV_ORGANIZATION_ID``,
+    else ``demo`` / the oldest root organization. The user is the directory account with that e-mail, if any."""
     org: DirectoryOrganization | None = None
     wanted = organization_id or _uuid(settings.dev_organization_id, 'EWS_DEV_ORGANIZATION_ID')
-    if wanted:
+    if organization_id:
+        org = await directory.organization(organization_id)
+    elif slug:
+        org = await directory.organization_by_slug(slug)
+    if org is None and wanted:
         org = await directory.organization(wanted)
     if org is None:
         org = await directory.first_root_organization(DEV_ORGANIZATION_SLUG)

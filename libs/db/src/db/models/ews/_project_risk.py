@@ -21,7 +21,7 @@ class ProjectRisk(UUIDv7Base, SoftDeleteColumns):
     risk_source: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     risk_mitigation_plan: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     risk_status: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'new'::character")
+        TEXT, nullable=True, server_default=text("'new'")
     )
     probability: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     impact: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)

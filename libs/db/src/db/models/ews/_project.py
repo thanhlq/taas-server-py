@@ -33,15 +33,20 @@ class Project(UUIDv7Base, SoftDeleteColumns):
     __tablename__ = PROJECTS_TABLE
 
     org_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
+    """Legacy, unused: the organization is ``organization_id``."""
     tenant_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
         GUID(length=16), index=True, nullable=True, default=None
     )
+    organization_id: Mapped[TENANT_ID_COLUMN_TYPE | None] = mapped_column(
+        GUID(length=16), index=True, nullable=True, default=None
+    )
+    """Organization of the project (``taas_organizations.id``); every request is scoped to it (Ppm-0001)."""
 
     name: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
     code: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     content_type: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'md'::character")
+        TEXT, nullable=True, server_default=text("'md'")
     )
     html_text: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
 
@@ -54,7 +59,7 @@ class Project(UUIDv7Base, SoftDeleteColumns):
 
     engagement_type_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     status: Mapped[Optional[str]] = mapped_column(
-        TEXT, nullable=True, server_default=text("'New'::character"), index=True
+        TEXT, nullable=True, server_default=text("'New'"), index=True
     )
     status_updated_time: Mapped[Optional[datetime]] = mapped_column(
         TIMESTAMP, nullable=True
