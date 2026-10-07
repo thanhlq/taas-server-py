@@ -1,5 +1,5 @@
 """Tenant-based blob service: picks the adapter, resolves / provisions tenant buckets, memory adapter; storage
-resolver (pooled / dedicated private storage) and the public CDN store (taas-specs/storage)."""
+resolver (pooled / dedicated private storage) and the public CDN store (taas-specs/platform/storage)."""
 
 from .factory import create_blob_adapter, create_blob_service
 from .memory_adapter import MemoryBlobAdapter

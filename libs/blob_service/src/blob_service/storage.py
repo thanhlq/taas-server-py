@@ -1,4 +1,4 @@
-"""Storage resolver (pooled / dedicated private storage) and the public CDN store (taas-specs/storage).
+"""Storage resolver (pooled / dedicated private storage) and the public CDN store (taas-specs/platform/storage).
 
 `create_storage_resolver(blob_service, registry)` → `StorageResolverT`; `create_public_store()` → `PublicStoreT`
 (S3 compatible: Cloudflare R2, AWS S3 + CloudFront) or a disabled store when no CDN is configured.

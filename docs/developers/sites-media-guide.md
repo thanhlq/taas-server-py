@@ -39,7 +39,7 @@ Markdown round-trip test there.
 ## 3. Media library (`ews/media`, `/api/v1/media/*`)
 
 Private storage via `StorageResolverT.root(tenant)` (registered in `apps/ews_api/app.py`, pooled or dedicated —
-`taas-specs/storage`): originals `uploads/media/<org>/<asset>/<version>/original.<ext>`, variants
+`taas-specs/platform/storage`): originals `uploads/media/<org>/<asset>/<version>/original.<ext>`, variants
 `derived/media/<asset>/<version>/w<width>.webp|avif` (SHA-256 stored per variant). Publishing a site copies them to
 the public CDN bucket (`ews/sites/_cdn.py`: `{tenantId}/site/{siteId}/{sha256}.{ext}`, URLs in the release snapshot);
 unpublish / archive / delete remove that prefix. Tests swap the stores with `use_storage(...)` / `use_public_store(...)`. `_processing.py` sniffs the bytes, strips

@@ -1,4 +1,4 @@
-"""Blob storage value types (contract §3, `taas-specs/blob-storage-service`)."""
+"""Blob storage value types (contract §3, `taas-specs/platform/storage/blob-service`)."""
 
 from __future__ import annotations
 

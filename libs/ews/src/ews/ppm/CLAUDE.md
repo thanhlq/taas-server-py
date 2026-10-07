@@ -12,8 +12,8 @@ The purpose is to build a so flexible project & poforlio management system (as h
 
 ## Specification
 
-See taas-server-py/libs/ews/docs/specs/ppm and the workflow standard
-`taas-specs/ppm/project/project-workflow/README.md`.
+See `taas-specs/ppm/` (app spec `ppm-app-spec.md`, API `ppm-api.md`, decisions, roadmap) and the
+workflow standard `taas-specs/ppm/project/project-workflow/README.md`.
 
 ## Workflows
 

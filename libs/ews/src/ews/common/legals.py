@@ -1,7 +1,7 @@
 from .types import LegalBusinessType
 
 # Static list of business types
-# Source: taas-specs/docs/business/financial-transactions-database/business types
+# Source: taas-specs/research/business/financial-transactions-database/business types
 # ``name`` keeps the upstream option value verbatim (camelCase) so it stays
 # comparable with the payment provider's enum; ``description`` is the option
 # label shown to the user. The source's disabled "--" placeholder is omitted —

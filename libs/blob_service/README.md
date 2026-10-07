@@ -1,6 +1,6 @@
 # blob-service
 
-Tenant-based blob storage (contract: `taas-specs/blob-storage-service/blob-service-spec.md`, same names and
+Tenant-based blob storage (contract: `taas-specs/platform/storage/blob-service/blob-service-spec.md`, same names and
 behaviour as `@taas/blob-service` in taas-server-js). Consumers depend on `foundation.blob` and get a
 `BlobServiceT` from this package; they never import an adapter.
 

@@ -1,6 +1,6 @@
 """Media library use cases (``session`` = the request's DB session; ``scope`` = verified caller).
 
-Storage (taas-specs/storage): the tenant's private storage through ``StorageResolverT.root`` — originals in the
+Storage (taas-specs/platform/storage): the tenant's private storage through ``StorageResolverT.root`` — originals in the
 ``upload`` kind ``uploads/media/<organization_id>/<asset_id>/<version>/original.<ext>``, variants in the ``derived``
 kind ``derived/media/<asset_id>/<version>/w640.webp`` … (keys stored relative to the tenant root). A new version on
 "replace file" keeps old URLs from serving stale caches; the previous version is deleted after the switch.

@@ -1,4 +1,4 @@
-"""Storage resolver (pooled / dedicated, kinds) and the public CDN store (taas-specs/storage)."""
+"""Storage resolver (pooled / dedicated, kinds) and the public CDN store (taas-specs/platform/storage)."""
 
 from __future__ import annotations
 

@@ -126,7 +126,7 @@ class EwsApplication(BaseApiApplication[FastAPI]):
     def _init_blob_service(self) -> None:
         """Private storage (resolver: pooled / dedicated, ``STORAGE_*``) and the public CDN store (``CDN_*``).
 
-        Contract: taas-specs/storage/storage-architecture-spec.md.
+        Contract: taas-specs/platform/storage/storage-architecture-spec.md.
         """
         from blob_service import create_blob_service, create_public_store, create_storage_resolver
         from foundation.db.advanced_db_manager import MainDatabase

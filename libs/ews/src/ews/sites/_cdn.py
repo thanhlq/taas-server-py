@@ -1,4 +1,4 @@
-"""Public CDN copies of a site's media (taas-specs/storage §3, content ADR C-2).
+"""Public CDN copies of a site's media (taas-specs/platform/storage §3, content ADR C-2).
 
 Publishing a release copies every file of the referenced media (original + variants) from the tenant's private
 storage to the shared public bucket under ``{tenantId}/site/{siteId}/{sha256}.{ext}`` and writes the CDN URLs into

@@ -1,6 +1,6 @@
 # Blob storage (tenant buckets)
 
-Contract: `taas-specs/blob-storage-service/blob-service-spec.md` — same names, behaviour and settings as the
+Contract: `taas-specs/platform/storage/blob-service/blob-service-spec.md` — same names, behaviour and settings as the
 taas-server-js twin (`@taas/blob-*`).
 
 ## Libs
@@ -69,7 +69,7 @@ url = await store.presign(f'tasks/{task_id}/attachments/{name}', BlobPresignOpti
 - Browser uploads: presign a PUT with `content_type`; the client must send exactly that `Content-Type`
   (Azure also `x-ms-blob-type: BlockBlob`).
 
-## Storage resolver and public CDN (taas-specs/storage)
+## Storage resolver and public CDN (taas-specs/platform/storage)
 
 ```python
 from blob_service import create_blob_service, create_public_store, create_storage_resolver   # app startup

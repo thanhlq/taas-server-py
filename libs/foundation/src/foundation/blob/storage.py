@@ -1,4 +1,4 @@
-"""Content storage on top of the blob contract (taas-specs/storage/storage-architecture-spec.md).
+"""Content storage on top of the blob contract (taas-specs/platform/storage/storage-architecture-spec.md).
 
 - **Private storage** per tenant, pooled (`STORAGE_PRIVATE_BUCKET` + `{tenantId}/`) or dedicated (one bucket per
   tenant), split into *kinds* (`uploads/`, `derived/`, `knowledge/`, `documents/`). Apps only call

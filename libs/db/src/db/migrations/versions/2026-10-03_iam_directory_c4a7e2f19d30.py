@@ -1,6 +1,6 @@
 """iam directory: uuid tenants, organization tree, memberships, join links
 
-Implements taas-specs/iam/specs/common-specs/saas-specs.md (Iam-0100..0170, Iam-0400) on the
+Implements taas-specs/platform/tenancy.md (Iam-0100..0170, Iam-0400) on the
 shared tables. Node (@taas/iam-db) mirrors these tables; this revision is their DDL owner.
 
 Dev data reset: tenant ids change from integer to UUID, so tenants, users and the IAM tables that

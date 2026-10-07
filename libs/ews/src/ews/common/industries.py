@@ -2,7 +2,7 @@
 
 from ews.common.types import IndustryType
 
-# Source: taas-specs/docs/business/financial-transactions-database/industry.md
+# Source: taas-specs/research/business/financial-transactions-database/industry.md
 # The source is a scraped DOM carrying display labels only, so ``name`` is a
 # derived camelCase key ("&" spelled out) — keep it stable once persisted.
 INDUSTRY_TYPES: list[IndustryType] = [

@@ -1,6 +1,6 @@
 """Tenant-based blob storage: interfaces, types, errors, validation and settings (no cloud SDK).
 
-Contract: `taas-specs/blob-storage-service/blob-service-spec.md`. Implementations: `blob_s3`, `blob_gcp`,
+Contract: `taas-specs/platform/storage/blob-service/blob-service-spec.md`. Implementations: `blob_s3`, `blob_gcp`,
 `blob_azure` (adapters) and `blob_service` (`create_blob_service`, memory adapter, tenant registries).
 """
 
