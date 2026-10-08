@@ -1,5 +1,6 @@
 """Business RBAC of the EWS apps: roles / permissions catalog (``data/ews-rbac.json``), its start-up
-sync into ``taas_casbin_rule`` and the ``can`` decision. Specs: taas-specs/iam/specs/app-roles-spec.md, authorization-rbac-spec.md."""
+sync into ``taas_casbin_rule`` and the ``can`` decision — the same RBAC as the Node IAM (both catalogs,
+shared vectors ``data/rbac-cases.json``). Specs: taas-specs/iam/specs/app-roles-spec.md, authorization-rbac-spec.md."""
 
 from ._catalog import (
     EwsResources,
@@ -9,9 +10,12 @@ from ._catalog import (
     RbacRole,
     SiteRoles,
     catalog_owns_policy,
+    builtin_catalogs,
     catalog_policies,
+    effective_policies,
     evaluate,
     ews_catalog,
+    iam_catalog,
     key_match,
     resource_domains,
     validate_catalog,
@@ -38,12 +42,15 @@ __all__ = [
     'SyncResult',
     'can',
     'catalog_owns_policy',
+    'builtin_catalogs',
     'catalog_policies',
+    'effective_policies',
     'evaluate',
     'ews_catalog',
     'grant',
     'granted_permissions',
     'grants_in',
+    'iam_catalog',
     'key_match',
     'resource_domains',
     'revoke',

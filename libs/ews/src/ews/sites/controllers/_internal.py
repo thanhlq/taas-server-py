@@ -26,7 +26,9 @@ from .._settings import sites_settings
 from ..schemas import FormSubmit, FormSubmitOut, RoutesOut, SnapshotOut
 
 
-def _require_renderer(ctx: Context) -> None:
+def require_renderer(ctx: Context) -> None:
+    """401 unless the request carries the renderer key (503 when none is configured). Shared by every
+    ``/api/v1/sites-internal`` controller (sites, blogs)."""
     expected = sites_settings().renderer_key
     if not expected:
         raise ServiceUnavailableException(detail='SITES_RENDERER_KEY is not configured')
@@ -42,26 +44,26 @@ class SitesInternalController(BaseController):
     @get('/routes', summary='Routing table: host + path prefix → site, live release')
     @db_context_session
     async def routes(self, ctx: Context, session: DBAsyncScopedSession) -> RoutesOut:
-        _require_renderer(ctx)
+        require_renderer(ctx)
         version, routes = await pub.routing_table(session)
         return RoutesOut(version=version, sites_domain=sites_settings().domain, routes=routes)
 
     @get('/releases/{release_id}', summary='Release snapshot (immutable: cache forever)')
     @db_context_session
     async def release(self, release_id: str, ctx: Context, session: DBAsyncScopedSession) -> SnapshotOut:
-        _require_renderer(ctx)
+        require_renderer(ctx)
         return SnapshotOut(release_id=release_id, snapshot=await pub.release_snapshot(session, release_id))
 
     @get('/preview/{token}', summary='Draft snapshot behind a signed preview link')
     @db_context_session
     async def preview(self, token: str, ctx: Context, session: DBAsyncScopedSession) -> SnapshotOut:
-        _require_renderer(ctx)
+        require_renderer(ctx)
         return SnapshotOut(snapshot=await pub.preview_snapshot(session, token))
 
     @get('/assets/{tenant_id}/{asset_id}/{name}', summary='Media bytes (original or a variant) for /_assets')
     @db_context_session
     async def asset(self, tenant_id: str, asset_id: str, name: str, ctx: Context, session: DBAsyncScopedSession) -> Any:
-        _require_renderer(ctx)
+        require_renderer(ctx)
         asset = await session.scalar(
             select(MediaAsset).where(
                 MediaAsset.id == parse_uuid(asset_id, 'asset'), MediaAsset.tenant_id == parse_uuid(tenant_id, 'tenant')
@@ -84,7 +86,7 @@ class SitesInternalController(BaseController):
     @post('/forms/{site_id}/{form_key}', summary='A visitor submitted a form (forwarded by the renderer)')
     @db_context_session(auto_commit=True)
     async def submit_form(self, site_id: str, form_key: str, data: FormSubmit, ctx: Context, session: DBAsyncScopedSession) -> FormSubmitOut:
-        _require_renderer(ctx)
+        require_renderer(ctx)
         ok, message = await forms.submit(
             session, site_id, form_key, data.data, page_id=data.page_id, ip_hash=data.ip_hash, honeypot=data.honeypot
         )

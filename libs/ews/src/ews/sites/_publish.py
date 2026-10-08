@@ -11,6 +11,7 @@ import copy
 import hashlib
 import json
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any
 from uuid import UUID
@@ -21,6 +22,7 @@ from foundation.db.types import DBAsyncScopedSession
 from foundation.exceptions import ClientException, NotFoundException
 from sqlalchemy import func, select, text
 
+from ews.media._publishing import asset_map
 from ews.security import RequestScope
 from ews.shared import parse_uuid, sign_token, utcnow, verify_token
 
@@ -56,23 +58,6 @@ def _menu_hrefs(items: list[dict[str, Any]], paths: dict[str, str]) -> list[dict
             entry['children'] = _menu_hrefs(item['children'], paths)
         out.append(entry)
     return out
-
-
-async def _assets(session: DBAsyncScopedSession, tenant_id: UUID, ids: set[UUID]) -> dict[str, Any]:
-    if not ids:
-        return {}
-    rows = await session.scalars(select(MediaAsset).where(MediaAsset.tenant_id == tenant_id, MediaAsset.id.in_(ids)))
-    return {
-        str(a.id): {
-            'kind': a.kind, 'mime': a.mime, 'title': a.title, 'alt': a.alt, 'width': a.width, 'height': a.height,
-            'focal_x': a.focal_x, 'focal_y': a.focal_y, 'version': a.key.rsplit('/', 2)[-2] if '/' in a.key else '',
-            'variants': {
-                name: {'width': v.get('width'), 'height': v.get('height'), 'format': v.get('format')}
-                for name, v in (a.variants or {}).items() if isinstance(v, dict)
-            },
-        }
-        for a in rows
-    }
 
 
 async def build_snapshot(
@@ -134,7 +119,7 @@ async def build_snapshot(
             for r in redirects
             if not (home and r.from_path == '/')
         ],
-        'assets': await _assets(session, site.tenant_id, refs),
+        'assets': await asset_map(session, site.tenant_id, refs),
         'built_at': utcnow().isoformat(),
     }
 
@@ -378,9 +363,20 @@ async def preview_snapshot(session: DBAsyncScopedSession, token: str) -> dict[st
 
 # --- routing table (Site-0610 / 0611) -------------------------------------------------------------
 
+RouteSource = Callable[[DBAsyncScopedSession], Awaitable[list[RouteOut]]]
+_ROUTE_SOURCES: list[RouteSource] = []
+
+
+def register_route_source(source: RouteSource) -> None:
+    """Another app served on the organization hosts (blogs, …) adds its routes to the routing table; called
+    when the app's controllers are built (``ews.blog.get_blog_controllers``). Idempotent."""
+    if source not in _ROUTE_SOURCES:
+        _ROUTE_SOURCES.append(source)
+
 
 async def routing_table(session: DBAsyncScopedSession) -> tuple[str, list[RouteOut]]:
-    """Every live system route of the platform: ``<org-slug>.<SITES_DOMAIN>`` + ``/<site-slug>`` (or ``/``)."""
+    """Every live system route of the platform: ``<org-slug>.<SITES_DOMAIN>`` + ``/<site-slug>`` (or ``/``), then
+    the routes of the registered sources (``kind: 'blog'`` …). The version digest covers them all."""
     settings = sites_settings()
     rows = await session.execute(
         text(
@@ -400,6 +396,8 @@ async def routing_table(session: DBAsyncScopedSession) -> tuple[str, list[RouteO
         )
         for r in rows
     ]
+    for source in _ROUTE_SOURCES:
+        routes += await source(session)
     digest = hashlib.sha1(json.dumps([r.as_dict() for r in routes], sort_keys=True).encode()).hexdigest()[:16]
     return digest, routes
 

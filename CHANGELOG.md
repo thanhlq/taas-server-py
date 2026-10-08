@@ -6,6 +6,46 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
 
 ## [Unreleased]
 
+### Added
+
+- `libs/ews` 0.2.0 — **File Manager** API `ews/files` (`/api/v1/files`, taas-specs F1 + drive roles of F2): organization
+  drives (implicit role of the organization's members), shared drives with members, *My files*, folder / file tree,
+  multipart and direct upload (storage kind `document`), versions, signed downloads / previews, trash + restore + purge,
+  activity, stars, recent, search.
+- `libs/ews` 0.2.0 — **Knowledge Center** API `ews/knowledge` (`/api/v1/knowledge`, K1 + K2): spaces with tenant /
+  organization (+ sub-organizations) / restricted visibility (implicit viewer), members, page tree (≤ 10 levels, move /
+  reorder), drafts + published versions, soft lock, verification and review list, 6 templates, attachments (storage
+  kind `knowledge`), home and search.
+- `libs/ews` 0.2.0 — **Blog** API `ews/blog` (`/api/v1/blog`, B1 + B2 transitions): blogs, members, posts with draft /
+  published revisions, autosave, soft lock, workflow (submit, request changes, approve, publish / update, schedule,
+  unpublish, archive), categories, tags, author profiles; `publish_due(now)` for the scheduler.
+- `libs/ews` 0.2.0 — `ews.access`: `ObjectAccess` (object → organization chain → tenant domains, 404 / 403 rule,
+  implicit roles, UI permissions, creator grant) + generic members routes (`list_members`, `member_candidates`,
+  `upsert_member`, `remove_member`, `object_roles`, schemas `MemberOut` …).
+- `libs/ews` 0.2.0 — `ews.shared`: materialized-path trees (`child_path`, `check_move`, `move_subtree` …), private storage
+  (`use_storage`, `storage_resolver`, `tenant_root`), `clean_seo`, `user_names`, `ConflictException`,
+  `path_segment_taken` (sites and blogs share the organization's address).
+- `libs/ews` 0.2.0 — RBAC: roles `drive_*`, `kb_space_*`, `kb_admin`, `blog_*` and `org_admin` rights on `files.*`,
+  `kb.*`, `blog.*` (`ews-rbac.json`); **one RBAC with Node**: the IAM catalog (`authz/data/iam-rbac.json`) and the shared
+  decision vectors (`rbac-cases.json`) ship here too, `iam_catalog()`, `effective_policies` (merge rule),
+  `resource_domains(objects=…)`, catalog validation of role keys / scopes, policies cached 60 s.
+- `libs/db` 0.2.0 — tables `taas_file_*` (5), `taas_kb_*` (4), `taas_blog_*` (8); migrations `3f1a9c7e2b10` →
+  `5c2d8e4a1f63` → `7e4b2a9d6c15`.
+- `libs/ews` 0.2.0 — **Blog public reading** (taas-specs/blog/blog-publishing-spec.md, B3 core): post addresses follow the
+  title until the first publication or a manual edit (`slug_auto`), are frozen afterwards and keep `former_slugs`
+  (public 301); reserved post slugs; `public_url` on blogs and posts, `live` on posts, the draft autosave answer carries
+  the address; blog releases (`taas_blog_releases`, immutable index snapshot rebuilt on every public change, last 20
+  kept); post media copied to the public CDN at publish; renderer API `GET /api/v1/sites-internal/blog-releases/{id}`,
+  `/blog-posts/{revisionId}` and blog routes in `/routes` (`RouteOut.kind = 'blog'`, `blog_id`; `redirect_status` for
+  redirect routes).
+- `libs/ews` 0.2.0 — shared `ews.shared.slugify` (transliteration of đ, ß, æ, ø, ł, œ, þ …) used by sites, blog, knowledge,
+  CRM; shared media publishing `ews.media` (`asset_map`, `publish_assets`, `remove_public_scope`) used by sites and blog;
+  `ews.sites.register_route_source` (other apps add renderer routes).
+- `libs/db` 0.2.0 — migration `b3d9f1a2c4e7`: `taas_blog_posts.slug_auto` / `former_slugs`, `taas_blog_post_revisions.assets`
+  / `cdn_origin`, `taas_blog_blogs.live_release_id`, table `taas_blog_releases`.
+- Tests: RBAC parity on the shared vectors, unique wire type names (`test_schema_names.py`), object access, API tests
+  with permission matrices for the three apps (`libs/ews/tests/unit_dev`).
+
 ### Security
 
 - `libs/ews` 0.2.0 — PPM and CRM routes require sign-in, are scoped to the request's tenant and organization and check
@@ -29,8 +69,16 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
   `9b3e61d4a7c2`); rows created before the scoping move to the development organization (`demo`, else the oldest root
   organization).
 
+- `libs/ews` 0.2.0 — the Site Builder reuses the shared pieces: member schemas (`ews.access.schemas`), SEO / user labels
+  / 409 errors (`ews.shared`), and refuses a slug already used by a blog of the organization; the media library uses
+  the shared private-storage override (`ews.media.use_storage` = `ews.shared.use_storage`).
+
 ### Fixed
 
+- `libs/http_litestar` 0.1.1 — the Litestar API builds again (ADR-P2 parity with FastAPI): path parameters in a
+  controller prefix are typed, routes without an explicit status answer 200 like FastAPI (Litestar defaulted POST to
+  201 and DELETE to 204, which refused DELETE handlers with a body), no-content routes are re-wrapped as `-> None`;
+  unit tests in `libs/http_litestar/tests/unit`.
 - `libs/db` 0.2.0 — 17 text column defaults written as `'…'::character` were `character(1)` (`'New'` stored as `'N'`);
   defaults fixed and truncated values repaired by the migration.
 - `libs/ews` 0.2.0 — malformed or unknown ids on PPM / CRM routes → 404 instead of 500.

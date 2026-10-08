@@ -4,7 +4,7 @@ Storage (taas-specs/platform/storage): the tenant's private storage through ``St
 ``upload`` kind ``uploads/media/<organization_id>/<asset_id>/<version>/original.<ext>``, variants in the ``derived``
 kind ``derived/media/<asset_id>/<version>/w640.webp`` … (keys stored relative to the tenant root). A new version on
 "replace file" keeps old URLs from serving stale caches; the previous version is deleted after the switch.
-Publishing copies files to the public CDN bucket (``ews.sites._cdn``), never from here.
+Publishing copies files to the public CDN bucket (``ews.media._publishing``, called by the publishing apps).
 """
 
 from __future__ import annotations
@@ -21,15 +21,14 @@ from uuid import UUID
 
 import msgspec
 from db.models.media import MediaAsset, MediaFavorite, MediaFolder, MediaUsage
-from foundation.blob import BlobPresignOptions, BlobPutOptions, StorageResolverT, TenantBlobStoreT, kind_key
+from foundation.blob import BlobPresignOptions, BlobPutOptions, TenantBlobStoreT, kind_key
 from foundation.exceptions import ClientException, NotFoundException
 from foundation.exceptions.http_exceptions import RequestEntityTooLarge
 from foundation.db.types import DBAsyncScopedSession
-from foundation.state import get_service
 from sqlalchemy import Select, and_, delete, func, or_, select
 
 from ews.security import RequestScope
-from ews.shared import parse_uuid, sign_token, utcnow, verify_token
+from ews.shared import parse_uuid, sign_token, tenant_root, utcnow, verify_token
 
 from ._processing import MediaRejected, ProcessedMedia, process_media
 from ._settings import MediaSettings, media_settings
@@ -59,21 +58,9 @@ class UnsupportedMediaException(ClientException):
     status_code = 415
 
 
-_storage_override: list[StorageResolverT | None] = [None]
-
-
-def use_storage(resolver: StorageResolverT | None) -> None:
-    """Tests: replace the registered storage resolver (``None`` restores ``foundation.state``)."""
-    _storage_override[0] = resolver
-
-
-def storage_resolver() -> StorageResolverT:
-    return _storage_override[0] or get_service(StorageResolverT)
-
-
 async def tenant_store(tenant_id: UUID | str) -> TenantBlobStoreT:
     """The tenant root of the private storage (keys start with ``uploads/`` / ``derived/``)."""
-    return await storage_resolver().root(tenant_id)
+    return await tenant_root(tenant_id)
 
 
 # --- keys & URLs ----------------------------------------------------------------------------------

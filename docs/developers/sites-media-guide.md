@@ -41,8 +41,9 @@ Markdown round-trip test there.
 Private storage via `StorageResolverT.root(tenant)` (registered in `apps/ews_api/app.py`, pooled or dedicated —
 `taas-specs/platform/storage`): originals `uploads/media/<org>/<asset>/<version>/original.<ext>`, variants
 `derived/media/<asset>/<version>/w<width>.webp|avif` (SHA-256 stored per variant). Publishing a site copies them to
-the public CDN bucket (`ews/sites/_cdn.py`: `{tenantId}/site/{siteId}/{sha256}.{ext}`, URLs in the release snapshot);
-unpublish / archive / delete remove that prefix. Tests swap the stores with `use_storage(...)` / `use_public_store(...)`. `_processing.py` sniffs the bytes, strips
+the public CDN bucket (`ews/sites/_cdn.py` over the shared `ews/media/_publishing.py`:
+`{tenantId}/site/{siteId}/{sha256}.{ext}`, URLs in the release snapshot); unpublish / archive / delete remove that
+prefix. Blogs use the same helpers with the scope `blog/<blogId>` (`ews/blog/_release.py`). Tests swap the stores with `use_storage(...)` / `use_public_store(...)`. `_processing.py` sniffs the bytes, strips
 EXIF GPS, builds variants, sanitizes SVG, refuses documents (415 `document_not_media`). Delivery: `MEDIA_DELIVERY=proxy`
 (signed `/api/v1/media/files/<token>`, needs `MEDIA_PUBLIC_BASE_URL`) or `presigned`. Usages: `record_usages(...)`
 from the owning app (site drafts on save).

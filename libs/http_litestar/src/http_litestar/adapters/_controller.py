@@ -8,9 +8,19 @@ from foundation.http import BaseController, Route, WebSocketRoute
 from litestar import Litestar, Router, WebSocket
 from litestar.handlers import HTTPRouteHandler, WebsocketRouteHandler
 
-from http_litestar.adapters._dependencies import adapt_handler, typed_path
+from http_litestar.adapters._dependencies import _make_wrapper, adapt_handler, typed_path
 from http_litestar.adapters._websocket import LitestarWebSocketSession
 from http_litestar.middewares.slowapi_ratelimit import rate_limit_guard
+
+
+def _without_body(handler: Any) -> Any:
+    """No-content statuses: Litestar refuses a handler that declares a return value (FastAPI ignores it), so the
+    handler is re-wrapped with ``-> None`` when it declares something else."""
+    signature = inspect.signature(handler)
+    if signature.return_annotation in (None, type(None), "None"):
+        return handler
+    annotations = {**getattr(handler, "__annotations__", {}), "return": None}
+    return _make_wrapper(handler, signature.replace(return_annotation=None), annotations)
 
 
 def build_handler_for_route(route: Route) -> HTTPRouteHandler:
@@ -22,6 +32,8 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
     """
     handler, dependencies = adapt_handler(route.handler)
     is_async = inspect.iscoroutinefunction(handler)
+    if route.status_code is not None and (route.status_code < 200 or route.status_code in (204, 304)):
+        handler = _without_body(handler)
 
     kwargs: dict[str, Any] = {
         "path": typed_path(route.path, getattr(handler, "__annotations__", {})),
@@ -35,8 +47,9 @@ def build_handler_for_route(route: Route) -> HTTPRouteHandler:
         kwargs["summary"] = route.summary
     if route.description:
         kwargs["description"] = route.description
-    if route.status_code is not None:
-        kwargs["status_code"] = route.status_code
+    # Same default as FastAPI (200 for every method); Litestar would answer POST 201 / DELETE 204, and refuses a
+    # DELETE handler with a response body under 204.
+    kwargs["status_code"] = route.status_code if route.status_code is not None else 200
     if route.tags:
         kwargs["tags"] = list(route.tags)
     # ``extra`` carries framework-specific passthrough (guards, dependencies,
@@ -86,9 +99,10 @@ def build_ws_handler_for_route(ws: WebSocketRoute) -> WebsocketRouteHandler:
 def _router_kwargs(
     controller: BaseController, overrides: dict[str, Any]
 ) -> dict[str, Any]:
-    # Litestar requires a Router path; default to "/" when no prefix is set.
+    # Litestar requires a Router path; default to "/" when no prefix is set. A prefix may hold path parameters
+    # (``/api/v1/sites/{site_id}/pages``): Litestar needs them typed, like the route paths (``str`` here).
     kwargs: dict[str, Any] = {
-        "path": controller.api_prefix.rstrip("/") or "/",
+        "path": typed_path(controller.api_prefix.rstrip("/") or "/", {}),
     }
     if controller.tags:
         kwargs["tags"] = list(controller.tags)

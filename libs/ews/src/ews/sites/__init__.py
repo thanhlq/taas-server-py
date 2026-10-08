@@ -9,11 +9,26 @@ from foundation.http import BaseController
 
 from ._document import block_catalog, validate_document
 from ._settings import SitesSettings, sites_settings
-from .controllers import SitePagesController, SitePublishingController, SitesController, SitesInternalController
+from ._publish import register_route_source
+from .controllers import (
+    SitePagesController,
+    SitePublishingController,
+    SitesController,
+    SitesInternalController,
+    require_renderer,
+)
 
 
 def get_sites_controllers() -> list[BaseController]:
     return [SitesController(), SitePagesController(), SitePublishingController(), SitesInternalController()]
 
 
-__all__ = ['SitesSettings', 'block_catalog', 'get_sites_controllers', 'sites_settings', 'validate_document']
+__all__ = [
+    'SitesSettings',
+    'block_catalog',
+    'get_sites_controllers',
+    'register_route_source',
+    'require_renderer',
+    'sites_settings',
+    'validate_document',
+]

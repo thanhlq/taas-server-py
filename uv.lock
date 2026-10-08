@@ -1574,7 +1574,7 @@ requires-dist = [
 
 [[package]]
 name = "http-litestar"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "libs/http_litestar" }
 dependencies = [
     { name = "foundation" },

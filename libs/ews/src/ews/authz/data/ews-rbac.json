@@ -1,8 +1,8 @@
 {
   "catalog": "ews",
   "version": 1,
-  "description": "Business roles and permissions of the EWS apps (PPM, CRM, Site Builder, Media Library), taas-specs/iam/specs/app-roles-spec.md. Synced into taas_casbin_rule (p rows) at EWS API start-up. Roles with 'extends' are defined by the IAM catalog (iam-rbac.json); this file only adds their business permissions. Permission = '<resource>:<action>', '*' = any.",
-  "namespaces": ["ppm", "crm", "sites", "media"],
+  "description": "Business roles and permissions of the EWS apps (PPM, CRM, Site Builder, Media Library, File Manager, Knowledge Center, Blog), taas-specs/iam/specs/app-roles-spec.md. Synced into taas_casbin_rule (p rows) at EWS API start-up. Roles with 'extends' are defined by the IAM catalog (iam-rbac.json); this file only adds their business permissions. Permission = '<resource>:<action>', '*' = any.",
+  "namespaces": ["ppm", "crm", "sites", "media", "files", "kb", "blog"],
   "resources": [
     { "key": "ppm.project", "name": "Projects", "actions": ["create", "read", "update", "delete"] },
     { "key": "ppm.project_member", "name": "Project members", "actions": ["create", "read", "update", "delete"] },
@@ -21,7 +21,20 @@
     { "key": "sites.submission", "name": "Form submissions", "actions": ["read", "export", "delete"] },
     { "key": "sites.ai", "name": "AI content assist", "actions": ["use"] },
     { "key": "media.asset", "name": "Media files", "actions": ["create", "read", "update", "delete"] },
-    { "key": "media.folder", "name": "Media folders", "actions": ["create", "read", "update", "delete"] }
+    { "key": "media.folder", "name": "Media folders", "actions": ["create", "read", "update", "delete"] },
+    { "key": "files.drive", "name": "Drives (organization, shared, personal) and their settings", "actions": ["create", "read", "update", "delete"] },
+    { "key": "files.item", "name": "Folders, files and versions of a drive", "actions": ["create", "read", "update", "delete", "restore", "comment", "share"] },
+    { "key": "files.member", "name": "Drive members (roles on the drive)", "actions": ["read", "manage"] },
+    { "key": "kb.space", "name": "Knowledge spaces and their settings", "actions": ["create", "read", "update", "delete"] },
+    { "key": "kb.space_member", "name": "Space members (roles on the space)", "actions": ["read", "manage"] },
+    { "key": "kb.page", "name": "Pages, drafts, revisions and attachments", "actions": ["create", "read", "update", "delete", "publish", "verify"] },
+    { "key": "kb.link", "name": "Share links of pages", "actions": ["create", "read", "revoke"] },
+    { "key": "kb.ai", "name": "Ask and writing help", "actions": ["use"] },
+    { "key": "blog.blog", "name": "Blogs and their settings", "actions": ["create", "read", "update", "delete"] },
+    { "key": "blog.member", "name": "Blog members (roles on the blog)", "actions": ["read", "manage"] },
+    { "key": "blog.post", "name": "Posts, drafts and revisions ('update_own' = posts the user authors)", "actions": ["create", "read", "update", "update_own", "delete", "submit", "review", "publish"] },
+    { "key": "blog.taxonomy", "name": "Categories, tags and author profiles", "actions": ["read", "manage"] },
+    { "key": "blog.ai", "name": "AI writing assistant", "actions": ["use"] }
   ],
   "roles": [
     {
@@ -129,10 +142,112 @@
       "permissions": ["sites.site:read", "sites.page:read", "sites.member:read"]
     },
     {
+      "key": "drive_manager",
+      "name": "Drive Manager",
+      "scope": "drive",
+      "description": "Everything on the drive: files, sharing, members, settings (File-0200).",
+      "permissions": ["files.drive:read", "files.drive:update", "files.drive:delete", "files.item:*", "files.member:*"]
+    },
+    {
+      "key": "drive_editor",
+      "name": "Drive Editor",
+      "scope": "drive",
+      "description": "Uploads, new versions, rename, move inside the drive, delete to and restore from the trash (File-0306).",
+      "permissions": [
+        "files.drive:read",
+        "files.item:create",
+        "files.item:read",
+        "files.item:update",
+        "files.item:delete",
+        "files.item:restore",
+        "files.item:comment",
+        "files.member:read"
+      ]
+    },
+    {
+      "key": "drive_commenter",
+      "name": "Drive Commenter",
+      "scope": "drive",
+      "description": "Sees, previews and downloads; comments and requests approvals.",
+      "permissions": ["files.drive:read", "files.item:read", "files.item:comment", "files.member:read"]
+    },
+    {
+      "key": "drive_viewer",
+      "name": "Drive Viewer",
+      "scope": "drive",
+      "description": "Sees, previews and downloads.",
+      "permissions": ["files.drive:read", "files.item:read", "files.member:read"]
+    },
+    {
+      "key": "kb_space_admin",
+      "name": "Space Admin",
+      "scope": "kb-space",
+      "description": "Settings, members and every page of the space (Kb-0100).",
+      "permissions": ["kb.space:read", "kb.space:update", "kb.space:delete", "kb.space_member:*", "kb.page:*", "kb.link:*", "kb.ai:*"]
+    },
+    {
+      "key": "kb_space_editor",
+      "name": "Space Editor",
+      "scope": "kb-space",
+      "description": "Creates, edits, publishes and verifies pages; creates share links.",
+      "permissions": ["kb.space:read", "kb.space_member:read", "kb.page:*", "kb.link:*", "kb.ai:use"]
+    },
+    {
+      "key": "kb_space_viewer",
+      "name": "Space Viewer",
+      "scope": "kb-space",
+      "description": "Reads published pages (granted implicitly by the space visibility).",
+      "permissions": ["kb.space:read", "kb.space_member:read", "kb.page:read", "kb.ai:use"]
+    },
+    {
+      "key": "kb_admin",
+      "name": "Knowledge Admin",
+      "scope": "tenant",
+      "description": "Creates and manages every space of the tenant (Kb-0101).",
+      "permissions": ["kb.space:*", "kb.space_member:*", "kb.page:*", "kb.link:*", "kb.ai:*"]
+    },
+    {
+      "key": "blog_admin",
+      "name": "Blog Admin",
+      "scope": "blog",
+      "description": "Settings, address, members, taxonomy and every post of the blog.",
+      "permissions": ["blog.blog:read", "blog.blog:update", "blog.blog:delete", "blog.member:*", "blog.post:*", "blog.taxonomy:*", "blog.ai:*"]
+    },
+    {
+      "key": "blog_editor",
+      "name": "Blog Editor",
+      "scope": "blog",
+      "description": "Edits every post, reviews, schedules, publishes; manages categories, tags and authors.",
+      "permissions": ["blog.blog:read", "blog.member:read", "blog.post:*", "blog.taxonomy:*", "blog.ai:use"]
+    },
+    {
+      "key": "blog_author",
+      "name": "Blog Author",
+      "scope": "blog",
+      "description": "Creates posts, edits its own posts and submits them for review (no publish).",
+      "permissions": [
+        "blog.blog:read",
+        "blog.member:read",
+        "blog.post:create",
+        "blog.post:read",
+        "blog.post:update_own",
+        "blog.post:submit",
+        "blog.taxonomy:read",
+        "blog.ai:use"
+      ]
+    },
+    {
+      "key": "blog_viewer",
+      "name": "Blog Viewer",
+      "scope": "blog",
+      "description": "Reads drafts and previews (reviewers, legal).",
+      "permissions": ["blog.blog:read", "blog.member:read", "blog.post:read", "blog.taxonomy:read"]
+    },
+    {
       "key": "org_admin",
       "extends": "iam",
       "scope": "org",
-      "description": "Organization Admin: full permission on the projects, CRM data, sites and media library of the organization (Iam-0510).",
+      "description": "Organization Admin: full permission on the projects, CRM data, sites, media library, drives, knowledge spaces and blogs of the organization (Iam-0510).",
       "permissions": [
         "ppm.project:*",
         "ppm.project_member:*",
@@ -151,7 +266,20 @@
         "sites.submission:*",
         "sites.ai:*",
         "media.asset:*",
-        "media.folder:*"
+        "media.folder:*",
+        "files.drive:*",
+        "files.item:*",
+        "files.member:*",
+        "kb.space:*",
+        "kb.space_member:*",
+        "kb.page:*",
+        "kb.link:*",
+        "kb.ai:*",
+        "blog.blog:*",
+        "blog.member:*",
+        "blog.post:*",
+        "blog.taxonomy:*",
+        "blog.ai:*"
       ]
     },
     {

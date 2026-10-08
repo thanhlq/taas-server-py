@@ -1,0 +1,7 @@
+from ..config import TABLE_PREFIX
+
+FILE_DRIVES_TABLE = f'{TABLE_PREFIX}file_drives'
+FILE_NODES_TABLE = f'{TABLE_PREFIX}file_nodes'
+FILE_VERSIONS_TABLE = f'{TABLE_PREFIX}file_versions'
+FILE_ACTIVITY_TABLE = f'{TABLE_PREFIX}file_activity'
+FILE_STARS_TABLE = f'{TABLE_PREFIX}file_stars'

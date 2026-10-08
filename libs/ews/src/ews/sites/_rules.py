@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from ews.shared import slugify  # noqa: F401 (re-exported: one slug rule for every app)
+
 from ._document import iter_blocks
 
 SITE_SLUG = re.compile(r'^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$')
@@ -49,14 +51,6 @@ _ENUMS = {
     'buttonStyle': ('solid', 'outline', 'pill'),
 }
 _SOCIAL = ('facebook', 'instagram', 'linkedin', 'x', 'youtube', 'tiktok', 'github')
-
-
-def slugify(text: str, max_len: int = 40) -> str:
-    import unicodedata
-
-    ascii_text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode()
-    slug = re.sub(r'[^a-z0-9]+', '-', ascii_text.lower()).strip('-')
-    return slug[:max_len].strip('-')
 
 
 def site_slug_error(slug: str) -> str | None:

@@ -1,0 +1,52 @@
+{
+  "key": "faq",
+  "order": 4,
+  "name": "FAQ",
+  "icon": "circle-help",
+  "description": "Frequently asked questions with short answers.",
+  "title": "Frequently asked questions",
+  "doc": {
+    "schemaVersion": 1,
+    "sections": [
+      {
+        "id": "intro",
+        "type": "richText",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Answers to the questions we hear most often. Missing one? Ask the page owner."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "faq",
+        "type": "faq",
+        "props": {
+          "title": "Questions",
+          "items": [
+            {
+              "question": "First question?",
+              "answer": "A short, direct answer."
+            },
+            {
+              "question": "Second question?",
+              "answer": "A short, direct answer."
+            },
+            {
+              "question": "Third question?",
+              "answer": "A short, direct answer."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

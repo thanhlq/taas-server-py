@@ -1,0 +1,75 @@
+{
+  "catalog": "iam",
+  "version": 1,
+  "description": "Built-in IAM roles and permissions (Iam-05xx, taas-specs/iam/specs/app-roles-spec.md). Synced into taas_casbin_rule (p rows) at IAM start-up: rows of these roles in the owned namespaces are replaced by this file. Permission = '<resource>:<action>', '*' = any.",
+  "namespaces": ["iam", "*"],
+  "retiredResources": ["tenant", "organization", "invitation", "member", "team"],
+  "resources": [
+    { "key": "iam.tenant", "name": "Tenant", "actions": ["read", "update", "delete"] },
+    { "key": "iam.organization", "name": "Organizations", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.member", "name": "Memberships", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.user", "name": "Users", "actions": ["read", "update", "suspend", "delete", "export"] },
+    { "key": "iam.invitation", "name": "Invitations", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.team", "name": "Teams", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.role", "name": "Roles", "actions": ["create", "read", "update", "delete", "assign"] },
+    { "key": "iam.auth_settings", "name": "Authentication settings", "actions": ["read", "update"] },
+    { "key": "iam.sso", "name": "Single sign-on, domains, provisioning", "actions": ["read", "update"] },
+    { "key": "iam.application", "name": "OAuth applications", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.api_key", "name": "API keys", "actions": ["create", "read", "update", "delete"] },
+    { "key": "iam.audit", "name": "Audit log", "actions": ["read", "export"] },
+    { "key": "iam.session", "name": "Sessions", "actions": ["read", "delete"] }
+  ],
+  "roles": [
+    {
+      "key": "tenant_admin",
+      "name": "Tenant Admin",
+      "scope": "tenant",
+      "description": "Full permission within the tenant (Iam-0500), business apps included.",
+      "permissions": ["*:*"]
+    },
+    {
+      "key": "org_admin",
+      "name": "Organization Admin",
+      "scope": "org",
+      "description": "Full directory permission within the organization and its sub-organizations, except deleting the organization (Iam-0510).",
+      "permissions": [
+        "iam.organization:create",
+        "iam.organization:read",
+        "iam.organization:update",
+        "iam.member:*",
+        "iam.user:read",
+        "iam.user:update",
+        "iam.user:suspend",
+        "iam.user:export",
+        "iam.invitation:*",
+        "iam.team:*",
+        "iam.role:read",
+        "iam.role:assign",
+        "iam.audit:read",
+        "iam.session:read",
+        "iam.session:delete"
+      ]
+    },
+    {
+      "key": "org_member",
+      "name": "Organization Member",
+      "scope": "org",
+      "description": "Member of the organization (Iam-0520).",
+      "permissions": ["iam.organization:read", "iam.member:read"]
+    },
+    {
+      "key": "team_admin",
+      "name": "Team Admin",
+      "scope": "team",
+      "description": "Manages the team and its members.",
+      "permissions": ["iam.team:*"]
+    },
+    {
+      "key": "team_member",
+      "name": "Team Member",
+      "scope": "team",
+      "description": "Member of the team.",
+      "permissions": ["iam.team:read"]
+    }
+  ]
+}

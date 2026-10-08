@@ -6,7 +6,6 @@ detail, update and delete for accounts (clients/customers).
 
 from __future__ import annotations
 
-import re
 from datetime import date
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -23,7 +22,7 @@ from sqlalchemy import ColumnElement, and_, select
 
 from ews.authz import EwsResources
 from ews.security import RequestScope, authorize, current_scope
-from ews.shared import parse_uuid
+from ews.shared import parse_uuid, slugify
 
 from .._account_status import ACCOUNT_STATUS_COLORS, account_status, account_status_color
 from ..repos import CrmAccountRepository, RepoFactory
@@ -46,8 +45,7 @@ _BUSINESS_FIELDS = (*_METADATA_FIELDS, 'tier', 'currency', 'country', 'city')
 
 def _slugify(name: str) -> str:
     """Build a unique, URL-safe slug from a name (SlugKey requires a non-null unique slug)."""
-    base = re.sub(r'[^a-z0-9]+', '-', (name or 'account').lower()).strip('-') or 'account'
-    return f'{base[:48]}-{uuid4().hex[:8]}'
+    return f'{slugify(name or "", 48) or "account"}-{uuid4().hex[:8]}'
 
 
 def _metadata(a: ews_models.CrmAccount) -> dict[str, Any]:

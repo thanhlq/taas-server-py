@@ -4,13 +4,14 @@ The ``session`` parameters are injected by ``db_context_session``: never pass th
 
 - ``sync_catalog``: bootstrap at start-up — the stored ``p`` rows of the catalog's roles become the
   catalog (``ews-rbac.json``); rows of other catalogs (IAM) and custom roles are untouched.
-- ``can``: grants (``g, <user_id>, <role>, <domain>``) read fresh on every check; policies = this
-  catalog + the other stored ``p`` rows (IAM built-in roles synced by the IAM, custom roles), cached
-  per process.
+- ``can``: grants (``g, <user_id>, <role>, <domain>``) read fresh on every check; policies =
+  ``effective_policies``: this catalog from JSON + the IAM rows the IAM synced (else the shipped copy
+  ``iam-rbac.json``) + custom roles, cached ``POLICY_CACHE_SECONDS`` per process (Node: same rule).
 """
 
 from __future__ import annotations
 
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -24,6 +25,7 @@ from ._catalog import (
     RbacCatalog,
     catalog_owns_policy,
     catalog_policies,
+    effective_policies,
     evaluate,
     ews_catalog,
 )
@@ -31,7 +33,11 @@ from ._catalog import (
 # Same lock as the IAM sync (Node): one catalog sync at a time across services / replicas.
 _SYNC_LOCK = text("select pg_advisory_xact_lock(hashtext('taas_rbac_catalog_sync'))")
 
+POLICY_CACHE_SECONDS = 60.0
+"""How long the policy rows are cached per process (grants are always read fresh)."""
+
 _policies: list[PolicyRow] | None = None
+_loaded_at = 0.0
 
 
 @dataclass(frozen=True)
@@ -78,14 +84,13 @@ async def sync_catalog(
 
 
 async def _load_policies(session: DBAsyncScopedSession) -> list[PolicyRow]:
-    global _policies
-    if _policies is None:
-        catalog = ews_catalog()
+    global _policies, _loaded_at
+    if _policies is None or time.monotonic() - _loaded_at > POLICY_CACHE_SECONDS:
         stored = (
             await session.scalars(select(CasbinRule).where(CasbinRule.ptype == 'p'))
         ).all()
-        extra = [_row(r) for r in stored if not catalog_owns_policy(catalog, _row(r))]
-        _policies = list(dict.fromkeys([*catalog_policies(catalog), *extra]))
+        _policies = effective_policies(ews_catalog(), [_row(r) for r in stored])
+        _loaded_at = time.monotonic()
     return _policies
 
 

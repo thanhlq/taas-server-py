@@ -1,8 +1,10 @@
-"""API tests of the EWS business apps (media, sites, ppm, crm) on the local Postgres of ``.env.test``.
+"""API tests of the EWS business apps (media, sites, ppm, crm, files, knowledge, blog) on the local Postgres
+of ``.env.test``.
 
 Each session creates its own tenant + root organization (+ a sub-organization) and removes them at the
 end (``ON DELETE CASCADE``). Blobs go to the in-memory adapter. Authentication: development mode
-(``taas_dev_session`` cookie) unless a test configures ``ews.security`` itself.
+(``taas_dev_session`` cookie) unless a test configures ``ews.security`` itself. Rows of the object apps
+(``taas_file_*``, ``taas_kb_*``, ``taas_blog_*``) are removed by ``tenant_id`` through ``TENANT_TABLES``.
 Run: ``uv run pytest libs/ews/tests/unit_dev`` (skips when the database is unreachable).
 """
 
@@ -35,6 +37,30 @@ os.environ['TAAS_RATE_LIMIT_ENABLED'] = 'false'
 import httpx  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from sqlalchemy import text  # noqa: E402
+
+
+# Tables with a ``tenant_id`` column, deleted at the end of the session (children first). Tables of apps
+# that are not installed (no model yet) are skipped.
+TENANT_TABLES: tuple[str, ...] = (
+    'taas_file_activity',
+    'taas_file_stars',
+    'taas_file_versions',
+    'taas_file_nodes',
+    'taas_file_drives',
+    'taas_kb_attachments',
+    'taas_kb_page_revisions',
+    'taas_kb_pages',
+    'taas_kb_spaces',
+    'taas_blog_releases',
+    'taas_blog_post_revisions',
+    'taas_blog_post_tags',
+    'taas_blog_post_authors',
+    'taas_blog_posts',
+    'taas_blog_tags',
+    'taas_blog_categories',
+    'taas_blog_authors',
+    'taas_blog_blogs',
+)
 
 
 @dataclass(frozen=True)
@@ -122,8 +148,17 @@ async def test_org() -> AsyncIterator[TestOrg]:
     ):
         await _execute(statement, {'t': org.tenant_id})
     await _execute('delete from taas_crm_accounts where tenant_id = :t', {'t': org.tenant_id})
+    for table in TENANT_TABLES:
+        try:
+            await _execute(
+                f'delete from {table} where tenant_id = :t',  # noqa: S608 (constant table names)
+                {'t': org.tenant_id},
+            )
+        except Exception:  # noqa: BLE001 — table of an app that is not migrated yet
+            continue
+    # Grants of the session user (any object domain) and every grant on the test tenant's domains.
     await _execute(
-        "delete from taas_casbin_rule where ptype = 'g' and (v2 like :t or (v2 like 'site:%' or v2 like 'project:%') and v0 = :u)",
+        "delete from taas_casbin_rule where ptype = 'g' and (v2 like :t or v0 = :u)",
         {'t': f'%{org.tenant_id}%', 'u': str(org.user_id)},
     )
     await _execute('delete from taas_user_account where id = :id', {'id': org.user_id})
@@ -139,7 +174,8 @@ async def app(test_org: TestOrg) -> FastAPI:
         create_blob_service,
         create_storage_resolver,
     )
-    from ews.media import get_media_controllers, use_storage
+    from ews.media import get_media_controllers
+    from ews.shared import use_storage
     from ews.sites._cdn import use_public_store
     from foundation.blob import StorageSettings
     from ews.security import EwsAuthSettings, configure_security
@@ -151,7 +187,8 @@ async def app(test_org: TestOrg) -> FastAPI:
     registry = MemoryTenantBucketRegistry({str(test_org.tenant_id): '12345678'})
     blob = create_blob_service(adapter=adapter, registry=registry, register=False)
     settings = StorageSettings(STORAGE_PRIVATE_MODE='pooled', STORAGE_PRIVATE_BUCKET='taas-private-test')
-    use_storage(create_storage_resolver(blob, registry, settings, register=False))
+    resolver = create_storage_resolver(blob, registry, settings, register=False)
+    use_storage(resolver)  # ews.shared: one private-storage override for every app
     await adapter.ensure_bucket('cdn-test')
     use_public_store(AdapterPublicStore(adapter, 'cdn-test', 'https://cdn.test'))
     configure_security(settings=EwsAuthSettings(mode='dev', dev_organization_id=str(test_org.organization_id)))
@@ -162,12 +199,19 @@ async def app(test_org: TestOrg) -> FastAPI:
     from ews.ppm import get_project_controllers
 
     controllers = [*get_media_controllers(), *get_project_controllers(), *get_crm_controllers()]
-    try:
-        from ews.sites import get_sites_controllers
+    import importlib
 
-        controllers += get_sites_controllers()
-    except ImportError:
-        pass
+    # Object apps: mounted when their module exists (``get_<app>_controllers``).
+    for module, factory in (
+        ('ews.sites', 'get_sites_controllers'),
+        ('ews.files', 'get_files_controllers'),
+        ('ews.knowledge', 'get_knowledge_controllers'),
+        ('ews.blog', 'get_blog_controllers'),
+    ):
+        try:
+            controllers += getattr(importlib.import_module(module), factory)()
+        except (ImportError, AttributeError):
+            continue
     for controller in controllers:
         include_controller(api, controller)
     return api

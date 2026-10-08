@@ -1,0 +1,11 @@
+from ..config import TABLE_PREFIX
+
+BLOG_BLOGS_TABLE = f'{TABLE_PREFIX}blog_blogs'
+BLOG_POSTS_TABLE = f'{TABLE_PREFIX}blog_posts'
+BLOG_POST_REVISIONS_TABLE = f'{TABLE_PREFIX}blog_post_revisions'
+BLOG_CATEGORIES_TABLE = f'{TABLE_PREFIX}blog_categories'
+BLOG_TAGS_TABLE = f'{TABLE_PREFIX}blog_tags'
+BLOG_POST_TAGS_TABLE = f'{TABLE_PREFIX}blog_post_tags'
+BLOG_AUTHORS_TABLE = f'{TABLE_PREFIX}blog_authors'
+BLOG_POST_AUTHORS_TABLE = f'{TABLE_PREFIX}blog_post_authors'
+BLOG_RELEASES_TABLE = f'{TABLE_PREFIX}blog_releases'

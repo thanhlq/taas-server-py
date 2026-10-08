@@ -53,7 +53,16 @@ Every change (feature, fix, breaking change, security fix) updates, in the same 
 
 ## Rules
 
-
+- **Reuse first** (platform for an unlimited number of apps): before writing a helper, check
+  `taas-specs/platform/architecture/building-blocks.md`; generic mechanics live in `ews/shared` (ids, signed tokens,
+  materialized-path trees), `ews/access` (`ObjectAccess`: objects with their own roles — 404 / 403 rule, implicit
+  roles, generic members routes), `ews/authz` (RBAC), `ews/security` (scope). A piece a second app needs is extracted,
+  not copied.
+- **Wire type names are unique across the EWS API** (OpenAPI components are named by class, first one wins): prefix
+  app types (`KbPageOut`, `BlogPostOut`, `FileNodeOut`) or reuse a shared type — `libs/ews/tests/unit/test_schema_names.py`.
+- **One RBAC with Node**: `ews/authz/data/ews-rbac.json` is owned here, `iam-rbac.json` and `rbac-cases.json` are
+  copies from taas-server-js — after a catalog change run `python3 ../taas-tools/rbac-catalogs/sync_rbac_catalogs.py`
+  and the unit tests of both projects (`taas-specs/iam/specs/authorization-rbac-spec.md` §7).
 
 ## Conventions
 
@@ -88,11 +97,12 @@ There are two scripts to start the api service in fastapi and litestar framework
   fetches do not.
 - **EWS controllers** are registered in `libs/ews/src/ews/__init__.py:get_ews_controllers`
   (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `media` + `sites.get_sites_controllers` +
-  `PlatformController`). CRM
+  `files.get_files_controllers` +
+  `blog.get_blog_controllers` + `knowledge.get_knowledge_controllers` + `PlatformController`). CRM
   accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
   advanced_alchemy `SlugKey` → set a unique `slug` on create.
 
-## Business apps: auth, Site Builder, Media library
+## Business apps: auth, Site Builder, Media library, Blog, Knowledge Center, File Manager
 
 - **Auth** (`libs/ews/src/ews/security`): `await current_scope()` → user + tenant + organization,
   `authorize(...)` → `ews.authz.can`. `EWS_AUTH_MODE=iam` introspects the IAM session; `dev` trusts the web's
@@ -105,8 +115,32 @@ There are two scripts to start the api service in fastapi and litestar framework
 - **Tests**: `libs/ews/tests/unit_dev/test_ppm_crm_api.py` (scoping, permissions, CSRF, soft deletes) on the local DB.
 - **Site Builder** (`ews/sites`, `/api/v1/sites/*`, tables `taas_site_*`) and **Media library** (`ews/media`,
   `/api/v1/media/*`, tables `taas_media_*`, private storage through `StorageResolverT`: `uploads/media/…`,
-  `derived/media/…`); publishing copies media to the public CDN (`ews/sites/_cdn.py`, `PublicStoreT`); AI gateway `ews/ai`.
+  `derived/media/…`); publishing copies media to the public CDN (`ews/media/_publishing.py` shared by sites and blogs,
+  `PublicStoreT`); AI gateway `ews/ai`. URL slugs of every app: `ews.shared.slugify`.
   Never pick buckets in app code — always the resolver (`taas-specs/platform/storage`).
   `ews/sites/data/blocks.json` is the block catalog source of truth (copied to taas-web-official `@taas/site-blocks`).
 - Guide: [docs/developers/sites-media-guide.md](docs/developers/sites-media-guide.md). Env: `.env.example` §11.
+- **Blog** (`ews/blog`, `/api/v1/blog/*`, tables `taas_blog_*`): blogs on `blog:<id>` (`ews.access.ObjectAccess`, roles
+  `blog_admin` · `blog_editor` · `blog_author` · `blog_viewer`), posts whose body is the site document (draft / published
+  revisions), workflow submit → review → publish / schedule (`ews.blog.publish_due` for the scheduler), categories,
+  tags, author profiles; public reading: post addresses (`slug_auto`, `former_slugs`, `public_url`, `live`), releases
+  `taas_blog_releases` rebuilt after every public change, renderer API `/api/v1/sites-internal/blog-*` + blog routes
+  in the routing table, media on the CDN scope `blog/<blogId>`. Module guide `libs/ews/src/ews/blog/CLAUDE.md`, API
+  `taas-specs/blog/blog-api.md`, publishing `taas-specs/blog/blog-publishing-spec.md`; tests
+  `tests/unit/test_blog_rules.py`, `tests/unit_dev/test_blog_api.py` (permission matrix in IAM mode),
+  `tests/unit_dev/test_blog_public_api.py`.
+- **Knowledge Center** (`ews/knowledge`, `/api/v1/knowledge/*`, tables `taas_kb_*`): tenant-wide spaces on
+  `kb-space:<id>` (`ObjectAccess`, roles `kb_space_admin` · `kb_space_editor` · `kb_space_viewer`, tenant `kb_admin`);
+  visibility tenant / organization (± sub-organizations) / restricted grants `kb_space_viewer` implicitly; page tree
+  (≤ 10 levels) of site documents with drafts, versions on publish, restore, soft lock, owner + verification, templates,
+  private attachments (storage kind `knowledge/`, 5-minute signed URLs), home / review / simple search. Module guide
+  `libs/ews/src/ews/knowledge/CLAUDE.md`, API `taas-specs/knowledge/knowledge-api.md`; tests
+  `tests/unit/test_knowledge_rules.py`, `tests/unit_dev/test_knowledge_api.py` (permission matrix in IAM mode).
+- **File Manager** (`ews/files`, `/api/v1/files/*`, tables `taas_file_*`): drives on `drive:<id>` (`ObjectAccess`, roles
+  `drive_manager` · `drive_editor` · `drive_commenter` · `drive_viewer`): organization drive (implicit role of its direct
+  members), shared drives, *My files* (owner only, drive → tenant); folder / file tree (≤ 20 levels), uploads (multipart
+  or direct ticket → PUT → complete), versions, 1–5 min signed downloads, trash → purge (`ews.files.purge_expired` for the
+  scheduler), activity, search. Private storage kind `documents/` through `ews.shared.tenant_root`. Module guide
+  `libs/ews/src/ews/files/CLAUDE.md`, API `taas-specs/files/files-api.md`; tests `tests/unit/test_files_rules.py`,
+  `tests/unit_dev/test_files_api.py` (permission matrix in IAM mode). Env `FILES_*` (`.env.example` §11).
 

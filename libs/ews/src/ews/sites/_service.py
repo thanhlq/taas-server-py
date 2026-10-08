@@ -19,12 +19,12 @@ import msgspec
 from db.models.sites import Site, SiteMenu, SitePage, SitePageRevision, SiteRedirect, SiteRelease
 from foundation.db.types import DBAsyncScopedSession
 from foundation.exceptions import ClientException, NotFoundException, ValidationException
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from ews.authz import SiteRoles, grant, revoke_domain
 from ews.media import record_usages
 from ews.security import RequestScope, is_allowed
-from ews.shared import parse_uuid, utcnow
+from ews.shared import ConflictException, clean_seo, parse_uuid, path_segment_taken, user_names, utcnow
 
 from . import _access as access
 from ._audit import audit
@@ -63,27 +63,12 @@ REVISION_WINDOW = timedelta(seconds=60)
 """Autosaves of the same author within this window update the working draft (Site-0204)."""
 
 
-class ConflictException(ClientException):
-    status_code = 409
-
-
 def _invalid(issues: Iterable[Any], what: str = 'document') -> ValidationException:
     items = [str(i) for i in issues]
     return ValidationException(detail=f'invalid {what}: {items[0] if items else ""}', extra={'issues': items})
 
 
 # --- users ----------------------------------------------------------------------------------------
-
-
-async def user_names(session: DBAsyncScopedSession, ids: Iterable[UUID | None]) -> dict[UUID, str]:
-    wanted = {i for i in ids if i}
-    if not wanted:
-        return {}
-    rows = await session.execute(
-        text('select id, coalesce(nullif(name, \'\'), email) as label from taas_user_account where id = any(:ids)'),
-        {'ids': list(wanted)},
-    )
-    return {r.id: r.label for r in rows}
 
 
 # --- sites ----------------------------------------------------------------------------------------
@@ -179,12 +164,8 @@ async def list_sites(session: DBAsyncScopedSession, scope: RequestScope, *, incl
 
 
 async def _slug_taken(session: DBAsyncScopedSession, scope: RequestScope, slug: str, exclude: UUID | None = None) -> bool:
-    stmt = select(Site.id).where(
-        Site.organization_id == scope.organization_id, Site.slug == slug, Site.deleted_at.is_(None)
-    )
-    if exclude:
-        stmt = stmt.where(Site.id != exclude)
-    return (await session.scalar(stmt)) is not None
+    """Sites and blogs share the organization's address (``<org host>/<slug>``)."""
+    return await path_segment_taken(session, scope.organization_id, slug, exclude=exclude)
 
 
 async def _free_slug(session: DBAsyncScopedSession, scope: RequestScope, base: str) -> str:
@@ -223,7 +204,7 @@ async def create_site(session: DBAsyncScopedSession, scope: RequestScope, data: 
         if error := site_slug_error(data.slug):
             raise ClientException(detail=error)
         if await _slug_taken(session, scope, data.slug):
-            raise ConflictException(detail='this slug is already used by another site of the organization')
+            raise ConflictException(detail='this slug is already used by another site or blog of the organization')
         slug = data.slug
     else:
         slug = await _free_slug(session, scope, name)
@@ -371,7 +352,7 @@ async def update_site(session: DBAsyncScopedSession, scope: RequestScope, site: 
         if error := site_slug_error(data.slug):
             raise ClientException(detail=error)
         if await _slug_taken(session, scope, data.slug, exclude=site.id):
-            raise ConflictException(detail='this slug is already used by another site of the organization')
+            raise ConflictException(detail='this slug is already used by another site or blog of the organization')
         changes['slug'] = {'from': site.slug, 'to': data.slug}
         site.slug = data.slug
     if data.description is not None:
@@ -733,7 +714,7 @@ async def update_page(session: DBAsyncScopedSession, scope: RequestScope, site: 
     if data.noindex is not None:
         page.noindex = data.noindex
     if data.seo is not None:
-        page.seo = _clean_seo(data.seo)
+        page.seo = clean_seo(data.seo)
         changes['seo'] = True
     if structural:
         await _move_paths(session, scope, site, page, pages)
@@ -747,27 +728,6 @@ async def update_page(session: DBAsyncScopedSession, scope: RequestScope, site: 
 def _subtree_height(pages: list[SitePage], root: SitePage) -> int:
     children = [p for p in pages if p.parent_id == root.id]
     return 1 + max((_subtree_height(pages, c) for c in children), default=0)
-
-
-def _clean_seo(raw: dict[str, Any]) -> dict[str, Any]:
-    out: dict[str, Any] = {}
-    for key, limit in (('title', 120), ('description', 320)):
-        value = raw.get(key)
-        if value:
-            if not isinstance(value, str) or len(value) > limit:
-                raise ClientException(detail=f'seo.{key} must be at most {limit} characters')
-            out[key] = value.strip()
-    canonical = raw.get('canonical')
-    if canonical:
-        if not isinstance(canonical, str) or not canonical.startswith(('https://', 'http://')):
-            raise ClientException(detail='seo.canonical must be an absolute URL')
-        out['canonical'] = canonical[:1024]
-    og = raw.get('og_image')
-    if og:
-        if not isinstance(og, str) or not re.match(r'^asset:[0-9a-fA-F-]{36}$', og):
-            raise ClientException(detail='seo.og_image must be asset:<id>')
-        out['og_image'] = og
-    return out
 
 
 async def delete_page(session: DBAsyncScopedSession, scope: RequestScope, site: Site, page: SitePage) -> int:
@@ -833,7 +793,7 @@ async def save_draft(
             raise ClientException(detail='title must be 1 to 200 characters')
         page.title = clean
     if seo is not None:
-        page.seo = _clean_seo(seo)
+        page.seo = clean_seo(seo)
     now = utcnow()
     reuse = (
         current is not None

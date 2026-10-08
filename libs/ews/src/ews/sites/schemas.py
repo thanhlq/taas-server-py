@@ -9,6 +9,12 @@ from typing import Any, Literal
 import msgspec
 from foundation.serialization import ApiRequest, ApiResponse
 
+# Members: the shared shapes of every object app (one OpenAPI component each), re-exported for the site routes.
+from ews.access.schemas import CandidateOut as CandidateOut
+from ews.access.schemas import MemberOut as MemberOut
+from ews.access.schemas import MemberUpsert as MemberUpsert
+from ews.access.schemas import RoleOut as RoleOut
+
 # --- access ---------------------------------------------------------------------------------------
 
 
@@ -276,37 +282,6 @@ class PreviewLinkOut(ApiResponse, kw_only=True):
     expires_at: datetime
 
 
-# --- members --------------------------------------------------------------------------------------
-
-
-class MemberOut(ApiResponse, kw_only=True):
-    user_id: str
-    email: str | None = None
-    name: str | None = None
-    role: str
-    inherited: bool = False
-    """Organization / tenant admins (read-only here)."""
-
-
-class MemberUpsert(ApiRequest, kw_only=True):
-    user_id: str
-    role: str
-
-
-class CandidateOut(ApiResponse, kw_only=True):
-    user_id: str
-    email: str
-    name: str | None = None
-
-
-class RoleOut(ApiResponse, kw_only=True):
-    key: str
-    name: str
-    description: str
-    rank: int
-    default: bool = False
-
-
 # --- forms ----------------------------------------------------------------------------------------
 
 
@@ -441,11 +416,16 @@ class AiUsageOut(ApiResponse, kw_only=True):
 class RouteOut(ApiResponse, kw_only=True):
     host: str
     prefix: str
-    site_id: str
+    site_id: str | None = None
+    """Set on ``site`` routes."""
+    blog_id: str | None = None
+    """Set on ``blog`` routes (release = ``GET /blog-releases/{release_id}``)."""
     tenant_id: str
     release_id: str | None = None
-    kind: Literal['site', 'redirect'] = 'site'
+    kind: Literal['site', 'redirect', 'blog'] = 'site'
     redirect_to: str | None = None
+    redirect_status: int | None = None
+    """``redirect`` routes: 301 · 302 · 307 · 308 (the renderer defaults to 308)."""
 
 
 class RoutesOut(ApiResponse, kw_only=True):

@@ -11,6 +11,19 @@ from .banking import (
     CryptoToken,
 )
 
+# Blog (app ``blog``)
+from .blog import (
+    Blog,
+    BlogAuthor,
+    BlogCategory,
+    BlogPost,
+    BlogPostAuthor,
+    BlogPostRevision,
+    BlogPostTag,
+    BlogRelease,
+    BlogTag,
+)
+
 # Core models (IAM, Auth, etc.)
 from .core import (
     AuditLog,
@@ -59,6 +72,12 @@ from .ews import (
     Workflow,
     WorkflowStage,
 )
+
+# File Manager (app ``files``)
+from .files import FileActivity, FileDrive, FileNode, FileStar, FileVersion
+
+# Knowledge Center (app ``knowledge``)
+from .knowledge import KbAttachment, KbPage, KbPageRevision, KbSpace
 
 # Media library (app ``media``)
 from .media import MediaAsset, MediaFavorite, MediaFolder, MediaUsage
@@ -130,6 +149,19 @@ __all__ = [
     'Workflow',
     'WorkflowStage',
 
+    # Files
+    'FileActivity',
+    'FileDrive',
+    'FileNode',
+    'FileStar',
+    'FileVersion',
+
+    # Knowledge
+    'KbAttachment',
+    'KbPage',
+    'KbPageRevision',
+    'KbSpace',
+
     # Media
     'MediaAsset',
     'MediaFavorite',
@@ -146,6 +178,17 @@ __all__ = [
     'SitePageRevision',
     'SiteRedirect',
     'SiteRelease',
+
+    # Blog
+    'Blog',
+    'BlogAuthor',
+    'BlogCategory',
+    'BlogPost',
+    'BlogPostAuthor',
+    'BlogPostRevision',
+    'BlogPostTag',
+    'BlogRelease',
+    'BlogTag',
 
     # Banking
     'CryptoToken',

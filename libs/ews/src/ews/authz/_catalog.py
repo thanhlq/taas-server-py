@@ -1,17 +1,23 @@
 """RBAC catalogs and the domain RBAC decision, mirror of ``@taas/iam`` ``rbac.ts`` + ``@taas/iam-db``.
 
 Pure functions (no I/O): load a JSON catalog, turn it into casbin ``p`` rows, decide ownership of a
-stored row, validate, and evaluate ``can`` with the same casbin model as Node::
+stored row, validate, merge the policies of the built-in catalogs, and evaluate ``can`` with the same
+casbin model as Node::
 
     m = g(r.sub, p.sub, r.dom) && keyMatch(r.dom, p.dom)
         && (p.obj == "*" || r.obj == p.obj) && (p.act == "*" || r.act == p.act)
 
-Specs: taas-specs/iam/specs/authorization-rbac-spec.md (decision), app-roles-spec.md (roles per app).
+Both runtimes ship both catalogs (``data/ews-rbac.json`` owned here, ``data/iam-rbac.json`` copied from
+taas-server-js) and run the same decision vectors (``data/rbac-cases.json``, owned by taas-server-js):
+``python3 taas-tools/rbac-catalogs/sync_rbac_catalogs.py`` copies them.
+
+Specs: taas-specs/iam/specs/authorization-rbac-spec.md (decision, §5 parity), app-roles-spec.md (roles per app).
 """
 
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -63,6 +69,19 @@ class EwsResources(StrEnum):
     SITE_AI = 'sites.ai'
     MEDIA_ASSET = 'media.asset'
     MEDIA_FOLDER = 'media.folder'
+    FILES_DRIVE = 'files.drive'
+    FILES_ITEM = 'files.item'
+    FILES_MEMBER = 'files.member'
+    KB_SPACE = 'kb.space'
+    KB_SPACE_MEMBER = 'kb.space_member'
+    KB_PAGE = 'kb.page'
+    KB_LINK = 'kb.link'
+    KB_AI = 'kb.ai'
+    BLOG_BLOG = 'blog.blog'
+    BLOG_MEMBER = 'blog.member'
+    BLOG_POST = 'blog.post'
+    BLOG_TAXONOMY = 'blog.taxonomy'
+    BLOG_AI = 'blog.ai'
 
 
 @dataclass(frozen=True)
@@ -72,6 +91,7 @@ class RbacRole:
     permissions: tuple[str, ...]
     name: str | None = None
     extends: str | None = None
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -97,6 +117,7 @@ class RbacCatalog:
                     permissions=tuple(r['permissions']),
                     name=r.get('name'),
                     extends=r.get('extends'),
+                    description=r.get('description'),
                 )
                 for r in raw['roles']
             ),
@@ -112,6 +133,22 @@ class RbacCatalog:
 def ews_catalog() -> RbacCatalog:
     """The business catalog shipped with the EWS API (``data/ews-rbac.json``)."""
     return RbacCatalog.load(_DATA / 'ews-rbac.json')
+
+
+@lru_cache(maxsize=1)
+def iam_catalog() -> RbacCatalog:
+    """The IAM catalog (copy of taas-server-js ``@taas/iam`` ``rbac/iam-rbac.json``; the IAM syncs it)."""
+    return RbacCatalog.load(_DATA / 'iam-rbac.json')
+
+
+def builtin_catalogs() -> tuple[RbacCatalog, ...]:
+    """Every catalog a runtime evaluates (Node ``BUILTIN_RBAC_CATALOGS``)."""
+    return (iam_catalog(), ews_catalog())
+
+
+# Role keys: ``tenant_admin``, ``drive_editor``. Scopes (domain kinds): ``tenant``, ``org``, ``kb-space``.
+_ROLE_KEY = re.compile(r'^[a-z][a-z0-9_]*$')
+_ROLE_SCOPE = re.compile(r'^[a-z][a-z-]*$')
 
 
 def _split(permission: str) -> tuple[str, str]:
@@ -156,6 +193,10 @@ def validate_catalog(catalog: RbacCatalog) -> list[str]:
                 f'resource {key} is outside the namespaces {", ".join(catalog.namespaces)}'
             )
     for role in catalog.roles:
+        if not _ROLE_KEY.match(role.key):
+            errors.append(f'role {role.key}: invalid key')
+        if not _ROLE_SCOPE.match(role.scope):
+            errors.append(f'role {role.key}: invalid scope {role.scope}')
         for permission in role.permissions:
             resource, action = _split(permission)
             if resource == '*':
@@ -201,16 +242,49 @@ def evaluate(
     return False
 
 
+def effective_policies(
+    own: RbacCatalog,
+    stored: Iterable[Sequence[str | None]],
+    catalogs: Sequence[RbacCatalog] | None = None,
+) -> list[PolicyRow]:
+    """Policies a runtime evaluates (Node ``effectivePolicies``): its own catalog from JSON (the truth),
+    every other built-in catalog from the stored rows its owner synced — or the shipped copy while the
+    owner has not synced yet — plus the stored custom rows."""
+    catalogs = builtin_catalogs() if catalogs is None else tuple(catalogs)
+    rows_in: list[PolicyRow] = [
+        (row[0] or '', row[1] or '', row[2] or '', row[3] or '') for row in stored
+    ]
+    rows: dict[PolicyRow, None] = dict.fromkeys(catalog_policies(own))
+    for catalog in catalogs:
+        if catalog.catalog == own.catalog:
+            continue
+        synced = [
+            r
+            for r in rows_in
+            if catalog_owns_policy(catalog, r) and not catalog_owns_policy(own, r)
+        ]
+        rows.update(dict.fromkeys(synced or catalog_policies(catalog)))
+    custom = [
+        r for r in rows_in if not any(catalog_owns_policy(c, r) for c in catalogs)
+    ]
+    rows.update(dict.fromkeys(custom))
+    return list(rows)
+
+
 def resource_domains(
     *,
     tenant_id: object,
     org_path: str | None = None,
     project_id: object | None = None,
     site_id: object | None = None,
+    objects: Sequence[tuple[str, object]] = (),
 ) -> list[str]:
-    """RBAC domains of a business object, most specific first: ``project:<id>`` / ``site:<id>``, its
-    organization and ancestors (from the materialized ``path`` ``/<root>/<child>/``), then ``tenant:<id>``."""
-    domains = [f'project:{project_id}'] if project_id else []
+    """RBAC domains of a business object, most specific first: the object(s) (``project:<id>``,
+    ``site:<id>``, ``objects`` such as ``('drive', id)``), its organization and ancestors (from the
+    materialized ``path`` ``/<root>/<child>/``), then ``tenant:<id>``. Node ``resourceDomains``."""
+    domains = [f'{kind}:{oid}' for kind, oid in objects]
+    if project_id:
+        domains.insert(0, f'project:{project_id}')
     if site_id:
         domains.append(f'site:{site_id}')
     if org_path:
