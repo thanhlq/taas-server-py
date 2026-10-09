@@ -5,6 +5,7 @@
   loaded: a newer draft of someone else → 409 ``stale_draft``.
 - **Publish**: the draft becomes version *n* (immutable); readers get it, search indexes its text. The first
   publish counts as the first verification when the page has a review interval.
+- **Discard**: the draft goes back to the published version; the discarded draft stays in the history (restorable).
 - **Soft lock**: ``locked_by`` + ``locked_until`` (``LOCK_TTL``); saving / publishing while someone else holds it →
   409 ``locked``; ``force`` takes it over.
 - **Verify**: ``verified_until = now + review_interval_days``.
@@ -192,6 +193,39 @@ async def publish(
     pa.space.updated_at = now
     await session.flush()
     return page
+
+
+async def discard_draft(
+    session: DBAsyncScopedSession, scope: RequestScope, pa: PageAccess
+) -> KbDraftOut:
+    """Drop the unpublished changes (Kb-0302): the draft becomes the published version again; the discarded draft
+    stays in the history (versions sheet → restore)."""
+    page = pa.page
+    await _check_lock(session, scope, page)
+    if page.published_revision_id is None:
+        raise ConflictException(
+            detail='this page was never published: there is no version to go back to',
+            extra={'code': 'never_published'},
+        )
+    if page.draft_revision_id == page.published_revision_id:
+        raise ConflictException(
+            detail='nothing to discard: the page has no unpublished changes',
+            extra={'code': 'no_changes'},
+        )
+    published = await session.get(KbPageRevision, page.published_revision_id)
+    if published is None:  # pragma: no cover - dangling id
+        raise NotFoundException(detail='published version not found')
+    now = utcnow()
+    page.draft_revision_id = published.id
+    page.title = published.title
+    page.updated_by, page.updated_at = scope.user_id, now
+    await session.flush()
+    return KbDraftOut(
+        revision_id=str(published.id),
+        title=published.title,
+        status=page_status(page),
+        saved_at=now,
+    )
 
 
 def _revision_out(

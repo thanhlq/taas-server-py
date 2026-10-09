@@ -132,15 +132,20 @@ There are two scripts to start the api service in fastapi and litestar framework
 - **Knowledge Center** (`ews/knowledge`, `/api/v1/knowledge/*`, tables `taas_kb_*`): tenant-wide spaces on
   `kb-space:<id>` (`ObjectAccess`, roles `kb_space_admin` · `kb_space_editor` · `kb_space_viewer`, tenant `kb_admin`);
   visibility tenant / organization (± sub-organizations) / restricted grants `kb_space_viewer` implicitly; page tree
-  (≤ 10 levels) of site documents with drafts, versions on publish, restore, soft lock, owner + verification, templates,
+  (≤ 10 levels) of site documents with drafts (autosave, discard), versions on publish, restore, soft lock, owner + verification, templates,
   private attachments (storage kind `knowledge/`, 5-minute signed URLs), home / review / simple search. Module guide
   `libs/ews/src/ews/knowledge/CLAUDE.md`, API `taas-specs/knowledge/knowledge-api.md`; tests
   `tests/unit/test_knowledge_rules.py`, `tests/unit_dev/test_knowledge_api.py` (permission matrix in IAM mode).
 - **File Manager** (`ews/files`, `/api/v1/files/*`, tables `taas_file_*`): drives on `drive:<id>` (`ObjectAccess`, roles
   `drive_manager` · `drive_editor` · `drive_commenter` · `drive_viewer`): organization drive (implicit role of its direct
   members), shared drives, *My files* (owner only, drive → tenant); folder / file tree (≤ 20 levels), uploads (multipart
-  or direct ticket → PUT → complete), versions, 1–5 min signed downloads, trash → purge (`ews.files.purge_expired` for the
-  scheduler), activity, search. Private storage kind `documents/` through `ews.shared.tenant_root`. Module guide
-  `libs/ews/src/ews/files/CLAUDE.md`, API `taas-specs/files/files-api.md`; tests `tests/unit/test_files_rules.py`,
-  `tests/unit_dev/test_files_api.py` (permission matrix in IAM mode). Env `FILES_*` (`.env.example` §11).
+  or direct ticket → PUT → complete), versions, trash → purge, activity. **Processing pipeline** (queue =
+  `taas_file_versions.pipeline_status`, runner `FILES_PIPELINE=api|worker|off`): thumbnails / renditions in `derived/files/…`,
+  metadata, checksum, text in the **local index** (`taas_file_contents.tsv`, search by content with snippets), hourly
+  trash retention. **Signed delivery**: view URLs 24 h (rounded + cached, `ews.shared.SignedUrlCache`), downloads ≤ 5 min,
+  revocable (drive epoch), confidential drives. Storage kinds `documents/` + `derived/` through `ews.shared.tenant_root`.
+  Module guide `libs/ews/src/ews/files/CLAUDE.md`, developer guide `docs/developers/files-guide.md`, API
+  `taas-specs/files/files-api.md`, architecture `taas-specs/files/files-architecture.md`; tests
+  `tests/unit/test_files_{rules,derive,delivery}.py`, `tests/unit_dev/test_files_api.py` (permission matrix in IAM mode),
+  `tests/unit_dev/test_files_pipeline_api.py`. Env `FILES_*` (`.env.example` §11).
 

@@ -8,7 +8,9 @@ worker-side counterpart to the API's `BaseApiApplication`), it runs:
 - one or more **event subscribers** (a demo `ews.demo.ping` subscriber ships by
   default), and
 - an optional **transactional-outbox relay** (built on the `resiliant` outbox),
-  enabled with `OUTBOX_POLLER_ENABLE=true`.
+  enabled with `OUTBOX_POLLER_ENABLE=true`, and
+- the **File Manager pipeline** (thumbnails, previews, local search index, trash retention — `ews.files`) when
+  `FILES_PIPELINE=worker` (set it for the API too, so the API processes stop running it).
 
 A small aiohttp **health server** exposes `GET /health`.
 
@@ -35,6 +37,8 @@ Config via environment:
 - `KAFKA_BOOTSTRAP_SERVERS` (default `localhost:9092`)
 - `WORKER_LISTEN_PORT` (health server; default `7100` — avoids macOS AirPlay on 7000)
 - `OUTBOX_POLLER_ENABLE` (default `false`)
+- `FILES_PIPELINE` (`api` default = the API runs it; `worker` = this worker; `off`) — also needs the private storage
+  settings (`STORAGE_*`, `AWS_*`) of the API
 
 ## Test the messaging path (API ⇆ worker)
 

@@ -43,6 +43,8 @@ class FileDriveOut(ApiResponse, kw_only=True):
     owner_id: str | None = None
     default_member_role: str | None = None
     """Organization drive: role of the organization's direct members (``drive_editor`` · ``drive_viewer``)."""
+    sensitivity: Literal['standard', 'confidential'] = 'standard'
+    """``standard``: view URLs live 24 h and are cached; ``confidential``: every URL ≤ 5 min, never cached."""
     role: str | None = None
     """The caller's role: a grant on the drive, else the implicit one (owner, organization member)."""
     permissions: list[str] = msgspec.field(default_factory=list)
@@ -65,6 +67,8 @@ class FileDriveUpdate(ApiRequest, kw_only=True):
     description: str | None = None
     color: str | None | msgspec.UnsetType = msgspec.UNSET
     default_member_role: str | None = None
+    sensitivity: Literal['standard', 'confidential'] | None = None
+    """Changing it revokes the drive's outstanding URLs."""
 
 
 # --- nodes ----------------------------------------------------------------------------------------
@@ -101,6 +105,12 @@ class FileNodeOut(ApiResponse, kw_only=True):
     updated_at: datetime
     trashed_at: datetime | None = None
     trashed_by: str | None = None
+    preview_status: str | None = None
+    """Files: ``pending`` (being processed) · ``ready`` · ``none`` (no preview for this type) · ``failed``."""
+    thumbnail_url: str | None = None
+    """Signed view URL of the ``thumb`` variant (WebP ≤ 480 px), cached: the same URL within a window."""
+    placeholder: str | None = None
+    """Tiny blurred image (``data:`` URI) to show while the thumbnail loads."""
 
 
 class FileNodeDetailOut(FileNodeOut, kw_only=True):
@@ -111,6 +121,21 @@ class FileNodeDetailOut(FileNodeOut, kw_only=True):
 
 class FileNodePage(ApiResponse, kw_only=True):
     items: list[FileNodeOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class FileSearchHitOut(FileNodeOut, kw_only=True):
+    match: Literal['name', 'content'] = 'name'
+    """``content``: the words were found in the file's text (local index), not in its name."""
+    snippet: str | None = None
+    """Extract of the text around the match; matched words between ``\u0002`` and ``\u0003``."""
+    rank: float = 0.0
+
+
+class FileSearchPage(ApiResponse, kw_only=True):
+    items: list[FileSearchHitOut]
     total: int
     limit: int
     offset: int
@@ -192,15 +217,46 @@ class FileVersionOut(ApiResponse, kw_only=True):
     uploaded_by_name: str | None = None
     current: bool = False
     created_at: datetime
+    pipeline_status: str = 'pending'
+    """Processing: ``pending`` · ``running`` · ``done`` · ``failed``."""
+    pipeline_error: str | None = None
+    """Why a preview / the text is missing (unreadable file, too large, …)."""
+    preview_status: str = 'pending'
+    index_status: str = 'pending'
+    """Text in the local search index: ``pending`` · ``ready`` · ``none`` (no text / older version) · ``failed``."""
+    meta: dict[str, Any] = msgspec.field(default_factory=dict)
+    """Extracted metadata: ``sniffed``, ``width`` / ``height``, ``pages``, ``title``, ``author``, ``taken_at``,
+    ``words``, ``lines``."""
 
 
 class FileVersionUpdate(ApiRequest, kw_only=True):
     comment: str | None = None
 
 
+class FilePreviewOut(ApiResponse, kw_only=True):
+    """What the viewer shows for a file version (``GET /nodes/{id}/preview``)."""
+
+    node_id: str
+    version_id: str
+    status: str
+    """``preview_status`` of the version."""
+    kind: Literal['image', 'pdf', 'video', 'audio', 'text', 'none']
+    """How to render ``url``; ``none`` = no inline view (show ``thumbnail_url`` / the type icon + download)."""
+    url: str | None = None
+    """Signed view URL: the ``preview`` rendition (large / non-web images) or the original of a safe type."""
+    mime: str | None = None
+    width: int | None = None
+    height: int | None = None
+    thumbnail_url: str | None = None
+    placeholder: str | None = None
+    expires_at: datetime | None = None
+    index_status: str = 'pending'
+    meta: dict[str, Any] = msgspec.field(default_factory=dict)
+
+
 class FileDownloadOut(ApiResponse, kw_only=True):
     url: str
-    """Signed URL, valid 1–5 min (``FILES_URL_TTL_SECONDS``)."""
+    """Signed URL: attachments 1–5 min (``FILES_URL_TTL_SECONDS``); inline views of a standard drive 24 h."""
     filename: str
     mime: str
     size: int

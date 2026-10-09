@@ -1,5 +1,5 @@
-"""Helpers shared by the EWS business modules: ids, signed tokens, raw responses, materialized-path trees,
-user labels, SEO fields, 409 errors, URL slugs, public path segments of an organization."""
+"""Helpers shared by the EWS business modules: ids, signed tokens, cached signed URLs, raw responses,
+materialized-path trees, user labels, SEO fields, 409 errors, URL slugs, public path segments of an organization."""
 
 from ._errors import ConflictException
 from ._http import parse_uuid, raw_response, read_form, utcnow
@@ -9,12 +9,14 @@ from ._signing import sign_token, verify_token
 from ._slug import SLUG_MAX, slugify
 from ._storage import storage_resolver, tenant_root, use_storage
 from ._tree import ancestor_ids, check_move, child_path, depth_of, move_subtree
+from ._url_cache import SignedUrlCache, rounded_expiry
 from ._users import user_names
 
 __all__ = [
     'PATH_OWNERS',
     'SLUG_MAX',
     'ConflictException',
+    'SignedUrlCache',
     'ancestor_ids',
     'check_move',
     'child_path',
@@ -25,6 +27,7 @@ __all__ = [
     'path_segment_taken',
     'raw_response',
     'read_form',
+    'rounded_expiry',
     'sign_token',
     'slugify',
     'storage_resolver',

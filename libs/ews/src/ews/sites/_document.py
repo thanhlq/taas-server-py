@@ -26,12 +26,13 @@ _PAGE = re.compile(r'^page:([0-9a-fA-F-]{36})(#[A-Za-z0-9_-]{1,60})?$')
 _SAFE_URL = re.compile(r'^(https?://[^\s<>"]+|mailto:[^\s<>"]+|tel:[+0-9 ()-]+|#[A-Za-z0-9_-]{0,60}|/[^\s<>"]*)$', re.I)
 _CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
 
-# ProseMirror schema of the richText block (Tiptap StarterKit subset).
+# ProseMirror schema of the richText block (Tiptap StarterKit subset + tables, editor-spec Site-0104).
 _PM_NODES = {
-    'doc', 'paragraph', 'heading', 'text', 'bulletList', 'orderedList', 'listItem', 'blockquote',
-    'codeBlock', 'hardBreak', 'horizontalRule',
+    'doc', 'paragraph', 'heading', 'text', 'bulletList', 'orderedList', 'listItem', 'taskList', 'taskItem', 'blockquote',
+    'codeBlock', 'hardBreak', 'horizontalRule', 'table', 'tableRow', 'tableHeader', 'tableCell',
 }
 _PM_MARKS = {'bold', 'italic', 'strike', 'code', 'link', 'underline'}
+_TABLE_CELLS = {'tableHeader', 'tableCell'}
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +82,8 @@ class _Validator:
         self.max_depth = limits['maxDepth']
         self.max_text = limits['maxTextLength']
         self.max_list = limits['maxListItems']
+        self.max_table_columns = limits['maxTableColumns']
+        self.max_table_rows = limits['maxTableRows']
 
     def add(self, path: str, message: str) -> None:
         if len(self.issues) < 50:
@@ -166,10 +169,59 @@ class _Validator:
                     if not isinstance(href, str) or not is_safe_url(href):
                         self.add(path, 'unsafe link')
             return
+        if node['type'] == 'tableRow' or node['type'] in _TABLE_CELLS:
+            self.add(path, f'{node["type"]} must be inside a table')
+            return
         if node['type'] == 'heading' and (node.get('attrs') or {}).get('level') not in (1, 2, 3, 4):
             self.add(path, 'heading level must be 1 to 4')
+        if node['type'] == 'taskItem' and not isinstance((node.get('attrs') or {}).get('checked', False), bool):
+            self.add(path, 'checked must be true or false')
+        if node['type'] == 'table':
+            self.table(path, node, depth)
+            return
         for i, child in enumerate(node.get('content') or []):
             self.rich_text(f'{path}.content[{i}]', child, depth + 1)
+
+    def table(self, path: str, node: dict[str, Any], depth: int) -> None:
+        """Rich text table (Site-0104): rows of cells of paragraphs, the same number of cells per row, ≤ limits."""
+        rows = node.get('content') if isinstance(node.get('content'), list) else []
+        if not rows:
+            self.add(path, 'a table needs at least one row')
+            return
+        if len(rows) > self.max_table_rows:
+            self.add(path, f'a table has at most {self.max_table_rows} rows')
+            return
+        width: int | None = None
+        for r, row in enumerate(rows):
+            row_path = f'{path}.content[{r}]'
+            is_row = isinstance(row, dict) and row.get('type') == 'tableRow'
+            cells = row.get('content') if is_row and isinstance(row.get('content'), list) else []
+            if not is_row:
+                self.add(row_path, 'a table holds table rows only')
+            elif not cells:
+                self.add(row_path, 'a table row needs at least one cell')
+            elif width is None and len(cells) > self.max_table_columns:
+                self.add(path, f'a table has at most {self.max_table_columns} columns')
+                return
+            elif width is not None and len(cells) != width:
+                self.add(row_path, 'every table row has the same number of cells')
+            if not cells:
+                continue
+            width = len(cells) if width is None else width
+            for c, cell in enumerate(cells):
+                cell_path = f'{row_path}.content[{c}]'
+                if not isinstance(cell, dict) or cell.get('type') not in _TABLE_CELLS:
+                    self.add(cell_path, 'a table row holds table cells only')
+                    continue
+                attrs = cell.get('attrs') if isinstance(cell.get('attrs'), dict) else {}
+                if attrs.get('colspan') not in (None, 1) or attrs.get('rowspan') not in (None, 1):
+                    self.add(cell_path, 'merged table cells are not supported')
+                paragraphs = cell.get('content') if isinstance(cell.get('content'), list) else []
+                for p, paragraph in enumerate(paragraphs):
+                    if not isinstance(paragraph, dict) or paragraph.get('type') != 'paragraph':
+                        self.add(f'{cell_path}.content[{p}]', 'a table cell holds paragraphs only')
+                    else:
+                        self.rich_text(f'{cell_path}.content[{p}]', paragraph, depth + 3)
 
     def block(self, path: str, block: Any, parent: str | None, depth: int) -> None:
         self.count += 1
@@ -305,7 +357,7 @@ def _rich_text(node: Any, out: list[str]) -> None:
             out.append(node['text'])
         for child in node.get('content') or []:
             _rich_text(child, out)
-        if node.get('type') in ('paragraph', 'heading', 'listItem'):
+        if node.get('type') in ('paragraph', 'heading', 'listItem', 'taskItem'):
             out.append('\n')
 
 

@@ -65,6 +65,83 @@ def test_invalid_documents(block, message):
     assert any(message in i for i in issues), issues
 
 
+# --- rich text tables (editor-spec Site-0104) ---------------------------------------------------------
+
+
+def _p(*texts):
+    return {'type': 'paragraph', 'content': [{'type': 'text', 'text': t} for t in texts]} if texts else {'type': 'paragraph'}
+
+
+def _cell(kind, *texts, **attrs):
+    return {'type': kind, 'content': [_p(*texts)], **({'attrs': attrs} if attrs else {})}
+
+
+def _row(*cells):
+    return {'type': 'tableRow', 'content': list(cells)}
+
+
+def _table(*rows):
+    return {'type': 'table', 'content': list(rows)}
+
+
+def _rich(*nodes):
+    return _doc({'id': 'r', 'type': 'richText', 'content': {'type': 'doc', 'content': list(nodes)}})
+
+
+PRICES = _table(
+    _row(_cell('tableHeader', 'Coffee'), _cell('tableHeader', 'Price')),
+    _row(_cell('tableCell', 'Espresso'), _cell('tableCell')),
+)
+
+
+def test_tables_are_valid_rich_text_and_their_cells_are_plain_text():
+    # canonical form + what Tiptap sends (cell attributes at their defaults), also inside a list item
+    tiptap = _table(_row(_cell('tableHeader', 'A', colspan=1, rowspan=1, colwidth=None, align=None)))
+    in_list = {'type': 'bulletList', 'content': [{'type': 'listItem', 'content': [_p('item'), PRICES]}]}
+    doc = _rich(PRICES, tiptap, in_list)
+    assert validate_document(doc) == []
+    text = plain_text(doc)
+    assert all(word in text for word in ('Coffee', 'Price', 'Espresso', 'item'))
+
+
+@pytest.mark.parametrize(
+    ('node', 'message'),
+    [
+        ({'type': 'table', 'content': []}, 'a table needs at least one row'),
+        (_table(_p('x')), 'a table holds table rows only'),
+        (_table(_row()), 'a table row needs at least one cell'),
+        (_table(_row(_p('x'))), 'a table row holds table cells only'),
+        (_table(_row(_cell('tableHeader'), _cell('tableHeader')), _row(_cell('tableCell'))), 'same number of cells'),
+        (_table(_row({'type': 'tableHeader', 'content': [{'type': 'bulletList', 'content': []}]})), 'paragraphs only'),
+        (_table(_row(_cell('tableHeader', colspan=2))), 'merged table cells'),
+        (_row(_cell('tableCell')), 'tableRow must be inside a table'),
+        (_cell('tableCell'), 'tableCell must be inside a table'),
+        (_table(_row(*(_cell('tableHeader') for _ in range(21)))), 'at most 20 columns'),
+        (_table(*(_row(_cell('tableCell')) for _ in range(501))), 'at most 500 rows'),
+        (
+            _table(_row({'type': 'tableHeader', 'content': [{'type': 'paragraph', 'content': [
+                {'type': 'text', 'text': 'x', 'marks': [{'type': 'link', 'attrs': {'href': 'javascript:alert(1)'}}]},
+            ]}]})),
+            'unsafe link',
+        ),
+    ],
+)
+def test_invalid_tables(node, message):
+    issues = [str(i) for i in validate_document(_rich(node))]
+    assert any(message in i for i in issues), issues
+
+
+def test_table_limits_come_from_the_catalog():
+    limits = block_catalog()['limits']
+    assert (limits['maxTableColumns'], limits['maxTableRows']) == (20, 500)
+    wide = _table(*(_row(*(_cell('tableCell', 'x') for _ in range(20))) for _ in range(10)))
+    long = _table(*(_row(_cell('tableCell', 'x'), _cell('tableCell', 'y')) for _ in range(500)))
+    assert validate_document(_rich(wide)) == [] and validate_document(_rich(long)) == []
+    # the document size (512 KB) caps a table before 20 × 500 cells
+    full = _table(*(_row(*(_cell('tableCell', 'x') for _ in range(20))) for _ in range(500)))
+    assert [str(i) for i in validate_document(_rich(full))] == ['$: document is larger than 512 KB']
+
+
 def test_duplicate_ids_and_limits():
     issues = [str(i) for i in validate_document(_doc({'id': 'a', 'type': 'spacer'}, {'id': 'a', 'type': 'divider'}))]
     assert any('duplicate' in i for i in issues)
@@ -128,3 +205,25 @@ def test_starter_templates_are_valid():
         for page in template['pages']:
             assert validate_document(page['doc']) == [], (template['key'], page['key'])
     assert keys == {'blank', 'business', 'cafe', 'portfolio'}
+
+
+def test_site_0104_task_lists_in_rich_text():
+    """Checklists (`taskList` / `taskItem`, Doc-0108): accepted, `checked` must be a boolean, text is searchable."""
+
+    def doc(checked):
+        item = {
+            'type': 'taskItem',
+            'attrs': {'checked': checked},
+            'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': 'Laptop received'}]}],
+        }
+        return {
+            'schemaVersion': 1,
+            'sections': [
+                {'id': 'r1', 'type': 'richText', 'content': {'type': 'doc', 'content': [{'type': 'taskList', 'content': [item]}]}}
+            ],
+        }
+
+    assert validate_document(doc(True)) == []
+    assert validate_document(doc(False)) == []
+    assert [i.message for i in validate_document(doc('yes'))] == ['checked must be true or false']
+    assert 'Laptop received' in plain_text(doc(True))

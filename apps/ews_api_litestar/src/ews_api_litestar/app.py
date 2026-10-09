@@ -74,9 +74,12 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
 
         @asynccontextmanager
         async def lifespan(_app: Litestar):
+            from ews.files import start_pipeline, stop_pipeline
+
             cli_print_info('Starting up the application...')
 
             await self._init_services()
+            start_pipeline('api')  # File Manager previews / index / retention when FILES_PIPELINE=api
 
             if self.config.websocket_config and self.config.websocket_config.debug:
                 cli_print_info('🐛 WebSocket debug mode is enabled.')
@@ -84,6 +87,7 @@ class EwsLitestarApplication(BaseApiApplication[Litestar]):
             yield  # Startup complete, now run the app
 
             cli_print_info('Shutting down the application...')
+            await stop_pipeline()
 
         # Litestar invokes exception handlers synchronously, so this must be a
         # plain (non-async) function. Scope it to 500 only so Litestar keeps

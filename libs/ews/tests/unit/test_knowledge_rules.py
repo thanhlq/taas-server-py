@@ -18,7 +18,7 @@ from ews.knowledge._attachments import (
     read_file_token,
     safe_filename,
 )
-from ews.knowledge._document import check_document
+from ews.knowledge._document import check_document, search_text
 from ews.knowledge._rules import (
     MAX_DEPTH,
     VIEWER,
@@ -164,6 +164,21 @@ def test_kb0301_templates_are_valid_site_documents():
         get_template('nope')
     with pytest.raises(ValidationException):
         check_document({'schemaVersion': 1, 'sections': [{'id': 'x', 'type': 'nope'}]})
+
+
+def test_kb0104_search_text_includes_table_cells():
+    def cell(kind, text):
+        return {'type': kind, 'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': text}]}]}
+
+    doc = {
+        'schemaVersion': 1,
+        'sections': [{'id': 't', 'type': 'richText', 'content': {'type': 'doc', 'content': [{'type': 'table', 'content': [
+            {'type': 'tableRow', 'content': [cell('tableHeader', 'Setting'), cell('tableHeader', 'Value')]},
+            {'type': 'tableRow', 'content': [cell('tableCell', 'retention'), cell('tableCell', '30 days')]},
+        ]}]}}],
+    }
+    assert check_document(doc) is doc
+    assert all(word in search_text(doc) for word in ('Setting', 'Value', 'retention', '30 days'))
 
 
 def test_kb0305_attachment_names_types_and_tokens():

@@ -18,6 +18,7 @@ from ews.security import RequestScope, is_allowed
 from ews.shared import utcnow
 
 from . import _access as access
+from . import _delivery as delivery
 from ._activity import record
 from ._rules import clean_color
 from .schemas import FileDriveCreate, FileDriveOut, FileDriveUpdate
@@ -200,6 +201,7 @@ async def drive_outputs(
                 default_member_role=access.default_member_role(d)
                 if d.kind == 'organization'
                 else None,
+                sensitivity=delivery.sensitivity_of(d.settings),
                 role=max(roles, key=access.DRIVES.rank) if roles else None,
                 permissions=await access.permissions(scope, ctx),
                 file_count=count,
@@ -264,9 +266,41 @@ async def update_drive(
             'default_member_role': data.default_member_role,
         }
         changed['default_member_role'] = data.default_member_role
+    if data.sensitivity is not None and data.sensitivity != delivery.sensitivity_of(
+        drive.settings
+    ):
+        if data.sensitivity not in delivery.SENSITIVITIES:
+            raise ClientException(
+                detail=f'sensitivity must be one of {", ".join(delivery.SENSITIVITIES)}'
+            )
+        drive.settings = {**(drive.settings or {}), 'sensitivity': data.sensitivity}
+        changed['sensitivity'] = data.sensitivity
+        revoke_links(drive)  # URLs handed out under the old policy stop working
     if changed:
         drive.updated_at = utcnow()
         record(session, scope, drive.id, 'drive.updated', **changed)
+    await session.flush()
+
+
+def revoke_links(drive: FileDrive) -> int:
+    """Invalidate every outstanding signed URL of the drive (proxy delivery): bump ``url_epoch`` (File-0503)."""
+    epoch = delivery.epoch_of(drive.settings) + 1
+    drive.settings = {**(drive.settings or {}), 'url_epoch': epoch}
+    drive.updated_at = utcnow()
+    delivery.forget_link_states()
+    return epoch
+
+
+async def revoke_drive_links(
+    session: DBAsyncScopedSession,
+    scope: RequestScope,
+    ctx: access.DriveCtx,
+    reason: str = 'manual',
+) -> None:
+    epoch = revoke_links(ctx.drive)
+    record(
+        session, scope, ctx.drive.id, 'drive.links_revoked', epoch=epoch, reason=reason
+    )
     await session.flush()
 
 
@@ -278,6 +312,7 @@ async def delete_drive(
     if drive.kind != 'shared':
         raise ClientException(detail='only shared drives can be deleted')
     drive.deleted_at = utcnow()
+    delivery.forget_link_states()
     record(session, scope, drive.id, 'drive.deleted', name=drive.name)
     await session.flush()
     await access.DRIVES.forget(drive.id)

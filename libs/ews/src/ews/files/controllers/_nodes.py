@@ -14,10 +14,12 @@ from ews.security import current_scope
 from .. import _access as access
 from .. import _activity as activity
 from .. import _nodes as nodes
+from .. import _pipeline as pipeline
 from .. import _uploads as uploads
 from ..schemas import (
     FileActivityOut,
     FileDownloadOut,
+    FilePreviewOut,
     FileNodeCopy,
     FileNodeDetailOut,
     FileNodeMove,
@@ -205,8 +207,42 @@ class FilesNodesController(BaseController):
         )
 
     @get(
+        '/{node_id}/preview',
+        summary='What the viewer shows: rendition / inline original / cover, as cached view URLs',
+    )
+    @db_context_session(auto_commit=True)
+    async def preview(
+        self, node_id: str, session: DBAsyncScopedSession, version_id: str | None = None
+    ) -> FilePreviewOut:
+        scope = await current_scope()
+        node, ctx = await access.load_node(session, scope, node_id)
+        return await uploads.preview(session, scope, ctx, node, version_id=version_id)
+
+    @post(
+        '/{node_id}/reprocess',
+        status_code=status.HTTP_202_ACCEPTED,
+        summary='Rebuild the previews and the search text of the current version',
+    )
+    @db_context_session(auto_commit=True)
+    async def reprocess(
+        self, node_id: str, session: DBAsyncScopedSession
+    ) -> FileNodeOut:
+        scope = await current_scope()
+        node, ctx = await access.load_node(
+            session, scope, node_id, access.ITEM, 'update'
+        )
+        if node.kind != 'file':
+            raise ClientException(detail='only files are processed')
+        await pipeline.reprocess(node)
+        activity.record(
+            session, scope, ctx.drive.id, 'file.reprocessed', node, version=node.version
+        )
+        pipeline.kick()
+        return await nodes.node_output(session, scope, node)
+
+    @get(
         '/{node_id}/download',
-        summary='Signed URL (1–5 min) to download or preview (inline: safe types only)',
+        summary='Signed URL to download (1–5 min) or view inline (safe types; 24 h on standard drives)',
     )
     @db_context_session(auto_commit=True)
     async def download(

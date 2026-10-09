@@ -1,11 +1,12 @@
-"""File bytes in the tenant's private storage, kind ``document`` (storage spec §2.2), through the storage
-resolver (``ews.shared.tenant_root``) — never a bucket picked here.
+"""File bytes in the tenant's private storage (storage spec §2.2), through the storage resolver
+(``ews.shared.tenant_root``) — never a bucket picked here. Keys are built from ids only (never user names) and are
+immutable: renames and moves are database updates.
 
-- Key of a version: ``documents/drives/{drive_id}/{node_id}/{version_id}`` (no user-provided name; immutable).
-- Download / preview: ``proxy`` = signed EWS URL ``/api/v1/files/content/{token}`` (1–5 min) streaming the bytes;
-  ``presigned`` = a provider-signed GET URL with the same lifetime (Sto-0200, Sto-0201).
+- Version: ``documents/drives/{drive_id}/{node_id}/{version_id}`` (kind ``document``).
+- Generated variant: ``derived/files/{node_id}/{version_id}/{variant}.webp`` (kind ``derived``, ``_pipeline``).
 - Direct upload to ``documents/staging/{drive_id}/{version_id}``: ``proxy`` = ``PUT /api/v1/files/uploads/{token}``;
   ``presigned`` = a provider-signed PUT URL; ``complete`` copies it to the version key.
+- Download / view URLs: ``_delivery``.
 """
 
 from __future__ import annotations
@@ -24,10 +25,8 @@ from foundation.blob import (
 
 from ews.shared import sign_token, tenant_root, verify_token
 
-from ._rules import content_disposition
 from ._settings import FilesSettings, files_settings
 
-CONTENT_PURPOSE = 'files.content'
 UPLOAD_PURPOSE = 'files.upload'
 
 
@@ -35,6 +34,11 @@ def version_key(
     drive_id: UUID | str, node_id: UUID | str, version_id: UUID | str
 ) -> str:
     return kind_key('document', f'drives/{drive_id}/{node_id}/{version_id}')
+
+
+def preview_key(node_id: UUID | str, version_id: UUID | str, variant: str) -> str:
+    """A generated variant of a version (thumbnail, preview rendition)."""
+    return kind_key('derived', f'files/{node_id}/{version_id}/{variant}.webp')
 
 
 def staging_key(drive_id: UUID | str, version_id: UUID | str) -> str:
@@ -46,9 +50,22 @@ async def store_for(tenant_id: UUID) -> TenantBlobStoreT:
     return await tenant_root(tenant_id)
 
 
-async def put_bytes(tenant_id: UUID, key: str, body: bytes, mime: str) -> None:
+IMMUTABLE_PRIVATE = 'private, max-age=31536000, immutable'
+"""Cache header stored on generated variants (keys are never reused): honoured by provider-signed GETs."""
+
+
+async def put_bytes(
+    tenant_id: UUID,
+    key: str,
+    body: bytes,
+    mime: str,
+    *,
+    cache_control: str | None = None,
+) -> None:
     store = await store_for(tenant_id)
-    await store.put(key, body, BlobPutOptions(content_type=mime))
+    await store.put(
+        key, body, BlobPutOptions(content_type=mime, cache_control=cache_control)
+    )
 
 
 async def delete_keys(tenant_id: UUID, keys: list[str]) -> None:
@@ -62,69 +79,6 @@ def _expiry(seconds: int, now: float | None = None) -> int:
 
 def as_datetime(exp: int) -> datetime:
     return datetime.fromtimestamp(exp, UTC)
-
-
-# --- downloads ------------------------------------------------------------------------------------
-
-
-def read_content_token(token: str) -> dict[str, Any] | None:
-    return verify_token(token, purpose=CONTENT_PURPOSE)
-
-
-async def content_url(
-    tenant_id: UUID,
-    key: str,
-    mime: str,
-    filename: str,
-    *,
-    inline: bool,
-    settings: FilesSettings | None = None,
-) -> tuple[str, int]:
-    """``(url, exp)`` of a short-lived download / preview URL (the caller checked the permission)."""
-    settings = settings or files_settings()
-    exp = _expiry(settings.url_ttl_seconds)
-    if settings.delivery == 'presigned':
-        store = await store_for(tenant_id)
-        url = await store.presign(
-            key,
-            BlobPresignOptions(
-                method='GET',
-                expires_in=settings.url_ttl_seconds,
-                download_name=None if inline else filename,
-            ),
-        )
-        return url, exp
-    payload = {
-        't': str(tenant_id),
-        'k': key,
-        'm': mime,
-        'f': filename,
-        'i': inline,
-        'exp': exp,
-    }
-    return (
-        f'{settings.public_base_url}/api/v1/files/content/{sign_token(payload, purpose=CONTENT_PURPOSE)}',
-        exp,
-    )
-
-
-def content_headers(
-    mime: str, filename: str, *, inline: bool, etag: str | None = None
-) -> dict[str, str]:
-    """Headers of a proxied file: risky types are always attachments, never sniffed (Sto-0202)."""
-    headers = {
-        'content-disposition': content_disposition(filename, inline=inline),
-        'x-content-type-options': 'nosniff',
-        'cache-control': 'private, no-store',
-        'cross-origin-resource-policy': 'cross-origin',
-    }
-    if inline and mime != 'application/pdf':
-        headers['content-security-policy'] = (
-            "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
-        )
-    if etag:
-        headers['etag'] = f'"{etag}"'
-    return headers
 
 
 # --- direct uploads -------------------------------------------------------------------------------

@@ -74,7 +74,7 @@ from .ews import (
 )
 
 # File Manager (app ``files``)
-from .files import FileActivity, FileDrive, FileNode, FileStar, FileVersion
+from .files import FileActivity, FileContent, FileDrive, FileNode, FilePreview, FileStar, FileVersion
 
 # Knowledge Center (app ``knowledge``)
 from .knowledge import KbAttachment, KbPage, KbPageRevision, KbSpace
@@ -151,8 +151,10 @@ __all__ = [
 
     # Files
     'FileActivity',
+    'FileContent',
     'FileDrive',
     'FileNode',
+    'FilePreview',
     'FileStar',
     'FileVersion',
 

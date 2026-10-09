@@ -1,7 +1,7 @@
 [project]
 name = "ews_worker"
-version = "0.1.0"
-description = "EWS background worker: Kafka consumer, event processing, and outbox relay."
+version = "0.2.0"
+description = "EWS background worker: Kafka consumer, event processing, outbox relay, File Manager pipeline."
 readme = "README.md"
 authors = [
     { name = "Thanh LE", email = "thanhlq@msn.com" }
@@ -11,6 +11,8 @@ dependencies = [
     # Core modules (workspace)
     'foundation',
     'db',
+    'ews',
+    'blob_service',
     'store_redis',
     'messaging_faststream',
     'resiliant',

@@ -338,6 +338,35 @@ async def test_kb0302_drafts_publish_versions_and_restore(client: httpx.AsyncCli
     ).status_code == 404
 
 
+async def test_kb0302_discard_draft_goes_back_to_the_published_version(
+    client: httpx.AsyncClient,
+):
+    """Draft mode: unpublished changes can be thrown away; the discarded draft stays in the history."""
+    space = await _space(client)
+    pid = (await _page(client, space['id']))['id']
+    never = await client.post(f'{KB}/pages/{pid}/draft/discard')
+    assert never.status_code == 409 and never.json()['extra']['code'] == 'never_published'
+    await client.put(f'{KB}/pages/{pid}/draft', json={'title': 'Live', 'doc': _doc('live text')})
+    assert (await client.post(f'{KB}/pages/{pid}/publish', json={})).status_code == 200
+    nothing = await client.post(f'{KB}/pages/{pid}/draft/discard')
+    assert nothing.status_code == 409 and nothing.json()['extra']['code'] == 'no_changes'
+
+    await client.put(f'{KB}/pages/{pid}/draft', json={'title': 'Edited', 'doc': _doc('unwanted text')})
+    assert (await client.get(f'{KB}/pages/{pid}')).json()['status'] == 'changed'
+    discarded = await client.post(f'{KB}/pages/{pid}/draft/discard')
+    assert discarded.status_code == 200, discarded.text
+    assert discarded.json()['status'] == 'published' and discarded.json()['title'] == 'Live'
+    draft = (await client.get(f'{KB}/pages/{pid}')).json()
+    assert draft['title'] == 'Live' and 'live text' in json.dumps(draft['doc'])
+    assert 'unwanted text' not in json.dumps(draft['doc'])
+    history = (await client.get(f'{KB}/pages/{pid}/revisions')).json()
+    assert any(r['title'] == 'Edited' and not r.get('is_draft') for r in history)  # still restorable
+    # the next edit starts a new draft, the published version stays untouched
+    await client.put(f'{KB}/pages/{pid}/draft', json={'doc': _doc('new try')})
+    live = (await client.get(f'{KB}/pages/{pid}', params={'view': 'published'})).json()
+    assert 'live text' in json.dumps(live['doc'])
+
+
 async def test_kb0302_soft_lock_and_stale_draft(
     app, client: httpx.AsyncClient, test_org
 ):

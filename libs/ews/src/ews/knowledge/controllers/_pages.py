@@ -148,6 +148,17 @@ class KnowledgePagesController(BaseController):
             page, scope, editor=True, names=await user_names(session, [page.owner_id])
         )
 
+    @post(
+        '/{page_id}/draft/discard',
+        summary='Discard the unpublished changes: the draft goes back to the published version',
+    )
+    @db_context_session(auto_commit=True)
+    async def discard_draft(self, page_id: str, session: DBAsyncScopedSession) -> KbDraftOut:
+        scope = await current_scope()
+        return await _revisions.discard_draft(
+            session, scope, await load_page(session, scope, page_id, PAGE, 'update')
+        )
+
     @get(
         '/{page_id}/revisions',
         summary='Versions and drafts, newest first (editors; diff in the web)',

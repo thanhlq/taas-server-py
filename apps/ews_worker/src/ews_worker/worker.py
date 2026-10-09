@@ -7,8 +7,9 @@ Concrete worker application built on :class:`foundation.worker.BaseWorker`
 Responsibilities:
   * initialise the Redis cache service (same as the API lifespan),
   * initialise the FastStream Kafka messaging service and register subscribers,
-  * run the Kafka consumer loop, and
-  * optionally relay pending transactional-outbox events to the broker.
+  * run the Kafka consumer loop,
+  * optionally relay pending transactional-outbox events to the broker, and
+  * run the File Manager pipeline (previews, local search index, trash retention) when ``FILES_PIPELINE=worker``.
 
 Start command::
 
@@ -88,6 +89,21 @@ class EwsWorker(BaseWorker):
     #         '⬅️  Subscribed to demo topic %s (sub_id=%s)', DEMO_TOPIC, sub_id
     #     )
 
+    def _start_files_pipeline(self) -> 'asyncio.Task[None] | None':
+        """File Manager processing (``ews.files._pipeline``) when ``FILES_PIPELINE=worker``: private storage
+        through the same resolver as the API (taas-specs/platform/storage)."""
+        from ews.files import files_settings, start_pipeline
+
+        if files_settings().pipeline != 'worker':
+            return None
+        from blob_service import create_blob_service, create_storage_resolver
+        from foundation.db.advanced_db_manager import MainDatabase
+
+        blob = create_blob_service(engine=MainDatabase.get_instance().get_engine())
+        create_storage_resolver(blob, blob.registry)
+        self.logger.info('🗂️  File Manager pipeline started (FILES_PIPELINE=worker)')
+        return start_pipeline('worker')
+
     # ----------------------------------------------------------- task wiring
     async def initialize_worker_tasks(self) -> 'BaseWorker':
         """Wire up cache, messaging, subscribers, and background tasks.
@@ -105,5 +121,9 @@ class EwsWorker(BaseWorker):
                 self.messaging_service.start_consuming()
             )
             self.worker_tasks.append(('messaging_consumer', consumer_task))
+
+        files_task = self._start_files_pipeline()
+        if files_task is not None:
+            self.worker_tasks.append(('files_pipeline', files_task))
 
         return self

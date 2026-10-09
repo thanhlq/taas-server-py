@@ -10,7 +10,14 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 import msgspec
-from db.models.files import FileDrive, FileNode, FileStar, FileVersion
+from db.models.files import (
+    FileContent,
+    FileDrive,
+    FileNode,
+    FilePreview,
+    FileStar,
+    FileVersion,
+)
 from foundation.db.types import DBAsyncScopedSession
 from foundation.exceptions import ClientException, NotFoundException
 from sqlalchemy import (
@@ -40,6 +47,8 @@ from ews.shared import (
 )
 
 from . import _access as access
+from . import _delivery as delivery
+from . import _previews as previews
 from . import _storage as storage
 from ._activity import record
 from ._rules import (
@@ -197,9 +206,15 @@ async def node_outputs(
     names = await user_names(
         session, [u for n in nodes for u in (n.created_by, n.updated_by)]
     )
+    thumbs = await previews.thumbnails(session, scope.tenant_id, nodes)
     return [
         _out(
-            n, FileNodeOut, n.id in starred, names, (drive_names or {}).get(n.drive_id)
+            n,
+            FileNodeOut,
+            n.id in starred,
+            names,
+            (drive_names or {}).get(n.drive_id),
+            thumbs.get(n.id),
         )
         for n in nodes
     ]
@@ -211,6 +226,7 @@ def _out(
     starred: bool,
     names: dict[UUID, str],
     drive_name: str | None,
+    thumb: previews.Thumb | None = None,
     **extra,
 ) -> FileNodeOut:  # noqa: ANN003
     return cls(
@@ -239,6 +255,9 @@ def _out(
         updated_at=node.updated_at,
         trashed_at=node.trashed_at,
         trashed_by=str(node.trashed_by) if node.trashed_by else None,
+        preview_status=thumb.status if thumb else None,
+        thumbnail_url=thumb.url if thumb else None,
+        placeholder=thumb.placeholder if thumb else None,
         **extra,
     )
 
@@ -273,12 +292,14 @@ async def node_detail(
         )
     )
     names = await user_names(session, [node.created_by, node.updated_by])
+    thumbs = await previews.thumbnails(session, scope.tenant_id, [node])
     out = _out(
         node,
         FileNodeDetailOut,
         starred is not None,
         names,
         ctx.drive.name,
+        thumbs.get(node.id),
         ancestors=[FileNodeRef(id=str(i), name=rows[i]) for i in ids if i in rows],
         permissions=await access.permissions(scope, ctx),
     )
@@ -622,6 +643,7 @@ async def trash_node(
     node.trashed_at, node.trashed_by, node.trash_root_id = now, scope.user_id, node.id
     record(session, scope, ctx.drive.id, 'node.trashed', node)
     await session.flush()
+    delivery.forget_link_states()  # its signed URLs stop working here at once (other processes: ≤ 30 s)
 
 
 async def list_trash(
@@ -692,6 +714,7 @@ async def restore_node(
             raise name_conflict(name) from error
         raise
     node.trashed_at = node.trashed_by = node.trash_root_id = None
+    delivery.forget_link_states()
     record(
         session,
         scope,
@@ -711,7 +734,8 @@ async def purge_subtree(
     *,
     reason: str = 'user',
 ) -> int:
-    """Delete for good: the subtree's rows are marked ``deleted_at`` and its storage objects removed."""
+    """Delete for good: the subtree's rows are marked ``deleted_at``, its storage objects (versions and generated
+    variants) removed with their preview / index rows; versions still queued are closed (``done``)."""
     ids = list(
         await session.scalars(
             select(FileNode.id).where(
@@ -728,6 +752,11 @@ async def purge_subtree(
             select(FileVersion.key).where(FileVersion.node_id.in_(ids))
         )
     )
+    keys += list(
+        await session.scalars(
+            select(FilePreview.key).where(FilePreview.node_id.in_(ids))
+        )
+    )
     now = utcnow()
     await session.execute(
         update(FileNode)
@@ -736,7 +765,19 @@ async def purge_subtree(
         .execution_options(synchronize_session=False)
     )
     await session.execute(delete(FileStar).where(FileStar.node_id.in_(ids)))
+    await session.execute(delete(FilePreview).where(FilePreview.node_id.in_(ids)))
+    await session.execute(delete(FileContent).where(FileContent.node_id.in_(ids)))
+    await session.execute(
+        update(FileVersion)
+        .where(
+            FileVersion.node_id.in_(ids),
+            FileVersion.pipeline_status.in_(('pending', 'running')),
+        )
+        .values(pipeline_status='done', preview_status='none', index_status='none')
+        .execution_options(synchronize_session=False)
+    )
     root.deleted_at = now
+    delivery.forget_link_states()
     record(
         session,
         scope,

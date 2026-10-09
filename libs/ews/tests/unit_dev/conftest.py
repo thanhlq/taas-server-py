@@ -44,6 +44,8 @@ from sqlalchemy import text  # noqa: E402
 TENANT_TABLES: tuple[str, ...] = (
     'taas_file_activity',
     'taas_file_stars',
+    'taas_file_contents',
+    'taas_file_previews',
     'taas_file_versions',
     'taas_file_nodes',
     'taas_file_drives',

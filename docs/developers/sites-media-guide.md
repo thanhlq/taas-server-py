@@ -26,7 +26,7 @@ Domains: `resource_domains(site_id=…)` → `site:<id>` → `org:<id>` chain �
 | File | Role |
 | --- | --- |
 | `data/blocks.json` | Block catalog — **source of truth** (copied to `@taas/site-blocks`, parity test on the web) |
-| `_document.py` | `validate_document`, `migrate_document`, `asset_ids`, `page_ids`, `plain_text`, `is_safe_url` |
+| `_document.py` | `validate_document` (blocks + rich text nodes incl. tables: rows → cells → paragraphs, same cell count, ≤ `limits.maxTableColumns` × `maxTableRows` — Site-0104; mirrored by `validateDocument` of `@taas/site-blocks`), `migrate_document`, `asset_ids`, `page_ids`, `plain_text` (cell text included: search, reading time, AI), `is_safe_url` |
 | `_rules.py` | Slugs + reserved paths, theme normalization + contrast, menus, redirect loops, accessibility issues |
 | `_service.py` | Sites, pages (paths, automatic 301 on moves), drafts (base-revision conflict, 60 s revision reuse, lock 120 s), revisions, menus, redirects, export / import |
 | `_publish.py` | Snapshots, releases (partial, a11y gate), rollback, unpublish, preview links (signed), routing table |

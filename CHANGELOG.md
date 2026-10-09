@@ -8,6 +8,36 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
 
 ### Added
 
+- `libs/ews` 0.2.0 — Knowledge Center: `POST /api/v1/knowledge/pages/{id}/draft/discard` — the draft goes back to the
+  published version (409 `never_published` / `no_changes` / `locked`), the discarded draft stays in the history (Kb-0302,
+  ADR-9).
+- `libs/ews` 0.2.0 — site documents accept rich text checklists (`taskList` / `taskItem`, `checked` boolean) in
+  `validate_document`; their text is in `plain_text` (search, AI context) — Site-0104.
+
+- `libs/ews` 0.2.0 — **File Manager F3 core** (taas-specs/files File-0302, File-0400, File-0500 … File-0605; ADR-9 … ADR-13):
+  processing **pipeline** (queue = `taas_file_versions.pipeline_status`, `SKIP LOCKED` claims, retries, `drain`,
+  `run_pipeline`, `start_pipeline` / `stop_pipeline`, hourly `purge_expired`) with pure `_derive` (type sniffed from
+  the content; WebP thumbnails, renditions and placeholders for images, PDF page 1 via PDFium, Office / OpenDocument
+  covers; text of PDF / Office / text files; metadata: dimensions, pages, title, author, date taken, words; SHA-256 of
+  direct uploads); **local index** search by content (`taas_file_contents.tsv`, prefix queries, `match`, highlighted
+  `snippet`, `rank`; trigram index on names); **cached signed URLs** (view URLs 24 h on standard drives, rounded
+  windows, `ETag` / 304, `Range` / 206), **revocation** (`POST /drives/{id}/links/revoke`, automatic on member removal
+  and sensitivity change, trashed / purged items), drive `sensitivity` (`standard` · `confidential`);
+  `GET /nodes/{id}/preview`, `POST /nodes/{id}/reprocess`; item fields `preview_status`, `thumbnail_url`,
+  `placeholder`; version fields `pipeline_status`, `pipeline_error`, `preview_status`, `index_status`, `meta`; activity
+  `drive.links_revoked`, `file.reprocessed`; settings `FILES_VIEW_URL_TTL_HOURS`, `FILES_PIPELINE*`,
+  `FILES_INDEX_MAX_CHARS`. New dependency `pypdfium2`.
+- `libs/ews` 0.2.0 — `ews.shared.SignedUrlCache` + `rounded_expiry`: sign once per window, same URL for every caller
+  (in-process LRU, Redis for provider signatures).
+- `libs/db` 0.2.0 — migration `8c4f2d6b1a95`: `taas_file_previews`, `taas_file_contents` (generated `tsvector`, GIN),
+  pipeline columns of `taas_file_versions`, trigram index `ix_taas_file_nodes_name_trgm` (when `pg_trgm` is available).
+- `apps/ews_api` 0.2.0, `apps/ews_api_litestar` 0.2.0 — the lifespan starts / stops the File Manager pipeline
+  (`FILES_PIPELINE=api`, default).
+- `apps/ews_worker` 0.2.0 — runs the File Manager pipeline when `FILES_PIPELINE=worker` (initialises the storage
+  resolver); depends on `ews` and `blob_service`.
+- Docs: `docs/developers/files-guide.md`; tests `test_files_derive.py`, `test_files_delivery.py`,
+  `test_files_pipeline_api.py`.
+
 - `libs/ews` 0.2.0 — **File Manager** API `ews/files` (`/api/v1/files`, taas-specs F1 + drive roles of F2): organization
   drives (implicit role of the organization's members), shared drives with members, *My files*, folder / file tree,
   multipart and direct upload (storage kind `document`), versions, signed downloads / previews, trash + restore + purge,
@@ -38,6 +68,9 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
   kept); post media copied to the public CDN at publish; renderer API `GET /api/v1/sites-internal/blog-releases/{id}`,
   `/blog-posts/{revisionId}` and blog routes in `/routes` (`RouteOut.kind = 'blog'`, `blog_id`; `redirect_status` for
   redirect routes).
+- `libs/ews` 0.2.0 — rich text **tables** in site documents (Site-0104): `ews/sites/_document.py` accepts `table` /
+  `tableRow` / `tableHeader` / `tableCell` with the structure rules (header row, same cell count, no merged cells) and
+  the catalog limits `maxTableColumns` 20 / `maxTableRows` 500; cell text counts for search and reading time.
 - `libs/ews` 0.2.0 — shared `ews.shared.slugify` (transliteration of đ, ß, æ, ø, ł, œ, þ …) used by sites, blog, knowledge,
   CRM; shared media publishing `ews.media` (`asset_map`, `publish_assets`, `remove_public_scope`) used by sites and blog;
   `ews.sites.register_route_source` (other apps add renderer routes).
@@ -60,6 +93,10 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
 - `libs/ews` 0.2.0 — demo routes `/api/v1/test-apis/*` are mounted only when `ENVIRONMENT` is local / test / development.
 
 ### Changed
+
+- `libs/ews` 0.2.0 — File Manager: `GET /search` returns `FileSearchPage` (hits = items + `match`, `snippet`, `rank`) and
+  matches content too (`match=name` for names only); inline downloads of standard drives are view URLs (24 h, cacheable);
+  `/content/{token}` sends `private, max-age, immutable` for view URLs and answers 404 for revoked links.
 
 - `libs/ews` 0.2.0 — comment authors come from the session; workflow privacy (`assigned`) uses the session user — the
   `user_id` query parameter of the task and workflow lists is removed; a task's parent, task list and iteration must

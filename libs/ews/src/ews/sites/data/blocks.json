@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Block catalog of the site builder (taas-specs/site-builder/editor-spec.md §2): the server validates every saved document against it (Site-0103). Copied to taas-web-official packages/site-blocks/src/catalog/blocks.gen.json (pnpm --filter @taas/site-blocks sync-catalog) — never edit the copy. Prop types: string, text, number, boolean, enum, asset, url, icon, list, richtext.",
-  "limits": { "maxBlocks": 400, "maxDepth": 4, "maxDocBytes": 524288, "maxListItems": 24, "maxTextLength": 20000 },
+  "limits": { "maxBlocks": 400, "maxDepth": 4, "maxDocBytes": 524288, "maxListItems": 24, "maxTextLength": 20000, "maxTableColumns": 20, "maxTableRows": 500 },
   "groups": ["layout", "text", "media", "marketing", "contact"],
   "blocks": {
     "section": {
@@ -60,7 +60,7 @@
     "richText": {
       "group": "text",
       "content": true,
-      "ai": "Formatted text: paragraphs, headings 2-4, bold, italic, links, lists, quotes, code.",
+      "ai": "Formatted text: paragraphs, headings 2-4, bold, italic, links, lists, quotes, code, tables (first row = header).",
       "props": {
         "align": { "type": "enum", "options": ["start", "center", "end"], "default": "start" }
       }

@@ -8,18 +8,16 @@ from typing import Any, Literal
 
 from foundation.db.advanced_db_manager import db_context_session
 from foundation.db.types import DBAsyncScopedSession
-from foundation.exceptions import NotFoundException
 from foundation.http import BaseController, get, post, put, status
 from foundation.http.context import Context
 
 from ews.access import RoleOut, object_roles
 from ews.security import current_scope, is_allowed
-from ews.shared import raw_response
 
 from .. import _access as access
+from .. import _delivery as delivery
 from .. import _drives as drives
 from .. import _nodes as nodes
-from .. import _storage as storage
 from .. import _uploads as uploads
 from .. import _views as views
 from .._settings import files_settings
@@ -27,7 +25,7 @@ from ..schemas import (
     FilesAccessOut,
     FilesHomeOut,
     FileNodeOut,
-    FileNodePage,
+    FileSearchPage,
     FileUploadComplete,
     FileUploadOut,
 )
@@ -96,7 +94,7 @@ class FilesAppController(BaseController):
 
     @get(
         '/search',
-        summary='Search folders and files by name, type, owner, date (File-0400 metadata)',
+        summary='Search folders and files by name and content (local index), type, owner, date (File-0400)',
     )
     @db_context_session(auto_commit=True)
     async def search(
@@ -108,9 +106,10 @@ class FilesAppController(BaseController):
         drive_id: str | None = None,
         owner: str | None = None,
         modified_after: datetime | None = None,
+        match: Literal['all', 'name'] = 'all',
         limit: int = 50,
         offset: int = 0,
-    ) -> FileNodePage:
+    ) -> FileSearchPage:
         scope = await current_scope()
         ctxs = await drives.visible_drives(session, scope)
         return await views.search(
@@ -122,6 +121,7 @@ class FilesAppController(BaseController):
             drive_id=drive_id,
             owner=owner,
             modified_after=modified_after,
+            content=match == 'all',
             limit=limit,
             offset=offset,
         )
@@ -155,19 +155,10 @@ class FilesAppController(BaseController):
 
     @get(
         '/content/{token}',
-        summary='File bytes behind a signed download / preview URL (no session needed)',
+        summary='File bytes behind a signed URL (no session needed; ETag / 304, Range / 206, revocable)',
     )
-    async def content(self, token: str, ctx: Context) -> Any:
-        claims = storage.read_content_token(token)
-        if claims is None:
-            raise NotFoundException(detail='link expired or invalid')
-        blob = await (await storage.store_for(claims['t'])).get(claims['k'])
-        if blob is None:
-            raise NotFoundException(detail='file not found')
-        mime: str = claims['m'] or 'application/octet-stream'
-        headers = storage.content_headers(
-            mime, claims['f'], inline=bool(claims.get('i')), etag=blob.info.etag
-        )
-        return raw_response(
-            blob.body, media_type=mime, headers=headers, request=ctx.req
-        )
+    @db_context_session
+    async def content(
+        self, token: str, ctx: Context, session: DBAsyncScopedSession
+    ) -> Any:
+        return await delivery.content_response(session, token, ctx.req)

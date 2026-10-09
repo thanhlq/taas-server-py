@@ -9,7 +9,7 @@ Spec: `taas-specs/knowledge/` (app spec, `knowledge-api.md`, `decisions.md`, `ro
 | --- | --- |
 | `_access.py` | `KB_SPACES = ObjectAccess('kb-space', 'kb.space', 'kb')`, `load_space` / `load_page` (404 / 403, drafts hidden from readers), `readable_spaces` (batched list trimming), `SpaceAccess.member_scope` |
 | `_rules.py` | Pure rules: limits (`MAX_DEPTH` 10, `LOCK_TTL` 2 min, review 180 / 14 days, 50 MB, 5 min URLs), `implicit_role`, `page_status`, `review_status`, `visible_tree_ids`, slugs, search helpers |
-| `_spaces.py` · `_pages.py` · `_revisions.py` | Spaces · page tree (create, move, delete, detail) · drafts, publish, versions, restore, soft lock, verify |
+| `_spaces.py` · `_pages.py` · `_revisions.py` | Spaces · page tree (create, move, delete, detail) · drafts, publish, discard (draft back to the published version), versions, restore, soft lock, verify |
 | `_attachments.py` · `_home.py` | Private attachments + signed URLs · home, review list, simple search |
 | `_document.py` · `_templates.py` | Site document adapter (`ews.sites._document`) · built-in templates `data/templates/*.json` |
 | `schemas.py` · `controllers/` | Wire types (all prefixed `Kb…` — names are global in OpenAPI) · `_app.py`, `_spaces.py`, `_pages.py` |
@@ -27,7 +27,9 @@ Spec: `taas-specs/knowledge/` (app spec, `knowledge-api.md`, `decisions.md`, `ro
   published version and title, a tree of published pages under published ancestors, published search results.
 - Draft = one revision with `version` null, autosaved in place by the same author; another author or a save after a
   publish starts a new one; `base_revision_id` → 409 `stale_draft`. Publish = draft becomes version n (immutable),
-  `search_text` refreshed, first publish = first verification. Soft lock `locked_by` / `locked_until` → 409 `locked`.
+  `search_text` refreshed, first publish = first verification. Discard = `draft_revision_id` back to the published
+  revision (409 `never_published` / `no_changes`; the discarded draft stays a revision). Soft lock `locked_by` /
+  `locked_until` → 409 `locked`.
 - Page bodies are site documents: validate with `check_document`, never store unvalidated JSON.
 - Attachments: storage kind `knowledge/` through `ews.shared.tenant_root` (the storage resolver), key
   `knowledge/<space>/<attachment>/<version>/original[.ext]`; download = permission check, then a 5-minute URL

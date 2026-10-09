@@ -8,6 +8,8 @@
 - Same name in the same folder: ``on_conflict`` = ``version`` (default: a new version, needs
   ``files.item:update``) · ``keep_both`` (*name (1).ext*) · ``skip``.
 - Malware scan: P2 — every version is ``scan_status = 'skipped'``; ``pending`` / ``infected`` block downloads.
+- Every new version is queued for the processing pipeline (``pipeline_status = 'pending'``: checksum, previews,
+  text index — ``_pipeline``); the in-process runner is woken up right after the request.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ import uuid
 from typing import Any, Literal
 from uuid import UUID
 
-from db.models.files import FileNode, FileVersion
+from db.models.files import FileNode, FilePreview, FileVersion
 from foundation.db.types import DBAsyncScopedSession
 from foundation.exceptions import ClientException, NotFoundException
 from foundation.exceptions.http_exceptions import RequestEntityTooLarge
@@ -27,13 +29,23 @@ from ews.security import RequestScope
 from ews.shared import ConflictException, child_path, parse_uuid, user_names, utcnow
 
 from . import _access as access
+from . import _delivery as delivery
 from . import _nodes as nodes
+from . import _pipeline as pipeline
 from . import _storage as storage
 from ._activity import record
-from ._rules import clean_name, free_name, inline_allowed, mime_of, split_ext
+from ._rules import (
+    clean_name,
+    free_name,
+    inline_allowed,
+    mime_of,
+    split_ext,
+    viewer_kind,
+)
 from ._settings import FilesSettings, files_settings
 from .schemas import (
     FileDownloadOut,
+    FilePreviewOut,
     OnConflict,
     FileUploadRequest,
     FileUploadTicketOut,
@@ -175,6 +187,7 @@ async def _add_version(
     node.ext = split_ext(node.name)[1]
     node.updated_by, node.updated_at = scope.user_id, now
     await session.flush()
+    pipeline.kick()
     if restored_from is not None:
         record(
             session,
@@ -502,6 +515,11 @@ async def _version_outputs(
             uploaded_by_name=names.get(v.uploaded_by) if v.uploaded_by else None,
             current=v.id == node.current_version_id,
             created_at=v.created_at,
+            pipeline_status=v.pipeline_status,
+            pipeline_error=v.pipeline_error,
+            preview_status=v.preview_status,
+            index_status=v.index_status,
+            meta=v.meta or {},
         )
         for v in rows
     ]
@@ -572,6 +590,94 @@ async def comment_version(
 # --- download / preview ---------------------------------------------------------------------------
 
 
+async def _readable_version(
+    session: DBAsyncScopedSession, node: FileNode, version_id: str | None
+) -> FileVersion:
+    if node.kind != 'file':
+        raise ClientException(detail='folders cannot be downloaded')
+    version = await nodes.current_version(session, node, version_id)
+    if version.scan_status in BLOCKED_SCANS:
+        raise ConflictException(
+            detail=f'file not available: scan {version.scan_status}',
+            extra={'code': f'scan_{version.scan_status}'},
+        )
+    return version
+
+
+async def preview(
+    session: DBAsyncScopedSession,
+    scope: RequestScope,
+    ctx: access.DriveCtx,
+    node: FileNode,
+    *,
+    version_id: str | None = None,
+) -> FilePreviewOut:
+    """What the viewer shows (File-0302): the ``preview`` rendition of an image when there is one, else the
+    original of a safe type inline, else the thumbnail (Office cover) — all as cached view URLs of the drive."""
+    version = await _readable_version(session, node, version_id)
+    variants = {
+        p.variant: p
+        for p in await session.scalars(
+            select(FilePreview).where(FilePreview.version_id == version.id)
+        )
+    }
+    drive_settings = ctx.drive.settings
+
+    async def view(key: str, mime: str, filename: str) -> tuple[str, int]:
+        return await delivery.signed_url(
+            scope.tenant_id,
+            drive_settings,
+            node.id,
+            key,
+            mime,
+            filename,
+            inline=True,
+            view=True,
+        )
+
+    kind = viewer_kind(version.mime)
+    out = FilePreviewOut(
+        node_id=str(node.id),
+        version_id=str(version.id),
+        status=version.preview_status,
+        kind=kind,
+        index_status=version.index_status,
+        meta=version.meta or {},
+    )
+    thumb, rendition = variants.get('thumb'), variants.get('preview')
+    if thumb is not None:
+        out.thumbnail_url, _ = await view(thumb.key, thumb.mime, 'thumbnail.webp')
+        out.placeholder = thumb.placeholder
+    exp: int | None = None
+    if kind == 'image' and rendition is not None:
+        out.url, exp = await view(rendition.key, rendition.mime, 'preview.webp')
+        out.mime, out.width, out.height = (
+            rendition.mime,
+            rendition.width,
+            rendition.height,
+        )
+    elif kind != 'none' and inline_allowed(version.mime):
+        out.url, exp = await view(version.key, version.mime, node.name)
+        out.mime = version.mime
+        out.width, out.height = (
+            (version.meta or {}).get('width'),
+            (version.meta or {}).get('height'),
+        )
+    elif thumb is not None:
+        out.kind = (
+            'image'  # no inline view (Office, TIFF without rendition …): show the cover
+        )
+        out.url, exp = out.thumbnail_url, None
+        out.mime, out.width, out.height = thumb.mime, thumb.width, thumb.height
+    else:
+        out.kind = 'none'
+    if exp is not None:
+        out.expires_at = storage.as_datetime(exp)
+    record(session, scope, ctx.drive.id, 'file.previewed', node, version=version.number)
+    await access.log_oversight(session, scope, ctx, 'preview')
+    return out
+
+
 async def download(
     session: DBAsyncScopedSession,
     scope: RequestScope,
@@ -581,18 +687,19 @@ async def download(
     version_id: str | None = None,
     inline: bool = False,
 ) -> FileDownloadOut:
-    """A 1–5 min signed URL after the permission check (Sto-0200); ``inline`` only for safe types (File-0206)."""
-    if node.kind != 'file':
-        raise ClientException(detail='folders cannot be downloaded')
-    version = await nodes.current_version(session, node, version_id)
-    if version.scan_status in BLOCKED_SCANS:
-        raise ConflictException(
-            detail=f'file not available: scan {version.scan_status}',
-            extra={'code': f'scan_{version.scan_status}'},
-        )
+    """A signed URL after the permission check: attachments 1–5 min (Sto-0200), inline views of safe types
+    (File-0206) as long as the drive's view URLs (``_delivery``)."""
+    version = await _readable_version(session, node, version_id)
     show_inline = inline and inline_allowed(version.mime)
-    url, exp = await storage.content_url(
-        scope.tenant_id, version.key, version.mime, node.name, inline=show_inline
+    url, exp = await delivery.signed_url(
+        scope.tenant_id,
+        ctx.drive.settings,
+        node.id,
+        version.key,
+        version.mime,
+        node.name,
+        inline=show_inline,
+        view=show_inline,
     )
     record(
         session,

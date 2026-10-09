@@ -20,11 +20,13 @@ from ews.files._rules import (
     like_pattern,
     mime_of,
     numbered,
+    prefix_tsquery,
     split_ext,
     type_patterns,
+    viewer_kind,
 )
 from ews.files._settings import FilesSettings
-from ews.files._storage import staging_key, version_key
+from ews.files._storage import preview_key, staging_key, version_key
 from foundation.exceptions import ClientException
 
 
@@ -110,17 +112,29 @@ def test_storage_keys_follow_the_document_layout():
     d, n, v = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     assert version_key(d, n, v) == f'documents/drives/{d}/{n}/{v}'
     assert staging_key(d, v) == f'documents/staging/{d}/{v}'
+    assert preview_key(n, v, 'thumb') == f'derived/files/{n}/{v}/thumb.webp'
 
 
 def test_sto_0200_url_lifetime_is_clamped(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv('FILES_URL_TTL_SECONDS', '3600')
     monkeypatch.setenv('FILES_DELIVERY', 'presigned')
     monkeypatch.setenv('FILES_PUBLIC_BASE_URL', 'https://api.example.test/')
+    monkeypatch.setenv('FILES_VIEW_URL_TTL_HOURS', '72')
+    monkeypatch.setenv('FILES_PIPELINE', 'worker')
     settings = FilesSettings.from_env()
     assert settings.url_ttl_seconds == 300
+    assert settings.view_ttl_seconds == 24 * 3600  # File-0500: view URLs at most 24 h
     assert settings.delivery == 'presigned'
     assert settings.public_base_url == 'https://api.example.test'
+    assert settings.pipeline == 'worker'
+    assert (
+        FilesSettings().pipeline == 'api' and FilesSettings().view_ttl_seconds == 86400
+    )
     monkeypatch.setenv('FILES_DELIVERY', 'cdn')
+    with pytest.raises(ValueError):
+        FilesSettings.from_env()
+    monkeypatch.setenv('FILES_DELIVERY', 'proxy')
+    monkeypatch.setenv('FILES_PIPELINE', 'cron')
     with pytest.raises(ValueError):
         FilesSettings.from_env()
 
@@ -175,3 +189,31 @@ def test_shared_storage_override():
 def test_file_0400_search_patterns_escape_like_wildcards():
     assert like_pattern('budget') == '%budget%'
     assert like_pattern('50%_off\\') == '%50\\%\\_off\\\\%'
+
+
+def test_file_0400_content_queries_are_quoted_prefixes():
+    assert prefix_tsquery('Invoice ACME') == "'invoice':* & 'acme':*"
+    assert (
+        prefix_tsquery("o'brien & | !:*") == "'o':* & 'brien':*"
+    )  # no tsquery syntax from users
+    assert prefix_tsquery('   ') is None and prefix_tsquery('?!') is None
+    assert (
+        prefix_tsquery(' '.join(f'w{i}' for i in range(20))).count('&') == 7
+    )  # at most 8 words
+
+
+@pytest.mark.parametrize(
+    ('mime', 'kind'),
+    [
+        ('image/jpeg', 'image'),
+        ('image/svg+xml', 'none'),
+        ('application/pdf', 'pdf'),
+        ('video/mp4', 'video'),
+        ('audio/ogg', 'audio'),
+        ('text/markdown', 'text'),
+        ('application/json', 'none'),
+        (None, 'none'),
+    ],
+)
+def test_file_0302_viewer_kind(mime: str | None, kind: str):
+    assert viewer_kind(mime) == kind

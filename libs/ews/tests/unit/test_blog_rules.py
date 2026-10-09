@@ -228,6 +228,18 @@ def test_reading_time_from_the_document():
         ],
     }
     assert reading_time(heading)[0] == 3
+    # rich text tables (Site-0104): every cell counts, the header row too
+    def cell(kind, text):
+        return {'type': kind, 'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': text}]}]}
+
+    table = {
+        'schemaVersion': 1,
+        'sections': [{'id': 't', 'type': 'richText', 'content': {'type': 'doc', 'content': [{'type': 'table', 'content': [
+            {'type': 'tableRow', 'content': [cell('tableHeader', 'Plan'), cell('tableHeader', 'Price')]},
+            {'type': 'tableRow', 'content': [cell('tableCell', 'Pro plan'), cell('tableCell', 'ten euros')]},
+        ]}]}}],
+    }
+    assert reading_time(table)[0] == 6
 
 
 # --- settings, links, SEO -----------------------------------------------------------------------------

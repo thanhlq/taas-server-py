@@ -93,7 +93,7 @@ class FilesDrivesController(BaseController):
 
     @patch(
         '/{drive_id}',
-        summary="Name, description, color, default role of the organization's members",
+        summary="Name, description, color, sensitivity, default role of the organization's members",
     )
     @db_context_session(auto_commit=True)
     async def update_drive(
@@ -103,6 +103,17 @@ class FilesDrivesController(BaseController):
         ctx = await access.load_drive(session, scope, drive_id, access.DRIVE, 'update')
         await drives.update_drive(session, scope, ctx, data)
         return (await drives.drive_outputs(session, scope, [ctx]))[0]
+
+    @post(
+        '/{drive_id}/links/revoke',
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary='Revoke every signed URL of the drive handed out so far (thumbnails, previews, downloads)',
+    )
+    @db_context_session(auto_commit=True)
+    async def revoke_links(self, drive_id: str, session: DBAsyncScopedSession) -> None:
+        scope = await current_scope()
+        ctx = await access.load_drive(session, scope, drive_id, access.DRIVE, 'update')
+        await drives.revoke_drive_links(session, scope, ctx)
 
     @delete(
         '/{drive_id}',
@@ -181,6 +192,8 @@ class FilesDrivesController(BaseController):
         _no_personal_members(ctx)
         await remove_member(session, scope, access.DRIVES, ctx.drive.id, user_id)
         activity.record(session, scope, ctx.drive.id, 'member.revoked', user_id=user_id)
+        # The removed member may hold 24 h view URLs: they stop working.
+        await drives.revoke_drive_links(session, scope, ctx, reason='member_removed')
 
     # --- content ----------------------------------------------------------------------------------
 

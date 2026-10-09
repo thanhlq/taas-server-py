@@ -16,6 +16,7 @@ MAX_DEPTH = 20
 MAX_NAME = 255
 
 type FileType = Literal['folder', 'document', 'image', 'video', 'audio', 'other']
+type ViewerKind = Literal['image', 'pdf', 'video', 'audio', 'text', 'none']
 type OnConflict = Literal['version', 'keep_both', 'skip']
 
 _EXT = re.compile(r'^[a-z0-9]{1,16}$')
@@ -156,6 +157,22 @@ def inline_allowed(mime: str | None) -> bool:
     return mime in _INLINE_EXACT or mime.startswith(_INLINE_PREFIXES)
 
 
+def viewer_kind(mime: str | None) -> ViewerKind:
+    """What the viewer renders for a type (the URL may be a generated rendition, ``_uploads.preview``)."""
+    mime = (mime or '').split(';', 1)[0].strip().lower()
+    if mime.startswith('image/') and mime != 'image/svg+xml':
+        return 'image'
+    if mime == 'application/pdf':
+        return 'pdf'
+    if mime.startswith('video/'):
+        return 'video'
+    if mime.startswith('audio/'):
+        return 'audio'
+    if mime in ('text/plain', 'text/markdown', 'text/csv'):
+        return 'text'
+    return 'none'
+
+
 def content_disposition(filename: str, *, inline: bool) -> str:
     """RFC 6266 header with an ASCII fallback and the UTF-8 name (``filename*``)."""
     ascii_name = (
@@ -167,6 +184,19 @@ def content_disposition(filename: str, *, inline: bool) -> str:
     )
     kind = 'inline' if inline else 'attachment'
     return f'{kind}; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename, safe="")}'
+
+
+_WORD = re.compile(r'\w+')
+MAX_QUERY_TERMS = 8
+SNIPPET_START, SNIPPET_STOP = '\x02', '\x03'
+"""Markers of the matched words in search snippets (never in indexed text: control characters are removed)."""
+
+
+def prefix_tsquery(q: str | None) -> str | None:
+    """``'invoice':* & 'acme':*`` for ``invoice acme`` — every word, as a prefix (type-ahead), quoted (no tsquery
+    syntax from users); ``None`` when ``q`` has no word."""
+    terms = [t.lower() for t in _WORD.findall(q or '')][:MAX_QUERY_TERMS]
+    return ' & '.join(f"'{t}':*" for t in terms) if terms else None
 
 
 def like_pattern(q: str) -> str:
