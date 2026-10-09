@@ -98,7 +98,8 @@ There are two scripts to start the api service in fastapi and litestar framework
 - **EWS controllers** are registered in `libs/ews/src/ews/__init__.py:get_ews_controllers`
   (`ppm.get_project_controllers` + `crm.get_crm_controllers` + `media` + `sites.get_sites_controllers` +
   `files.get_files_controllers` +
-  `blog.get_blog_controllers` + `knowledge.get_knowledge_controllers` + `PlatformController`). CRM
+  `blog.get_blog_controllers` + `knowledge.get_knowledge_controllers` + `notifications.get_notification_controllers` +
+  `PlatformController`). CRM
   accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
   advanced_alchemy `SlugKey` → set a unique `slug` on create.
 
@@ -147,5 +148,26 @@ There are two scripts to start the api service in fastapi and litestar framework
   Module guide `libs/ews/src/ews/files/CLAUDE.md`, developer guide `docs/developers/files-guide.md`, API
   `taas-specs/files/files-api.md`, architecture `taas-specs/files/files-architecture.md`; tests
   `tests/unit/test_files_{rules,derive,delivery}.py`, `tests/unit_dev/test_files_api.py` (permission matrix in IAM mode),
-  `tests/unit_dev/test_files_pipeline_api.py`. Env `FILES_*` (`.env.example` §11).
+  `tests/unit_dev/test_files_pipeline_api.py`. Env `FILES_*` (`.env.example` §11). Other apps' objects get **source
+  drives** (`ews.files._sources.register_source`, e.g. one drive per PPM project, access from the project roles).
+- **PPM V1** (`ews/ppm`, `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/ppm/*`): capability levels per organization
+  (`taas_ppm_settings`, 403 `capability_disabled`), project members, subtasks + roll-ups, owner + collaborators,
+  checklists, comments with mentions, Activity (audit `taas_ppm_audit_events`), files + links, My Work (Inbox =
+  personal project), overview / metrics, bulk + CSV export. **V2**: work model (item types, custom fields, approvals,
+  templates), schedule (phases, dependencies, engine `_schedule_engine.py`, manual / auto mode, Gantt payload),
+  transition rules + team workflows, time tracking (`_time.py`: effort, entries, timer, timesheets + approval), project
+  health (`_health_engine.py` rules, `_health.py`: daily snapshots, override, policy, job `ppm.health_refresh`),
+  dashboards & reports (`_widgets.py` query model, `_dashboards.py`, `_reports.py` CSV / XLSX, `_stats.py` daily
+  statistics + job `ppm.daily_stats`), automation (`_automation_rules.py` + `_automation.py`: rules run as their owner,
+  run log, undo, dry-run, job `ppm.automation_tick`; item writes through `_item_update.update_item`), intake
+  (`_intake_forms.py` pure rules, `_intake.py` forms + versions, `_intake_requests.py` submit / triage / tracking; public
+  `/api/v1/ppm/public-forms` · `/public-requests` without a session).
+  Every write emits `ppm.<entity>.<event>` through `_events.emit` (audit + outbox + in-process subscribers). Module
+  map `libs/ews/src/ews/ppm/CLAUDE.md`, guide `docs/developers/ppm-events-notifications-guide.md`, API `taas-specs/ppm/ppm-api.md`; tests
+  `tests/unit_dev/test_ppm_v1_api.py`, `test_ppm_v2_work_model_api.py`, `test_ppm_v2_schedule_api.py`, `test_ppm_v2_workflow_rules_api.py`,
+  `test_ppm_v2_time_api.py`, `test_ppm_v2_health_api.py`, `test_ppm_v2_dashboards_api.py`, `test_ppm_v2_automation_api.py`,
+  `test_ppm_v2_intake_api.py`.
+- **Notifications** (`ews/notifications`, `/api/v1/notifications/*`, tables `taas_notification*`): platform service of
+  every app — kinds registered by apps, in-app inbox (bell), e-mail instant / digest, preferences, scheduled app jobs;
+  runner `NOTIFICATIONS_RUNNER=api|worker|off` (`.env.example` §11). Rich text from users: `ews.shared._html` (nh3).
 

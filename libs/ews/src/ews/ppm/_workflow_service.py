@@ -35,7 +35,8 @@ from . import workflow_catalog as catalog
 
 PRIVACY_ALL = 'all'
 PRIVACY_ASSIGNED = 'assigned'
-PRIVACIES = frozenset({PRIVACY_ALL, PRIVACY_ASSIGNED})
+PRIVACY_TEAM = 'team'
+PRIVACIES = frozenset({PRIVACY_ALL, PRIVACY_ASSIGNED, PRIVACY_TEAM})
 
 # Board of a project created without a template.
 DEFAULT_STAGES: list[dict[str, Any]] = [
@@ -288,7 +289,7 @@ def stage_for_type(
 
 
 def normalize_privacy(value: Optional[str]) -> str:
-    return PRIVACY_ASSIGNED if value == PRIVACY_ASSIGNED else PRIVACY_ALL
+    return value if value in (PRIVACY_ASSIGNED, PRIVACY_TEAM) else PRIVACY_ALL
 
 
 def visible_to(
@@ -296,11 +297,20 @@ def visible_to(
     assigned: list[str],
     user_id: Optional[str],
     project: ews_models.Project,
+    teams: frozenset[str] | set[str] = frozenset(),
 ) -> bool:
-    """Privacy ``assigned``: only its assigned users (and the project's responsible user)."""
-    if user_id is None or normalize_privacy(workflow.privacy) == PRIVACY_ALL:
+    """Privacy ``assigned``: only its assigned users (and the project's responsible user); ``team``: also the members
+    of its team (``teams`` = the viewer's team ids, Ppm-0205)."""
+    privacy = normalize_privacy(workflow.privacy)
+    if user_id is None or privacy == PRIVACY_ALL:
         return True
-    return user_id in assigned or (project.user_id or '') == user_id
+    if user_id in assigned or (project.user_id or '') == user_id:
+        return True
+    return (
+        privacy == PRIVACY_TEAM
+        and bool(workflow.team_id)
+        and str(workflow.team_id) in teams
+    )
 
 
 def new_stage(
@@ -510,7 +520,9 @@ async def get_workflow(
     session: DBAsyncScopedSession, project: ews_models.Project, workflow_id: str
 ) -> ews_models.Workflow:
     await ensure_workflows(session, project)
-    workflow = await session.get(ews_models.Workflow, parse_uuid(workflow_id, 'workflow'))
+    workflow = await session.get(
+        ews_models.Workflow, parse_uuid(workflow_id, 'workflow')
+    )
     if workflow is None or workflow.project_id != project.id:
         raise NotFoundException(
             detail=f'Workflow {workflow_id} not found in this project.'

@@ -69,11 +69,14 @@ class EwsApplication(BaseApiApplication[FastAPI]):
         @asynccontextmanager
         async def lifespan(app: FastAPI):
             from ews.files import start_pipeline, stop_pipeline
+            from ews.notifications import start_runner, stop_runner
 
             await self._init_services()
             start_pipeline('api')  # File Manager previews / index / retention when FILES_PIPELINE=api
+            start_runner('api')  # e-mails, digests, PPM reminders when NOTIFICATIONS_RUNNER=api
             yield  # Startup complete, now run the app
             cli_print_info('Shutting down application...')
+            await stop_runner()
             await stop_pipeline()
 
         _fastapi_app: FastAPI = _setup_fastapi_app(

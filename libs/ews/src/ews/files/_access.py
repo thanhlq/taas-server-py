@@ -29,6 +29,8 @@ from ews.authz import EwsResources, can
 from ews.security import RequestScope
 from ews.shared import parse_uuid, utcnow
 
+from ._sources import is_source, source_role
+
 DRIVE = EwsResources.FILES_DRIVE.value
 ITEM = EwsResources.FILES_ITEM.value
 MEMBER = EwsResources.FILES_MEMBER.value
@@ -103,6 +105,9 @@ async def drive_ctx(
     org_id = drive.organization_id
     assert org_id is not None  # ck_taas_file_drives_owner
     path = (await org_paths(session, scope, {org_id})).get(org_id, '')
+    if is_source(drive.kind):
+        # A source drive (a project's files): the owning app decides the role (File-0100).
+        return DriveCtx(drive, path, await source_role(session, scope, drive))
     implicit = None
     if (
         drive.kind == 'organization'

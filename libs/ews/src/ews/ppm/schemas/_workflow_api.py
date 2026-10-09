@@ -83,6 +83,12 @@ class WorkflowStageResponse(ApiResponse):
     is_default: bool = False
     display_order: int = 0
     task_count: int = 0
+    # Transition rules (Ppm-0201…0203): next stages allowed (empty = any), entry requirements, default assignee.
+    allowed_next_stage_ids: list[str] = []
+    require_assignee: bool = False
+    require_due_date: bool = False
+    auto_assign: bool = False
+    default_assignee_id: Optional[str] = None
 
 
 class WorkflowResponse(ApiResponse):
@@ -92,9 +98,12 @@ class WorkflowResponse(ApiResponse):
     description: Optional[str] = None
     workflow_type: Optional[str] = None
     is_default: bool = False
-    # all | assigned
+    # all | assigned | team (``team_id``: members of that organization team, Ppm-0205)
     privacy: str = 'all'
+    team_id: Optional[str] = None
     assigned_user_ids: list[str] = []
+    # The caller is assigned to it or in its team (landing workflow).
+    viewer_member: bool = False
     template_id: Optional[str] = None
     display_order: int = 0
     task_count: int = 0
@@ -106,6 +115,7 @@ class WorkflowCreateRequest(ApiRequest):
     name: str
     description: Optional[str] = None
     privacy: Optional[str] = None
+    team_id: Optional[str] = None
     assigned_user_ids: Optional[list[str]] = None
     is_default: Optional[bool] = None
     # Copy the stages of this workflow (default: the template / default board).
@@ -116,6 +126,7 @@ class WorkflowUpdateRequest(ApiRequest):
     name: Optional[str] = None
     description: Optional[str] = None
     privacy: Optional[str] = None
+    team_id: Optional[str] = None
     assigned_user_ids: Optional[list[str]] = None
     # True makes it the project default (the previous default is unset).
     is_default: Optional[bool] = None
@@ -130,6 +141,11 @@ class WorkflowStageCreateRequest(ApiRequest):
     is_default: Optional[bool] = None
     # Insert at this index (default: last).
     position: Optional[int] = None
+    allowed_next_stage_ids: Optional[list[str]] = None
+    require_assignee: Optional[bool] = None
+    require_due_date: Optional[bool] = None
+    auto_assign: Optional[bool] = None
+    default_assignee_id: Optional[str] = None
 
 
 class WorkflowStageUpdateRequest(ApiRequest):
@@ -139,9 +155,23 @@ class WorkflowStageUpdateRequest(ApiRequest):
     color: Optional[str] = None
     wip_limit: Optional[int] = None
     is_default: Optional[bool] = None
-    # Reset these to null: ``wip_limit``, ``description``, ``color``.
+    allowed_next_stage_ids: Optional[list[str]] = None
+    require_assignee: Optional[bool] = None
+    require_due_date: Optional[bool] = None
+    auto_assign: Optional[bool] = None
+    default_assignee_id: Optional[str] = None
+    # Reset these to null: ``wip_limit``, ``description``, ``color``, ``allowed_next_stage_ids``, ``default_assignee_id``.
     clear: Optional[list[str]] = None
 
 
 class WorkflowStageOrderRequest(ApiRequest):
     stage_ids: list[str]
+
+
+class PpmTeamOut(ApiResponse):
+    """A team of the organization (team workflows, Ppm-0205)."""
+
+    id: str
+    name: str
+    member_count: int = 0
+    is_member: bool = False

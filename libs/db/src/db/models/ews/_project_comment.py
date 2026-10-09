@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from advanced_alchemy.base import UUIDv7Base
+from advanced_alchemy.types import GUID, DateTimeUTC
 from sqlalchemy import TEXT, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import Index
@@ -41,6 +43,11 @@ class ProjectComment(UUIDv7Base, SoftDeleteColumns):
         server_default=text("'project'"),
         index=True,
     )
+    tenant_id: Mapped[Optional[str]] = mapped_column(GUID(length=16), nullable=True)
+    edited_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTimeUTC(timezone=True), nullable=True
+    )
+    """Set when the author edits the text (Ppm-0504)."""
     privacy: Mapped[Optional[str]] = mapped_column(
         TEXT, nullable=True, server_default=text("'object'")
     )

@@ -13,6 +13,7 @@ from foundation.http import BaseController
 from ._nodes import purge_expired
 from ._pipeline import drain, run_pipeline, run_retention, start_pipeline, stop_pipeline
 from ._settings import FilesSettings, files_settings
+from ._sources import ensure_source_drive, ensure_source_folder, register_source
 from .controllers import FilesAppController, FilesDrivesController, FilesNodesController
 
 
@@ -23,9 +24,12 @@ def get_files_controllers() -> list[BaseController]:
 __all__ = [
     'FilesSettings',
     'drain',
+    'ensure_source_drive',
+    'ensure_source_folder',
     'files_settings',
     'get_files_controllers',
     'purge_expired',
+    'register_source',
     'run_pipeline',
     'run_retention',
     'start_pipeline',

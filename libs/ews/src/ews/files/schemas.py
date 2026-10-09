@@ -35,8 +35,10 @@ class FilesAccessOut(ApiResponse, kw_only=True):
 
 class FileDriveOut(ApiResponse, kw_only=True):
     id: str
-    kind: Literal['organization', 'shared', 'personal']
+    kind: Literal['organization', 'shared', 'personal', 'project']
     name: str
+    source_id: str | None = None
+    """Source drive (``kind = project``): the project id — access, members and name come from the project."""
     description: str | None = None
     color: str | None = None
     organization_id: str | None = None

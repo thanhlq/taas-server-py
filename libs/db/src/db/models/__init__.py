@@ -79,6 +79,42 @@ from .files import FileActivity, FileContent, FileDrive, FileNode, FilePreview, 
 # Knowledge Center (app ``knowledge``)
 from .knowledge import KbAttachment, KbPage, KbPageRevision, KbSpace
 
+# Platform notifications (one inbox for every app)
+from .notifications import Notification, NotificationDelivery, NotificationPreference, NotificationUserSettings
+
+# PPM tables ``taas_ppm_*`` (app ``ppm``; older PPM tables in ``ews``)
+from .ppm import (
+    PpmApproval,
+    PpmApprovalApprover,
+    PpmApprovalEvent,
+    PpmApprovalPolicy,
+    PpmAttachment,
+    PpmAuditEvent,
+    PpmAutomationRule,
+    PpmAutomationRun,
+    PpmCustomField,
+    PpmCustomFieldBinding,
+    PpmCustomFieldValue,
+    PpmDashboard,
+    PpmDashboardShare,
+    PpmForm,
+    PpmFormVersion,
+    PpmHealthOverride,
+    PpmHealthPolicy,
+    PpmHealthSnapshot,
+    PpmItemType,
+    PpmMention,
+    PpmMyWorkPlan,
+    PpmPhase,
+    PpmProjectDailyStats,
+    PpmRequest,
+    PpmTimeCategory,
+    PpmTimesheet,
+    PpmSettings,
+    PpmUserSettings,
+    PpmWorkItemLink,
+)
+
 # Media library (app ``media``)
 from .media import MediaAsset, MediaFavorite, MediaFolder, MediaUsage
 
@@ -194,4 +230,39 @@ __all__ = [
 
     # Banking
     'CryptoToken',
+    # Notifications
+    'Notification',
+    'NotificationDelivery',
+    'NotificationPreference',
+    'NotificationUserSettings',
+    # PPM (taas_ppm_*)
+    'PpmApproval',
+    'PpmApprovalApprover',
+    'PpmApprovalEvent',
+    'PpmApprovalPolicy',
+    'PpmAttachment',
+    'PpmAuditEvent',
+    'PpmAutomationRule',
+    'PpmAutomationRun',
+    'PpmCustomField',
+    'PpmCustomFieldBinding',
+    'PpmCustomFieldValue',
+    'PpmDashboard',
+    'PpmDashboardShare',
+    'PpmForm',
+    'PpmFormVersion',
+    'PpmHealthOverride',
+    'PpmHealthPolicy',
+    'PpmHealthSnapshot',
+    'PpmItemType',
+    'PpmMention',
+    'PpmMyWorkPlan',
+    'PpmPhase',
+    'PpmProjectDailyStats',
+    'PpmRequest',
+    'PpmTimeCategory',
+    'PpmTimesheet',
+    'PpmSettings',
+    'PpmUserSettings',
+    'PpmWorkItemLink',
 ]

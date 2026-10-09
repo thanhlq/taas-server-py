@@ -10,6 +10,10 @@ import db.models.ews as ews_models
 from foundation.db.types import DBAsyncScopedSession
 from sqlalchemy import func, select
 
+from ews.shared import html_to_text, sanitize_html
+
+from .._description import check_description, description_text
+
 from ..schemas._task_api import TASK_CLEARABLE_FIELDS, TaskResponse
 
 # ``ProjectComment.object_type`` of task comments.
@@ -68,7 +72,14 @@ def apply_task_update(t: ews_models.Task, fields: dict[str, Any]) -> None:
     labels = fields.pop('labels', None)
     watchers = fields.pop('watchers', None)
     html = fields.pop('description_html', None)
-    for key in ('task_list_id', 'iteration_id'):
+    doc = fields.pop('description_doc', None)
+    if doc is not None:
+        t.description_doc = check_description(doc)
+        if 'description' not in fields:
+            t.description = description_text(t.description_doc) or None
+        if html is None:
+            t.html_text = None  # the client renders the document (older readers fall back to the text)
+    for key in ('task_list_id', 'iteration_id', 'parent_id'):
         if key in fields:
             fields[key] = to_uuid(fields[key])
     if 'priority' in fields:
@@ -86,23 +97,41 @@ def apply_task_update(t: ews_models.Task, fields: dict[str, Any]) -> None:
             'users': clean_list(watchers),
         }
     if html is not None:
-        t.html_text = html
+        # Rich text from the editor: sanitized here (Ppm-0503); the plain text follows unless sent.
+        t.html_text = sanitize_html(html)
         t.content_type = 'html'
+        if 'description' not in fields:
+            t.description = html_to_text(t.html_text) or None
     for field in clear:
         if field == 'description_html':
             t.html_text = None
             t.content_type = 'md'
+        elif field == 'description_doc':
+            t.description_doc = None
         else:
             setattr(t, field, None)
 
 
-def task_to_response(t: ews_models.Task) -> TaskResponse:
+def task_to_response(
+    t: ews_models.Task,
+    collaborators: Optional[list[str]] = None,
+    custom_fields: Optional[dict[str, Any]] = None,
+    approval_status: Optional[str] = None,
+    effort: Optional[dict[str, Any]] = None,
+) -> TaskResponse:
+    figures = {
+        k: v
+        for k, v in (effort or {}).items()
+        if k not in ('estimated_minutes', 'actual_minutes')
+    }
     return TaskResponse(
+        **figures,
         id=str(t.id),
         project_id=str(t.project_id) if t.project_id else None,
         name=t.name,
         description=t.description,
         description_html=t.html_text,
+        description_doc=t.description_doc,
         code=t.code,
         workflow_id=str(t.workflow_id) if t.workflow_id else None,
         stage_id=str(t.stage_id) if t.stage_id else None,
@@ -121,7 +150,27 @@ def task_to_response(t: ews_models.Task) -> TaskResponse:
         estimated_minutes=t.estimated_minutes,
         actual_minutes=t.actual_minutes or 0,
         progress=t.progress,
+        progress_mode=t.progress_mode,
         completed_at=t.completed_at,
+        completed_by=t.completed_by,
+        collaborators=list(collaborators or []),
+        child_count=t.child_count or 0,
+        done_child_count=t.done_child_count or 0,
+        checklist_total=t.checklist_total or 0,
+        checklist_done=t.checklist_done or 0,
+        rollup_start_date=t.rollup_start_date,
+        rollup_due_date=t.rollup_due_date,
+        behaviour=t.behaviour or 'task',
+        recurrence_rule=t.recurrence_rule,
+        recurrence_id=t.recurrence_id,
+        phase_id=str(t.phase_id) if t.phase_id else None,
+        duration_days=t.duration_days,
+        schedule_mode=t.schedule_mode,
+        constraint_type=t.constraint_type,
+        constraint_date=t.constraint_date,
+        started_at=t.started_at,
+        custom_fields=dict(custom_fields or {}),
+        approval_status=approval_status,
         created_at=uuid7_time(t.id),
         updated_at=getattr(t, 'updated_at', None),
     )
@@ -143,16 +192,3 @@ async def next_task_code(
     )
     sequence = int(last or 0) + 1
     return sequence, f'{(prefix or _DEFAULT_CODE_PREFIX).strip()}-{sequence}'
-
-
-async def refresh_actual_minutes(
-    session: DBAsyncScopedSession, task: ews_models.Task
-) -> None:
-    """``actual_minutes`` = the sum of the task's time logs."""
-    total = await session.scalar(
-        select(func.coalesce(func.sum(ews_models.Timelog.log_minutes), 0)).where(
-            ews_models.Timelog.task_id == task.id,
-            ews_models.Timelog.deleted_at.is_(None),
-        )
-    )
-    task.actual_minutes = int(total or 0)

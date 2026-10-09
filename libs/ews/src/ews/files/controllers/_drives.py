@@ -50,6 +50,10 @@ def _no_personal_members(ctx: access.DriveCtx) -> None:
         raise ClientException(
             detail='My files has no members: share files and folders instead (F2)'
         )
+    if ctx.drive.kind == 'project':
+        raise ClientException(
+            detail="a project's files belong to the project: manage its members in the project"
+        )
 
 
 class FilesDrivesController(BaseController):

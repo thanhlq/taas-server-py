@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Optional
 
 from advanced_alchemy.base import UUIDv7AuditBase
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
+from advanced_alchemy.types import GUID
+from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Index, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import ID_COLUMN_TYPE
@@ -20,6 +21,14 @@ class TaskChecklistItem(UUIDv7AuditBase):
     """
 
     __tablename__ = TASK_CHECKLIST_ITEMS_TABLE
+    __table_args__ = (
+        Index('ix_taas_task_checklist_items_task', 'task_id', 'display_order'),
+        Index(
+            'ix_taas_task_checklist_items_assignee',
+            'assignee_user_id',
+            postgresql_where=text('is_completed = false'),
+        ),
+    )
 
     task_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
         ForeignKey(f'{TASKS_TABLE}.id'), nullable=True
@@ -31,6 +40,16 @@ class TaskChecklistItem(UUIDv7AuditBase):
     )
     completed_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     completed_by: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    tenant_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
+    assignee_user_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    """Assignee (IAM user id or e-mail, ADR-12): the item shows in their My Work (Ppm-0832)."""
+    due_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    is_mandatory: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text('false')
+    )
+    """Must be done before the item enters a ``done``-band stage (Ppm-0834)."""
     display_order: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True, server_default=text("'-1'::integer")
     )

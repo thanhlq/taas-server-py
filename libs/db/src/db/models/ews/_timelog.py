@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
-from sqlalchemy import TEXT, TIMESTAMP, Boolean, ForeignKey, Integer, text
+from advanced_alchemy.types import GUID
+from sqlalchemy import TEXT, TIMESTAMP, Boolean, Date, ForeignKey, Index, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import ID_COLUMN_TYPE, JSONB, SoftDeleteColumns
@@ -19,6 +20,16 @@ class Timelog(UUIDv7Base, SoftDeleteColumns):
     """Timelog"""
 
     __tablename__ = TIMELOG_TABLE
+    __table_args__ = (
+        Index('ix_taas_timelogs_user_date', 'user_id', 'entry_date'),
+        Index('ix_taas_timelogs_project_date', 'project_id', 'entry_date'),
+        Index(
+            'ux_taas_timelogs_running',
+            'user_id',
+            unique=True,
+            postgresql_where=text('is_recording and deleted_at is null'),
+        ),
+    )
 
     project_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
         ForeignKey(f'{PROJECTS_TABLE}.id'), nullable=True
@@ -63,6 +74,32 @@ class Timelog(UUIDv7Base, SoftDeleteColumns):
     approved_notes: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
 
     is_recording: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+
+    # Time tracking V2 (taas-specs/ppm/time-expense/time-tracking-spec.md §3.1)
+    tenant_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
+    organization_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
+    entry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    """Calendar day of the entry (the person's day); ``log_date`` is kept for older readers."""
+    time_category_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
+    source: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    """``manual`` · ``timer`` · ``timesheet`` · ``import`` · ``mobile``."""
+    timesheet_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True, index=True
+    )
+    locked_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    reverses_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
+    correction_reason: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    needs_review: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    """Timer stopped by the auto-stop limit (Ppm-1212)."""
+    created_by: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
     location_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     # Format: longitude,latitude, altitude, accuracy
     location: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

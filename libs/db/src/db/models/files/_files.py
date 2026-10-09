@@ -74,12 +74,13 @@ def _node_fk() -> Mapped[UUID]:
 
 
 class FileDrive(UUIDv7AuditBase, SoftDeleteColumns):
-    """A drive (RBAC domain ``drive:<id>``): ``organization`` · ``shared`` · ``personal``."""
+    """A drive (RBAC domain ``drive:<id>``): ``organization`` · ``shared`` · ``personal`` · ``project`` (a project's
+    files and task attachments, access from PPM — File-0101)."""
 
     __tablename__ = FILE_DRIVES_TABLE
     __table_args__ = (
         CheckConstraint(
-            "kind in ('organization', 'shared', 'personal')",
+            "kind in ('organization', 'shared', 'personal', 'project')",
             name='ck_taas_file_drives_kind',
         ),
         CheckConstraint(
@@ -91,6 +92,12 @@ class FileDrive(UUIDv7AuditBase, SoftDeleteColumns):
             'organization_id',
             unique=True,
             postgresql_where=text("kind = 'organization' AND deleted_at IS NULL"),
+        ),
+        Index(
+            'ux_taas_file_drives_source',
+            'source_id',
+            unique=True,
+            postgresql_where=text("kind = 'project' AND deleted_at IS NULL"),
         ),
         Index(
             'ux_taas_file_drives_personal',
@@ -114,6 +121,8 @@ class FileDrive(UUIDv7AuditBase, SoftDeleteColumns):
         GUID(length=16), nullable=True, index=True
     )
     """User of a personal drive (implicit ``drive_manager``)."""
+    source_id: Mapped[UUID | None] = mapped_column(GUID(length=16), nullable=True)
+    """Object of a *source* drive (``kind = project``: the project id) whose app decides access (File-0100)."""
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)

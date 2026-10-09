@@ -20,7 +20,8 @@ The structure:
 - shared: helpers of every module — `parse_uuid`, `utcnow`, `sign_token`, `raw_response`, `read_form`, materialized-path
   trees (`child_path`, `check_move`, `move_subtree`, …), `clean_seo`, `user_names`, `ConflictException` (409 +
   `extra.code`), URL slugs `slugify` (one rule for every app and the web), private storage `tenant_root` /
-  `use_storage` (storage resolver), cached signed URLs `SignedUrlCache` / `rounded_expiry`. Public CDN copies of media: `ews.media` (`asset_map`, `publish_assets`,
+  `use_storage` (storage resolver), cached signed URLs `SignedUrlCache` / `rounded_expiry`, downloads `file_response`, sign-in free endpoints `random_id` /
+  `random_token` + `token_hash` / `client_ip_hash`. Public CDN copies of media: `ews.media` (`asset_map`, `publish_assets`,
   `remove_public_scope`). Reuse first: `taas-specs/platform/architecture/building-blocks.md`
 - blog: Blog app (`/api/v1/blog`, `taas_blog_*`) — blogs, posts + revisions, workflow, taxonomy, authors, public
   addresses + releases read by the site renderer (`/api/v1/sites-internal/blog-*`); guide `src/ews/blog/CLAUDE.md`

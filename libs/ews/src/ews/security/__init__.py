@@ -13,7 +13,7 @@ from ._directory import (
     DirectoryUser,
     SqlDirectory,
 )
-from ._guard import authorize, configure_security, current_scope, current_settings, is_allowed
+from ._guard import authorize, configure_security, current_scope, current_settings, is_allowed, scope_of
 from ._scope import (
     DEV_SESSION_COOKIE,
     IamSessionVerifier,
@@ -47,4 +47,5 @@ __all__ = [
     'decode_dev_session',
     'is_allowed',
     'resolve_scope',
+    'scope_of',
 ]

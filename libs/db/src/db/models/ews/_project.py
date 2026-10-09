@@ -96,6 +96,17 @@ class Project(UUIDv7Base, SoftDeleteColumns):
 
     display_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     default_view: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
+    kind: Mapped[str] = mapped_column(
+        TEXT, nullable=False, server_default=text("'project'"), index=True
+    )
+    """``project`` · ``template`` (ADR-30, Ppm-0880) · ``personal`` (the owner's Inbox, ADR-29); lists show projects only."""
+    schedule_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text('0')
+    )
+    """Concurrency counter of the schedule (Ppm-1064), + 1 on each recalculation."""
+    created_from_template_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True
+    )
     wiki_start_page_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)
 
     color: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)

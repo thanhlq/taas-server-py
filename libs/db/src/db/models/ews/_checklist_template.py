@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from advanced_alchemy.base import UUIDv7Base
+from advanced_alchemy.types import GUID
 from foundation.types.types import SimpleStatus
 from sqlalchemy import TEXT, Boolean, Enum, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -33,6 +34,13 @@ class ChecklistTemplate(UUIDv7Base, SoftDeleteColumns):
     project_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
         ForeignKey(f'{PROJECTS_TABLE}.id'), nullable=True, index=True
     )
+    tenant_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True, index=True
+    )
+    organization_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16), nullable=True, index=True
+    )
+    """Scope (Ppm-0833): organization template (``project_id`` null) or a project's."""
 
     is_template: Mapped[Optional[bool]] = mapped_column(
         Boolean, nullable=True, server_default=text('true')

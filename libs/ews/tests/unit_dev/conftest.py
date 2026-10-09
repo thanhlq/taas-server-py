@@ -24,7 +24,11 @@ from dotenv import load_dotenv
 
 def _root() -> Path:
     for parent in Path(__file__).resolve().parents:
-        if (parent / '.env.test').exists() or (parent / 'libs').is_dir() and (parent / 'pyproject.toml').exists():
+        if (
+            (parent / '.env.test').exists()
+            or (parent / 'libs').is_dir()
+            and (parent / 'pyproject.toml').exists()
+        ):
             return parent
     return Path(__file__).resolve().parents[4]
 
@@ -42,6 +46,39 @@ from sqlalchemy import text  # noqa: E402
 # Tables with a ``tenant_id`` column, deleted at the end of the session (children first). Tables of apps
 # that are not installed (no model yet) are skipped.
 TENANT_TABLES: tuple[str, ...] = (
+    'taas_ppm_requests',
+    'taas_ppm_form_versions',
+    'taas_ppm_forms',
+    'taas_ppm_automation_runs',
+    'taas_ppm_automation_rules',
+    'taas_ppm_dashboard_shares',
+    'taas_ppm_dashboards',
+    'taas_ppm_project_daily_stats',
+    'taas_ppm_health_snapshots',
+    'taas_ppm_health_overrides',
+    'taas_ppm_health_policies',
+    'taas_ppm_work_item_links',
+    'taas_ppm_timesheets',
+    'taas_ppm_time_categories',
+    'taas_team',
+    'taas_ppm_custom_field_values',
+    'taas_ppm_custom_field_bindings',
+    'taas_ppm_custom_fields',
+    'taas_ppm_approval_events',
+    'taas_ppm_approval_approvers',
+    'taas_ppm_approvals',
+    'taas_ppm_approval_policies',
+    'taas_ppm_item_types',
+    'taas_notification_deliveries',
+    'taas_notifications',
+    'taas_notification_preferences',
+    'taas_notification_user_settings',
+    'taas_ppm_audit_events',
+    'taas_ppm_mentions',
+    'taas_ppm_attachments',
+    'taas_ppm_my_work_plans',
+    'taas_ppm_user_settings',
+    'taas_ppm_settings',
     'taas_file_activity',
     'taas_file_stars',
     'taas_file_contents',
@@ -110,46 +147,77 @@ async def test_org() -> AsyncIterator[TestOrg]:
     )
     code = str(uuid.uuid4().int)[:8]
     await _execute(
-        "insert into taas_tenants (id, name, status, slug, created_at, updated_at, tenant_code, account_type) "
+        'insert into taas_tenants (id, name, status, slug, created_at, updated_at, tenant_code, account_type) '
         "values (:id, :name, 'ACTIVE', :slug, now(), now(), :code, 'organization')",
         {'id': org.tenant_id, 'name': 'EWS test', 'slug': org.slug, 'code': code},
     )
     insert_org = (
-        "insert into taas_organizations (id, name, status, slug, created_at, updated_at, tenant_id, parent_id, path, depth) "
+        'insert into taas_organizations (id, name, status, slug, created_at, updated_at, tenant_id, parent_id, path, depth) '
         "values (:id, :name, 'ACTIVE', :slug, now(), now(), :t, :parent, :path, :depth)"
     )
     await _execute(
         insert_org,
-        {'id': org.organization_id, 'name': 'EWS test', 'slug': org.slug, 't': org.tenant_id, 'parent': None,
-         'path': f'/{org.organization_id}/', 'depth': 0},
+        {
+            'id': org.organization_id,
+            'name': 'EWS test',
+            'slug': org.slug,
+            't': org.tenant_id,
+            'parent': None,
+            'path': f'/{org.organization_id}/',
+            'depth': 0,
+        },
     )
     await _execute(
         insert_org,
-        {'id': org.child_organization_id, 'name': 'EWS test child', 'slug': f'{org.slug}-child', 't': org.tenant_id,
-         'parent': org.organization_id, 'path': f'/{org.organization_id}/{org.child_organization_id}/', 'depth': 1},
+        {
+            'id': org.child_organization_id,
+            'name': 'EWS test child',
+            'slug': f'{org.slug}-child',
+            't': org.tenant_id,
+            'parent': org.organization_id,
+            'path': f'/{org.organization_id}/{org.child_organization_id}/',
+            'depth': 1,
+        },
     )
     await _execute(
-        "insert into taas_user_account (id, email, username, email_verified, joined_at, login_count, is_root_account, "
-        "failed_reset_attempts, mfa_enabled, created_at, updated_at, tenant_id, directory_id) "
-        "values (:id, :email, :email, true, current_date, 0, false, 0, false, now(), now(), :t, :sub)",
-        {'id': org.user_id, 'email': org.email, 't': org.tenant_id, 'sub': f'sub-{suffix}'},
+        'insert into taas_user_account (id, email, username, email_verified, joined_at, login_count, is_root_account, '
+        'failed_reset_attempts, mfa_enabled, created_at, updated_at, tenant_id, directory_id) '
+        'values (:id, :email, :email, true, current_date, 0, false, 0, false, now(), now(), :t, :sub)',
+        {
+            'id': org.user_id,
+            'email': org.email,
+            't': org.tenant_id,
+            'sub': f'sub-{suffix}',
+        },
     )
     yield org
     projects = 'select id from taas_projects where tenant_id = :t'
     for statement in (
+        'delete from taas_checklist_items where template_id in '
+        '(select id from taas_checklist_templates where tenant_id = :t)',
+        'delete from taas_checklist_templates where tenant_id = :t',
+        'delete from taas_ppm_custom_field_values where tenant_id = :t',
         f'delete from taas_timelogs where project_id in ({projects})',
+        'delete from taas_timelogs where tenant_id = :t',
         'delete from taas_projects_comments where project_id in (select id::text from taas_projects where tenant_id = :t)',
+        f'delete from taas_tasks_users where task_id in (select id from taas_tasks where project_id in ({projects}))',
+        'delete from taas_task_checklist_items where task_id in '
+        f'(select id from taas_tasks where project_id in ({projects}))',
         f'delete from taas_tasks_lists where project_id in ({projects})',
         f'delete from taas_projects_iterations where project_id in ({projects})',
         f'delete from taas_projects_workflows_assignments where project_id in ({projects})',
+        'delete from taas_ppm_work_item_links where tenant_id = :t',
         f'delete from taas_tasks where project_id in ({projects})',
+        'delete from taas_ppm_phases where tenant_id = :t',
         'delete from taas_projects_workflows_stages where workflow_id in '
         f'(select id from taas_projects_workflows where project_id in ({projects}))',
         f'delete from taas_projects_workflows where project_id in ({projects})',
         'delete from taas_projects where tenant_id = :t',
     ):
         await _execute(statement, {'t': org.tenant_id})
-    await _execute('delete from taas_crm_accounts where tenant_id = :t', {'t': org.tenant_id})
+    await _execute(
+        'delete from taas_crm_accounts where tenant_id = :t', {'t': org.tenant_id}
+    )
     for table in TENANT_TABLES:
         try:
             await _execute(
@@ -188,19 +256,29 @@ async def app(test_org: TestOrg) -> FastAPI:
     adapter = MemoryBlobAdapter()
     registry = MemoryTenantBucketRegistry({str(test_org.tenant_id): '12345678'})
     blob = create_blob_service(adapter=adapter, registry=registry, register=False)
-    settings = StorageSettings(STORAGE_PRIVATE_MODE='pooled', STORAGE_PRIVATE_BUCKET='taas-private-test')
+    settings = StorageSettings(
+        STORAGE_PRIVATE_MODE='pooled', STORAGE_PRIVATE_BUCKET='taas-private-test'
+    )
     resolver = create_storage_resolver(blob, registry, settings, register=False)
     use_storage(resolver)  # ews.shared: one private-storage override for every app
     await adapter.ensure_bucket('cdn-test')
     use_public_store(AdapterPublicStore(adapter, 'cdn-test', 'https://cdn.test'))
-    configure_security(settings=EwsAuthSettings(mode='dev', dev_organization_id=str(test_org.organization_id)))
+    configure_security(
+        settings=EwsAuthSettings(
+            mode='dev', dev_organization_id=str(test_org.organization_id)
+        )
+    )
     api = FastAPI()
     api.add_middleware(RequestContextMiddleware)
     setup_fastapi_app(api)
     from ews.crm import get_crm_controllers
     from ews.ppm import get_project_controllers
 
-    controllers = [*get_media_controllers(), *get_project_controllers(), *get_crm_controllers()]
+    controllers = [
+        *get_media_controllers(),
+        *get_project_controllers(),
+        *get_crm_controllers(),
+    ]
     import importlib
 
     # Object apps: mounted when their module exists (``get_<app>_controllers``).
@@ -209,10 +287,11 @@ async def app(test_org: TestOrg) -> FastAPI:
         ('ews.files', 'get_files_controllers'),
         ('ews.knowledge', 'get_knowledge_controllers'),
         ('ews.blog', 'get_blog_controllers'),
+        ('ews.notifications', 'get_notification_controllers'),
     ):
         try:
             controllers += getattr(importlib.import_module(module), factory)()
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             continue
     for controller in controllers:
         include_controller(api, controller)

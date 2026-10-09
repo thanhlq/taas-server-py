@@ -20,6 +20,7 @@ from foundation.exceptions import (
 )
 from sqlalchemy import ColumnElement, and_, false, select
 
+from ews.access import ObjectAccess
 from ews.authz import EwsResources, ProjectRoles, grant, revoke_domain, user_domains
 from ews.security import RequestScope, is_allowed
 from ews.shared import parse_uuid
@@ -28,6 +29,12 @@ PROJECT = EwsResources.PROJECT.value
 WORKFLOW = EwsResources.WORKFLOW.value
 TASK = EwsResources.TASK.value
 TASK_ACTIVITY = EwsResources.TASK_ACTIVITY.value
+PROJECT_MEMBER = EwsResources.PROJECT_MEMBER.value
+
+PROJECTS = ObjectAccess(
+    'project', PROJECT, 'ppm', default_role=ProjectRoles.PROJECT_MEMBER.value
+)
+"""Projects as objects with their own roles (``project:<id>``): members routes, UI permissions (Ppm-06xx)."""
 
 
 def project_domain(project_id: UUID | str) -> str:

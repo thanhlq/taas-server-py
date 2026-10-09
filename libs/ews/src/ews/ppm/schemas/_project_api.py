@@ -15,6 +15,20 @@ from foundation.serialization import ApiRequest, ApiResponse
 from ._workflow_api import WorkItemTypeItem
 
 
+# Fields a project PATCH may reset to null through ``clear`` (ADR-9; app spec open question 1).
+PROJECT_CLEARABLE_FIELDS = frozenset(
+    {
+        'start_date',
+        'due_date',
+        'user_id',
+        'client_id',
+        'description',
+        'color',
+        'icon_name',
+    }
+)
+
+
 class ProjectCreateRequest(ApiRequest):
     """Create a project, optionally seeded from a workflow template."""
 
@@ -72,6 +86,11 @@ class ProjectUpdateRequest(ApiRequest):
     # The project's work item types. With a template: a subset of the template's
     # types (terms may be renamed); without: any types.
     work_item_types: Optional[list[WorkItemTypeInput]] = None
+    # Project settings to change (merged): ``editors`` ``{default, enabled}`` (description editor modes, null =
+    # the organization's).
+    settings: Optional[dict[str, Any]] = None
+    # Fields reset to null (omitted / null = unchanged, ADR-9): see ``PROJECT_CLEARABLE_FIELDS``.
+    clear: Optional[list[str]] = None
 
 
 class ProjectListItem(ApiResponse):
@@ -100,10 +119,14 @@ class ProjectListItem(ApiResponse):
     client_id: Optional[str] = None
     # Last change to the project or one of its tasks.
     last_activity_at: Optional[datetime] = None
+    # ``project`` · ``template`` · ``personal`` (Inbox).
+    kind: str = 'project'
     # Task progress: ``done_task_count`` / ``task_count`` as a 0-100 percentage.
     task_count: Optional[int] = None
     done_task_count: Optional[int] = None
     progress: Optional[int] = None
+    # Effective overall health of the latest snapshot (``green`` · ``amber`` · ``red`` · ``none``; Ppm-1615).
+    health: Optional[str] = None
 
 
 class ProjectResponse(ProjectListItem):
@@ -119,6 +142,12 @@ class ProjectResponse(ProjectListItem):
     # None: any stage type; else the allowed ones.
     allowed_stage_types: Optional[list[str]] = None
     workflow: Optional[dict[str, Any]] = None
+    # ``ppm.*`` permissions of the caller on the project (UI hints; the server decides).
+    permissions: list[str] = []
+    # The caller's direct project role (``None``: through an organization / tenant role).
+    role: Optional[str] = None
+    # Description editors of the project: ``{default, enabled}`` (project setting, else the organization's).
+    editors: Optional[dict[str, Any]] = None
     settings: Optional[dict[str, Any]] = None
     properties: Optional[dict[str, Any]] = None
 

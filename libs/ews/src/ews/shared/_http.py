@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from foundation.exceptions import ClientException, NotFoundException
+from foundation.http.context_state import get_request_context
 
 
 def utcnow() -> datetime:
@@ -41,6 +43,19 @@ def raw_response(
     from starlette.responses import Response
 
     return Response(content=body, media_type=media_type, status_code=status_code, headers=dict(headers or {}))
+
+
+
+def file_response(body: bytes, media_type: str, name: str) -> Any:
+    """A download (``content-disposition: attachment``, ``no-store``) of the current request's framework."""
+    ctx = get_request_context()
+    safe = re.sub(r'[^A-Za-z0-9._-]+', '-', name)[:120] or 'export'
+    return raw_response(
+        body,
+        media_type=media_type,
+        request=ctx.req if ctx else None,
+        headers={'content-disposition': f'attachment; filename="{safe}"', 'cache-control': 'no-store'},
+    )
 
 
 async def read_form(request: Any) -> Mapping[str, Any]:

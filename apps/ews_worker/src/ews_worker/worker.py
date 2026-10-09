@@ -126,4 +126,12 @@ class EwsWorker(BaseWorker):
         if files_task is not None:
             self.worker_tasks.append(('files_pipeline', files_task))
 
+        # Notification e-mails, digests and app reminder jobs when NOTIFICATIONS_RUNNER=worker.
+        import ews.ppm  # noqa: F401 — registers the PPM notification kinds and reminder job
+        from ews.notifications import start_runner
+
+        notifications_task = start_runner('worker')
+        if notifications_task is not None:
+            self.worker_tasks.append(('notifications_runner', notifications_task))
+
         return self

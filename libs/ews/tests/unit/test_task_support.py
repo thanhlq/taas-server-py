@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import db.models.ews as ews_models
-from ews.ppm.controllers._task_activity_api import _log_minutes
+from ews.ppm._time import EntryIn, _minutes
 from ews.ppm.controllers._task_support import (
     apply_task_update,
     clamp_priority,
@@ -14,7 +14,6 @@ from ews.ppm.controllers._task_support import (
     task_watchers,
     uuid7_time,
 )
-from ews.ppm.schemas._task_api import TimelogCreateRequest
 
 # UUIDv7 whose 48-bit timestamp is 2026-09-27T09:47:23.996Z.
 _UUID7 = UUID('01a0e243-1bdc-75f3-a0fb-5898097b5f1c')
@@ -102,11 +101,12 @@ def test_task_to_response_derives_created_at_and_lists():
     assert response.created_at == datetime(2026, 9, 27, 9, 47, 23, 996000)
 
 
-def test_log_minutes_prefers_explicit_minutes_then_the_time_range():
-    assert _log_minutes(TimelogCreateRequest(minutes=45)) == 45
+def test_entry_minutes_prefer_explicit_minutes_then_the_time_range():
+    """Time entries (``ews.ppm._time``): minutes win; a reversed range gives ≤ 0 (refused by validation)."""
+    assert _minutes(EntryIn(minutes=45)) == 45
     assert (
-        _log_minutes(
-            TimelogCreateRequest(
+        _minutes(
+            EntryIn(
                 start_time=datetime(2026, 9, 27, 9, 0),
                 end_time=datetime(2026, 9, 27, 17, 0),
             )
@@ -114,12 +114,12 @@ def test_log_minutes_prefers_explicit_minutes_then_the_time_range():
         == 480
     )
     assert (
-        _log_minutes(
-            TimelogCreateRequest(
+        _minutes(
+            EntryIn(
                 start_time=datetime(2026, 9, 27, 17, 0),
                 end_time=datetime(2026, 9, 27, 9, 0),
             )
         )
-        == 0
+        <= 0
     )
-    assert _log_minutes(TimelogCreateRequest()) == 0
+    assert _minutes(EntryIn()) == 0

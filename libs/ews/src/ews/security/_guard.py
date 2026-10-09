@@ -7,6 +7,7 @@ The scope is resolved once per request (cached on ``request.state``) from the re
 from __future__ import annotations
 
 from collections.abc import Sequence
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from foundation.exceptions import NotAuthorizedException, PermissionDeniedException
 from foundation.http.context_state import require_request_context
@@ -66,6 +67,36 @@ async def current_scope() -> RequestScope:
     scope = await resolve_scope(current_settings(), directory, verifier, headers, dict(req.cookies))
     req.state.ews_scope = scope
     return scope
+
+
+async def scope_of(user_ref: str, organization_id: UUID, user_id: UUID | None = None) -> RequestScope | None:
+    """A scope acting as a user in an organization, outside a request (jobs and automation rules running as their
+    owner): ``None`` when the organization is unknown or the user is not one of its members any more. Development
+    sign-in: every permission, like a request."""
+    directory, _ = _deps()
+    organization = await directory.organization(organization_id)
+    if organization is None:
+        return None
+    dev = current_settings().mode == 'dev'
+    user = await directory.user_by_email(user_ref) if '@' in user_ref else None
+    user_id = user.id if user else user_id
+    if dev:
+        # the development sign-in's id of an e-mail without a directory account
+        user_id = user_id or uuid5(NAMESPACE_URL, f'taas-dev-user:{user_ref.lower()}')
+    else:
+        if user_id is None:
+            return None
+        members = await directory.memberships(user_id)
+        if not any(organization.path.startswith(m.organization.path) for m in members):
+            return None
+    return RequestScope(
+        user_id=user_id,
+        email=user_ref if '@' in user_ref else None,
+        name=None,
+        tenant_id=organization.tenant_id,
+        organization=organization,
+        is_dev=dev,
+    )
 
 
 async def is_allowed(scope: RequestScope, resource: str, action: str, domains: Sequence[str] | None = None) -> bool:

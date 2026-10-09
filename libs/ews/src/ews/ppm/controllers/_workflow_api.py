@@ -23,9 +23,11 @@ from sqlalchemy import func, select, update
 from ews.security import current_scope
 
 from .. import _access as access
+from .. import _workflow_rules as rules
 from .. import _workflow_service as wfs
 from .. import workflow_catalog as catalog
 from ..schemas._workflow_api import (
+    PpmTeamOut,
     StageTypeResponse,
     TemplateCategoryResponse,
     TemplateDetail,
@@ -40,6 +42,13 @@ from ..schemas._workflow_api import (
 from ._project_api import _touch_project
 
 _STAGE_CLEARABLE = frozenset({'wip_limit', 'description', 'color'})
+_RULE_FIELDS = (
+    'allowed_next_stage_ids',
+    'require_assignee',
+    'require_due_date',
+    'auto_assign',
+    'default_assignee_id',
+)
 
 
 def _stage_to_response(
@@ -58,6 +67,7 @@ def _stage_to_response(
         is_default=bool(s.is_default),
         display_order=s.display_order or 0,
         task_count=counts.get(s.id, 0),
+        **rules.rules_out(s),
     )
 
 
@@ -66,15 +76,22 @@ async def _workflows_response(
     project: ews_models.Project,
     workflows: list[ews_models.Workflow],
     user_id: Optional[str] = None,
+    *,
+    me: Optional[str] = None,
+    teams: frozenset[str] | set[str] = frozenset(),
 ) -> list[WorkflowResponse]:
+    """``user_id`` = whose privacy applies (None = every workflow); ``me`` + ``teams`` = the caller (``viewer_member``)."""
     ids = [w.id for w in workflows]
     stages = await wfs.load_stages(session, ids)
     assigned = await wfs.load_assignments(session, ids)
     counts = await wfs.stage_task_counts(session, ids)
     out = []
     for w in workflows:
-        if not wfs.visible_to(w, assigned.get(w.id, []), user_id, project):
+        if not wfs.visible_to(w, assigned.get(w.id, []), user_id, project, teams):
             continue
+        member = (me is not None and me in assigned.get(w.id, [])) or (
+            bool(w.team_id) and str(w.team_id) in teams
+        )
         rows = [_stage_to_response(s, counts) for s in stages.get(w.id, [])]
         out.append(
             WorkflowResponse(
@@ -85,7 +102,9 @@ async def _workflows_response(
                 workflow_type=w.workflow_type,
                 is_default=bool(w.is_default),
                 privacy=wfs.normalize_privacy(w.privacy),
+                team_id=w.team_id,
                 assigned_user_ids=assigned.get(w.id, []),
+                viewer_member=member,
                 template_id=w.template_id,
                 display_order=w.display_order or 0,
                 task_count=sum(r.task_count for r in rows),
@@ -173,10 +192,15 @@ class ProjectWorkflowController(BaseController):
     ) -> list[WorkflowResponse]:
         """The default workflow first; ``assigned`` workflows the caller is not on are left out."""
         scope = await current_scope()
-        project = await access.load_project(session, scope, project_id, access.WORKFLOW, 'read')
+        project = await access.load_project(
+            session, scope, project_id, access.WORKFLOW, 'read'
+        )
         workflows = await wfs.ensure_workflows(session, project)
         viewer = await access.workflow_viewer(scope, project.id)
-        return await _workflows_response(session, project, workflows, viewer)
+        teams = await rules.viewer_teams(session, scope)
+        return await _workflows_response(
+            session, project, workflows, viewer, me=access.author(scope), teams=teams
+        )
 
     @post('/{project_id}/workflows', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
@@ -186,7 +210,9 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowCreateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'create')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'create'
+        )
         workflows = await wfs.ensure_workflows(session, project)
         process = wfs.ProjectProcess.of(project)
         if data.copy_from_workflow_id:
@@ -209,6 +235,16 @@ class ProjectWorkflowController(BaseController):
         else:
             seed = wfs.seed_process(process.template_id, None)
             specs, workflow_type = seed.stages, seed.workflow_type
+        privacy = data.privacy or wfs.PRIVACY_ALL
+        if privacy not in wfs.PRIVACIES:
+            raise ClientException(detail=f"Unknown privacy '{privacy}'.")
+        team_id = (
+            await rules.check_team(session, project, data.team_id)
+            if data.team_id
+            else None
+        )
+        if privacy == wfs.PRIVACY_TEAM and not team_id:
+            raise ClientException(detail='A team workflow needs a team.')
         workflow, _ = await wfs.create_workflow(
             session,
             project,
@@ -216,9 +252,10 @@ class ProjectWorkflowController(BaseController):
             description=data.description,
             stages=specs,
             workflow_type=workflow_type,
-            privacy=data.privacy or wfs.PRIVACY_ALL,
+            privacy=privacy,
             template_id=process.template_id,
         )
+        workflow.team_id = team_id
         if data.assigned_user_ids:
             await wfs.set_assignments(session, workflow, data.assigned_user_ids)
         if data.is_default or not workflows:
@@ -235,7 +272,9 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowUpdateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'update'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         if data.name is not None:
             if not data.name.strip():
@@ -243,10 +282,18 @@ class ProjectWorkflowController(BaseController):
             workflow.name = data.name.strip()
         if data.description is not None:
             workflow.description = data.description
+        if data.team_id is not None:
+            workflow.team_id = (
+                await rules.check_team(session, project, data.team_id)
+                if data.team_id
+                else None
+            )
         if data.privacy is not None:
             if data.privacy not in wfs.PRIVACIES:
                 raise ClientException(detail=f"Unknown privacy '{data.privacy}'.")
             workflow.privacy = data.privacy
+        if workflow.privacy == wfs.PRIVACY_TEAM and not workflow.team_id:
+            raise ClientException(detail='A team workflow needs a team.')
         if data.assigned_user_ids is not None:
             await wfs.set_assignments(session, workflow, data.assigned_user_ids)
         if data.is_default:
@@ -263,7 +310,9 @@ class ProjectWorkflowController(BaseController):
         self, project_id: str, workflow_id: str, session: DBAsyncScopedSession
     ) -> None:
         """Delete a workflow; its tasks move to the default workflow (same stage type when possible)."""
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'delete')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'delete'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         if workflow.is_default:
             raise ClientException(
@@ -300,7 +349,9 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowStageCreateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'create')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'create'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         wfs.ProjectProcess.of(project).check_stage_type(data.stage_type)
         if not data.name.strip():
@@ -325,6 +376,9 @@ class ProjectWorkflowController(BaseController):
         )
         session.add(stage)
         await session.flush()
+        rules.apply_rules(
+            stage, {k: getattr(data, k) for k in _RULE_FIELDS}, [*stages, stage], set()
+        )
         ordered = [*stages[:position], stage, *stages[position:]]
         for i, s in enumerate(ordered):
             s.display_order = s.position = i
@@ -343,7 +397,9 @@ class ProjectWorkflowController(BaseController):
         data: WorkflowStageUpdateRequest,
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'update'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stage = await self._stage(session, workflow, stage_id)
         if data.name is not None:
@@ -367,6 +423,13 @@ class ProjectWorkflowController(BaseController):
             stage.wip_limit = max(0, data.wip_limit) or None
         for field in set(data.clear or []) & _STAGE_CLEARABLE:
             setattr(stage, field, None)
+        siblings = (await wfs.load_stages(session, [workflow.id]))[workflow.id]
+        rules.apply_rules(
+            stage,
+            {k: getattr(data, k) for k in _RULE_FIELDS},
+            siblings,
+            set(data.clear or []),
+        )
         if data.is_default:
             await wfs.set_default_stage(session, workflow.id, stage.id)
         await session.flush()
@@ -384,7 +447,9 @@ class ProjectWorkflowController(BaseController):
         move_to: Optional[str] = None,
     ) -> WorkflowResponse:
         """Delete a stage; its tasks move to ``move_to`` (required when it has tasks)."""
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'delete')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'delete'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stage = await self._stage(session, workflow, stage_id)
         stages = (await wfs.load_stages(session, [workflow.id]))[workflow.id]
@@ -430,7 +495,9 @@ class ProjectWorkflowController(BaseController):
         session: DBAsyncScopedSession,
     ) -> WorkflowResponse:
         """Reorder the stages (``stage_ids`` = every stage id of the workflow, in the new order)."""
-        project = await access.load_project(session, await current_scope(), project_id, access.WORKFLOW, 'update')
+        project = await access.load_project(
+            session, await current_scope(), project_id, access.WORKFLOW, 'update'
+        )
         workflow = await wfs.get_workflow(session, project, workflow_id)
         stages = (await wfs.load_stages(session, [workflow.id]))[workflow.id]
         by_id = {str(s.id): s for s in stages}
@@ -447,9 +514,24 @@ class ProjectWorkflowController(BaseController):
     async def _stage(
         session: DBAsyncScopedSession, workflow: ews_models.Workflow, stage_id: str
     ) -> ews_models.WorkflowStage:
-        stage = await session.get(ews_models.WorkflowStage, parse_uuid(stage_id, 'stage'))
+        stage = await session.get(
+            ews_models.WorkflowStage, parse_uuid(stage_id, 'stage')
+        )
         if stage is None or stage.workflow_id != workflow.id:
             raise NotFoundException(
                 detail=f'Stage {stage_id} not found in this workflow.'
             )
         return stage
+
+
+class PpmTeamController(BaseController):
+    """Teams of the organization, for team workflows (Ppm-0205)."""
+
+    api_prefix = '/api/v1/ppm'
+    tags = ('Workflows',)
+
+    @get('/teams')
+    @db_context_session
+    async def list_teams(self, session: DBAsyncScopedSession) -> list[PpmTeamOut]:
+        scope = await current_scope()
+        return [PpmTeamOut(**t) for t in await rules.organization_teams(session, scope)]

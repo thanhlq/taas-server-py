@@ -117,6 +117,7 @@ async def visible_drives(
             .where(
                 FileDrive.tenant_id == scope.tenant_id,
                 FileDrive.deleted_at.is_(None),
+                FileDrive.kind.in_(('organization', 'shared', 'personal')),
                 or_(
                     FileDrive.organization_id == scope.organization_id,
                     FileDrive.id.in_(list(granted)),
@@ -198,6 +199,7 @@ async def drive_outputs(
                 color=d.color,
                 organization_id=str(d.organization_id) if d.organization_id else None,
                 owner_id=str(d.owner_id) if d.owner_id else None,
+                source_id=str(d.source_id) if d.source_id else None,
                 default_member_role=access.default_member_role(d)
                 if d.kind == 'organization'
                 else None,
@@ -242,6 +244,10 @@ async def update_drive(
     data: FileDriveUpdate,
 ) -> None:
     drive = ctx.drive
+    if drive.kind == 'project':
+        raise ClientException(
+            detail="a project's files follow the project: change the project instead"
+        )
     changed: dict[str, object] = {}
     if data.name is not None:
         if drive.kind == 'personal':
