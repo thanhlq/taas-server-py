@@ -100,7 +100,9 @@ There are two scripts to start the api service in fastapi and litestar framework
   `files.get_files_controllers` +
   `blog.get_blog_controllers` + `knowledge.get_knowledge_controllers` + `notifications.get_notification_controllers` +
   `PlatformController`). CRM
-  accounts live at `/api/v1/crm/accounts` (`libs/ews/src/ews/crm`). `CrmAccount` uses
+  accounts live at `/api/v1/crm/accounts`, contacts at `/api/v1/crm/contacts` (`libs/ews/src/ews/crm`: `_contacts.py` rules —
+  e-mails / phones lists, duplicate guard, soft delete, the account's primary contact = a contact; tests
+  `tests/unit/test_crm_contacts_rules.py`, `tests/unit_dev/test_crm_contacts_api.py`). `CrmAccount` uses
   advanced_alchemy `SlugKey` → set a unique `slug` on create.
 
 ## Business apps: auth, Site Builder, Media library, Blog, Knowledge Center, File Manager

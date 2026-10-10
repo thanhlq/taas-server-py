@@ -32,6 +32,7 @@ from .. import workflow_catalog as catalog
 from .._project_status import PROJECT_STATUS_CATALOG, project_status_color
 from ..repos import ProjectRepository, RepoFactory
 from .. import _events as events
+from .. import _project_contacts as project_contacts
 from .. import _projects as projects
 from .. import _health as health
 from .. import _work_items as items
@@ -144,6 +145,7 @@ async def _project_to_response(
         work_item_types=process.work_item_types,
         work_item_types_locked=process.work_item_types_locked,
         allowed_stage_types=process.allowed_stage_types,
+        contacts=await project_contacts.contacts_of(session, p.id),
     )
 
 
@@ -294,7 +296,10 @@ class ProjectController(BaseController):
             else {}
         )
         return create_paginated_response(
-            [_project_to_list_item(p, stats.get(p.id), ratings.get(p.id)) for p in rows],
+            [
+                _project_to_list_item(p, stats.get(p.id), ratings.get(p.id))
+                for p in rows
+            ],
             total=total,
         )
 
@@ -346,9 +351,15 @@ class ProjectController(BaseController):
             color=data.color,
             icon_name=data.icon_name,
             default_view=data.default_view,
-            client_id=data.client_id,
+            client_id=await project_contacts.check_client(
+                session, scope, data.client_id
+            ),
             user_id=data.user_id,
         )
+        if data.contact_ids:
+            await project_contacts.set_contacts(
+                session, scope, created, data.contact_ids, data.default_contact_id
+            )
         return await _project_to_response(session, scope, created, locale=data.locale)
 
     @patch('/{project_id}')
@@ -367,6 +378,23 @@ class ProjectController(BaseController):
         unknown = clear - PROJECT_CLEARABLE_FIELDS
         if unknown:
             raise ClientException(detail=f'cannot clear {", ".join(sorted(unknown))}')
+        contact_ids = fields.pop('contact_ids', None)
+        default_contact = fields.pop('default_contact_id', None)
+        if 'client_id' in fields:
+            fields['client_id'] = await project_contacts.check_client(
+                session, scope, fields['client_id']
+            )
+        if contact_ids is not None or default_contact is not None:
+            current = [
+                c['id'] for c in await project_contacts.contacts_of(session, p.id)
+            ]
+            await project_contacts.set_contacts(
+                session,
+                scope,
+                p,
+                current if contact_ids is None else contact_ids,
+                default_contact,
+            )
         settings_patch = fields.pop('settings', None)
         if settings_patch is not None:
             p.settings = _merged_project_settings(p, settings_patch)

@@ -16,6 +16,7 @@ from sqlalchemy import or_, select
 
 from ews.security import RequestScope, current_scope
 
+from .. import _project_contacts as project_contacts
 from .. import _access as access
 from .. import _approvals as approvals
 from .. import _behaviours as behaviours
@@ -845,6 +846,14 @@ class PpmProjectTemplateController(BaseController):
             include_field_values=data.include_field_values,
             include_members=data.include_members,
         )
+        if data.client_id:
+            project.client_id = await project_contacts.check_client(
+                session, scope, data.client_id
+            )
+        if data.contact_ids:
+            await project_contacts.set_contacts(
+                session, scope, project, data.contact_ids, data.default_contact_id
+            )
         return _created(project)
 
 

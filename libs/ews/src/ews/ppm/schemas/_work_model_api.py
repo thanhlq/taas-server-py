@@ -259,6 +259,10 @@ class PpmInstantiateIn(ApiRequest):
     role_map: dict[str, Optional[str]] = {}
     include_field_values: bool = False
     include_members: bool = False
+    # Client (CRM account) and CRM contacts of the new project (Ppm-0112).
+    client_id: Optional[str] = None
+    contact_ids: Optional[list[str]] = None
+    default_contact_id: Optional[str] = None
 
 
 class PpmDuplicateIn(ApiRequest):

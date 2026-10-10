@@ -8,6 +8,7 @@ from .controllers._my_work_api import MyWorkController
 from .controllers._overview_api import PpmOverviewController, ProjectMetricsController
 from .controllers._automation_api import PpmAutomationController
 from .controllers._intake_api import PpmFormController, PpmPublicIntakeController, PpmRequestController
+from .controllers._project_contacts_api import PpmContactProjectsController
 from .controllers._dashboards_api import (
     PpmDashboardController,
     PpmReportController,
@@ -91,6 +92,7 @@ def get_project_controllers() -> list[BaseController]:
         PpmFormController(),
         PpmRequestController(),
         PpmPublicIntakeController(),
+        PpmContactProjectsController(),
         PpmItemTypeController(),
         PpmCustomFieldController(),
         PpmChecklistTemplateController(),

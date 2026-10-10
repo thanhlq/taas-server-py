@@ -4,7 +4,7 @@ from ._crm_account_api import (
     CrmAccountResponse,
     CrmAccountStatusOption,
     CrmAccountUpdateRequest,
-    CrmContact,
+    CrmPrimaryContact,
 )
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     'CrmAccountListItem',
     'CrmAccountResponse',
     'CrmAccountStatusOption',
-    'CrmContact',
+    'CrmPrimaryContact',
 ]

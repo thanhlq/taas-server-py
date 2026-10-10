@@ -24,7 +24,12 @@ from ews.authz import EwsResources
 from ews.security import RequestScope, authorize, current_scope
 from ews.shared import parse_uuid, slugify
 
-from .._account_status import ACCOUNT_STATUS_COLORS, account_status, account_status_color
+from .. import _contacts as contacts
+from .._account_status import (
+    ACCOUNT_STATUS_COLORS,
+    account_status,
+    account_status_color,
+)
 from ..repos import CrmAccountRepository, RepoFactory
 from ..schemas import (
     CrmAccountCreateRequest,
@@ -32,15 +37,23 @@ from ..schemas import (
     CrmAccountResponse,
     CrmAccountStatusOption,
     CrmAccountUpdateRequest,
-    CrmContact,
+    CrmPrimaryContact,
 )
 from ..schemas._crm_account_api import _CrmBusinessInput
 
 # CRM business fields kept in ``account_metadata`` (no dedicated columns yet).
-_METADATA_FIELDS = ('arr', 'open_pipeline', 'health_score', 'renewal_date', 'primary_contact')
-# Business fields that live elsewhere: tier → ``account_rank``, currency → ``currency_id``,
-# country / city → the default address.
-_BUSINESS_FIELDS = (*_METADATA_FIELDS, 'tier', 'currency', 'country', 'city')
+_METADATA_FIELDS = ('arr', 'open_pipeline', 'health_score', 'renewal_date')
+# Business fields that live elsewhere: primary contact → a CRM contact (``primary_contact_id``, ADR-10),
+# tier → ``account_rank``, currency → ``currency_id``, country / city → the default address.
+_BUSINESS_FIELDS = (
+    *_METADATA_FIELDS,
+    'primary_contact',
+    'primary_contact_id',
+    'tier',
+    'currency',
+    'country',
+    'city',
+)
 
 
 def _slugify(name: str) -> str:
@@ -56,14 +69,33 @@ def _number(value: Any) -> Optional[float]:
     return float(value) if isinstance(value, (int, float)) else None
 
 
-def _contact(value: Any) -> Optional[CrmContact]:
-    if not isinstance(value, dict) or not any(value.get(k) for k in ('name', 'email', 'phone')):
+def _contact(
+    a: ews_models.CrmAccount, primary: Optional[ews_models.CrmContact]
+) -> Optional[CrmPrimaryContact]:
+    """The primary contact (a contact, ADR-10), else the legacy metadata of an account not migrated yet."""
+    if primary is not None:
+        return CrmPrimaryContact(
+            id=str(primary.id),
+            name=primary.name,
+            email=primary.email,
+            phone=primary.phone,
+        )
+    value = (
+        _metadata(a).get('primary_contact') if a.primary_contact_id is None else None
+    )
+    if not isinstance(value, dict) or not any(
+        value.get(k) for k in ('name', 'email', 'phone')
+    ):
         return None
-    return CrmContact(name=value.get('name'), email=value.get('email'), phone=value.get('phone'))
+    return CrmPrimaryContact(
+        name=value.get('name'), email=value.get('email'), phone=value.get('phone')
+    )
 
 
 def _fields(
-    a: ews_models.CrmAccount, address: Optional[ews_models.CrmAccountAddress]
+    a: ews_models.CrmAccount,
+    address: Optional[ews_models.CrmAccountAddress],
+    primary: Optional[ews_models.CrmContact] = None,
 ) -> dict[str, Any]:
     """Fields shared by the list item and the detail response."""
     meta = _metadata(a)
@@ -94,28 +126,35 @@ def _fields(
         'last_activity_at': getattr(a, 'updated_at', None),
         'industry_id': a.industry_id,
         'tier': a.account_rank,
-        'primary_contact': _contact(meta.get('primary_contact')),
+        'primary_contact': _contact(a, primary),
+        'primary_contact_id': str(primary.id) if primary is not None else None,
         'arr': _number(meta.get('arr')),
         'open_pipeline': _number(meta.get('open_pipeline')),
         'currency': a.currency_id or 'USD',
         'health_score': int(health) if isinstance(health, (int, float)) else None,
-        'renewal_date': date.fromisoformat(renewal) if isinstance(renewal, str) and renewal else None,
+        'renewal_date': date.fromisoformat(renewal)
+        if isinstance(renewal, str) and renewal
+        else None,
         'country': address.address_country_name if address else None,
         'city': address.address_city if address else None,
     }
 
 
 def _to_list_item(
-    a: ews_models.CrmAccount, address: Optional[ews_models.CrmAccountAddress] = None
+    a: ews_models.CrmAccount,
+    address: Optional[ews_models.CrmAccountAddress] = None,
+    primary: Optional[ews_models.CrmContact] = None,
 ) -> CrmAccountListItem:
-    return CrmAccountListItem(**_fields(a, address))
+    return CrmAccountListItem(**_fields(a, address, primary))
 
 
 def _to_response(
-    a: ews_models.CrmAccount, address: Optional[ews_models.CrmAccountAddress] = None
+    a: ews_models.CrmAccount,
+    address: Optional[ews_models.CrmAccountAddress] = None,
+    primary: Optional[ews_models.CrmContact] = None,
 ) -> CrmAccountResponse:
     return CrmAccountResponse(
-        **_fields(a, address),
+        **_fields(a, address, primary),
         commercial_name=a.commercial_name,
         employees=a.employees,
         annual_revenue=a.annual_revenue,
@@ -142,8 +181,21 @@ async def _addresses(
     return main
 
 
+async def _primaries(
+    session: DBAsyncScopedSession, rows: list[ews_models.CrmAccount]
+) -> dict[UUID, ews_models.CrmContact]:
+    """Primary contact of each account (live contacts only)."""
+    found = await contacts.summaries(
+        session, {a.primary_contact_id for a in rows if a.primary_contact_id}
+    )
+    return {
+        a.id: found[a.primary_contact_id] for a in rows if a.primary_contact_id in found
+    }
+
+
 async def _apply_business(
     session: DBAsyncScopedSession,
+    scope: RequestScope,
     a: ews_models.CrmAccount,
     data: _CrmBusinessInput,
     provided: set[str],
@@ -156,17 +208,27 @@ async def _apply_business(
         value = getattr(data, field)
         if field == 'renewal_date':
             value = value.isoformat() if value else None
-        elif field == 'primary_contact':
-            value = (
-                {k: getattr(value, k) for k in ('name', 'email', 'phone') if getattr(value, k)}
-                if value
-                else None
-            )
         if value is None or value == {}:
             meta.pop(field, None)
         else:
             meta[field] = value
     a.account_metadata = meta
+    if 'primary_contact_id' in provided:
+        a.primary_contact_id = (
+            (await contacts.load(session, scope, data.primary_contact_id)).id
+            if data.primary_contact_id
+            else None
+        )
+    elif 'primary_contact' in provided:
+        value = data.primary_contact
+        await contacts.write_primary(
+            session,
+            scope,
+            a,
+            {k: getattr(value, k) for k in ('name', 'email', 'phone')}
+            if value
+            else None,
+        )
     if 'tier' in provided:
         a.account_rank = data.tier or None
     if 'currency' in provided:
@@ -188,6 +250,14 @@ async def _apply_business(
             address.address_city = data.city or None
 
 
+async def _response(
+    session: DBAsyncScopedSession, a: ews_models.CrmAccount
+) -> CrmAccountResponse:
+    addresses = await _addresses(session, [a.id])
+    primaries = await _primaries(session, [a])
+    return _to_response(a, addresses.get(a.id), primaries.get(a.id))
+
+
 CRM_ACCOUNT = EwsResources.CRM_ACCOUNT.value
 
 
@@ -201,13 +271,19 @@ async def _scope(action: str) -> RequestScope:
 def _in_scope(scope: RequestScope) -> ColumnElement[bool]:
     """Accounts belong to the request's tenant and organization (``/<org>/crm``)."""
     a = ews_models.CrmAccount
-    return and_(a.tenant_id == scope.tenant_id, a.organization_id == scope.organization_id)
+    return and_(
+        a.tenant_id == scope.tenant_id, a.organization_id == scope.organization_id
+    )
 
 
-async def _load(session: DBAsyncScopedSession, scope: RequestScope, account_id: str) -> ews_models.CrmAccount:
+async def _load(
+    session: DBAsyncScopedSession, scope: RequestScope, account_id: str
+) -> ews_models.CrmAccount:
     """An account of the request's organization (404 otherwise, also for a malformed id)."""
     a = ews_models.CrmAccount
-    account = await session.scalar(select(a).where(a.id == parse_uuid(account_id, 'account'), _in_scope(scope)))
+    account = await session.scalar(
+        select(a).where(a.id == parse_uuid(account_id, 'account'), _in_scope(scope))
+    )
     if account is None:
         raise NotFoundException(detail='account not found')
     return account
@@ -247,8 +323,10 @@ class CrmAccountController(BaseController):
             )
         rows, total = await repo.list_and_count(*filters)
         addresses = await _addresses(session, [a.id for a in rows])
+        primaries = await _primaries(session, list(rows))
         return create_paginated_response(
-            [_to_list_item(a, addresses.get(a.id)) for a in rows], total=total
+            [_to_list_item(a, addresses.get(a.id), primaries.get(a.id)) for a in rows],
+            total=total,
         )
 
     @get('/statuses')
@@ -256,7 +334,8 @@ class CrmAccountController(BaseController):
         """The account status catalog: every status with its badge colour."""
         await current_scope()
         return [
-            CrmAccountStatusOption(value=s.value, color=c.value) for s, c in ACCOUNT_STATUS_COLORS.items()
+            CrmAccountStatusOption(value=s.value, color=c.value)
+            for s, c in ACCOUNT_STATUS_COLORS.items()
         ]
 
     @get('/{account_id}')
@@ -265,8 +344,7 @@ class CrmAccountController(BaseController):
         self, account_id: str, session: DBAsyncScopedSession
     ) -> CrmAccountResponse:
         a = await _load(session, await _scope('read'), account_id)
-        addresses = await _addresses(session, [a.id])
-        return _to_response(a, addresses.get(a.id))
+        return await _response(session, a)
 
     @post('/', status_code=status.HTTP_201_CREATED)
     @db_context_session(auto_commit=True)
@@ -293,34 +371,38 @@ class CrmAccountController(BaseController):
             employees=data.employees,
             annual_revenue=data.annual_revenue,
             status=data.status or CrmAccountStatus.PROSPECT,
-            is_individual=data.is_individual if data.is_individual is not None else False,
+            is_individual=data.is_individual
+            if data.is_individual is not None
+            else False,
             color=data.color,
             avatar_url=data.avatar_url,
             user_id=data.user_id,
         )
         created = await repo.add(account)
         provided = {f for f in _BUSINESS_FIELDS if getattr(data, f) is not None}
-        await _apply_business(session, created, data, provided)
+        await _apply_business(session, scope, created, data, provided)
         await session.flush()
-        addresses = await _addresses(session, [created.id])
-        return _to_response(created, addresses.get(created.id))
+        return await _response(session, created)
 
     @patch('/{account_id}')
     @db_context_session(auto_commit=True)
     async def update_account(
-        self, account_id: str, data: CrmAccountUpdateRequest, session: DBAsyncScopedSession
+        self,
+        account_id: str,
+        data: CrmAccountUpdateRequest,
+        session: DBAsyncScopedSession,
     ) -> CrmAccountResponse:
         repo = RepoFactory.get_repo(CrmAccountRepository, session)
-        a = await _load(session, await _scope('update'), account_id)
+        scope = await _scope('update')
+        a = await _load(session, scope, account_id)
         fields = data.as_dict()
         provided = {f for f in _BUSINESS_FIELDS if f in fields}
         for field, value in fields.items():
             if field not in _BUSINESS_FIELDS:
                 setattr(a, field, value)
-        await _apply_business(session, a, data, provided)
+        await _apply_business(session, scope, a, data, provided)
         updated = await repo.update(a)
-        addresses = await _addresses(session, [updated.id])
-        return _to_response(updated, addresses.get(updated.id))
+        return await _response(session, updated)
 
     @delete('/{account_id}', status_code=status.HTTP_204_NO_CONTENT)
     @db_context_session(auto_commit=True)

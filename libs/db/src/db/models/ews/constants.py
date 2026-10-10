@@ -2,6 +2,7 @@ from ..config import TABLE_PREFIX
 
 CRM_ACCOUNTS_TABLE = f'{TABLE_PREFIX}crm_accounts'
 CRM_ACCOUNTS_ADDRESSES_TABLE = f'{TABLE_PREFIX}crm_accounts_addresses'
+CRM_CONTACTS_TABLE = f'{TABLE_PREFIX}crm_contacts'
 # USERS_TABLE = f"{TABLE_PREFIX}users"
 # GROUPS_TABLE = f"{TABLE_PREFIX}groups"
 # GROUPS_USERS_TABLE = f"{TABLE_PREFIX}groups_users"

@@ -8,6 +8,18 @@ package it changes and its new version; how to write entries: [CLAUDE.md → Cha
 
 ### Added
 
+- `libs/ews` 0.2.0 — **CRM contacts** (contacts spec, CRM ADR-8…10): `/api/v1/crm/contacts` list (search over name,
+  e-mail, phone, job title, account; account / owner filters), detail, create (duplicate guard 409 `contact_exists`),
+  partial change, soft delete, lead source catalog; e-mails / phones as lists with one primary, addresses, owner,
+  reports to, labels, LinkedIn (`ews/crm/_contacts.py`); the account's primary contact is a contact
+  (`primary_contact_id`; the legacy `primary_contact` fields write through); RBAC `crm.contact`. **Project client &
+  contacts** (PPM Ppm-0113…0117): `client_id` checked against the organization's accounts, `contact_ids` +
+  `default_contact_id` on project create / update / template instantiation, `contacts` on the project detail,
+  `GET /api/v1/ppm/contacts/{id}/projects`, event `ppm.project.contacts_changed` (`ews/ppm/_project_contacts.py`).
+  **Changed**: the account wire type `CrmContact` is now `CrmPrimaryContact` (with the contact `id`).
+- `libs/db` 0.2.0 — migration `02f24a9e6949`: `taas_crm_contacts`, `taas_ppm_project_contacts`,
+  `taas_crm_accounts.primary_contact_id`; existing `account_metadata.primary_contact` values become contacts.
+- Tests `tests/unit/test_crm_contacts_rules.py`, `tests/unit_dev/test_crm_contacts_api.py`.
 - `libs/ews` 0.2.0 — **PPM intake V2** (intake spec, ADR-47): request forms (organization or project, internal or
   public) with a draft definition — fields, show-if logic on the automation operators, defaults, mapping to item fields,
   title template, routing rules — and immutable published versions; close, rotate the public link, routing test,

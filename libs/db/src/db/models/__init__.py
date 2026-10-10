@@ -51,6 +51,7 @@ from .ews import (
     ChecklistTemplate,
     ChecklistTemplateItem,
     CrmAccount,
+    CrmContact,
     CrmAccountAddress,
     Payrate,
     PayrateAdjustment,
@@ -98,6 +99,7 @@ from .ppm import (
     PpmDashboard,
     PpmDashboardShare,
     PpmForm,
+    PpmProjectContact,
     PpmFormVersion,
     PpmHealthOverride,
     PpmHealthPolicy,
@@ -159,6 +161,7 @@ __all__ = [
 
     # CRM
     'CrmAccount',
+    'CrmContact',
     'CrmAccountAddress',
 
     # PPM
@@ -250,6 +253,7 @@ __all__ = [
     'PpmDashboard',
     'PpmDashboardShare',
     'PpmForm',
+    'PpmProjectContact',
     'PpmFormVersion',
     'PpmHealthOverride',
     'PpmHealthPolicy',

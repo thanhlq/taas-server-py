@@ -5,6 +5,7 @@ from ._checklist_template import ChecklistTemplate
 from ._checklist_template_item import ChecklistTemplateItem
 from ._crm_account import CrmAccount
 from ._crm_account_address import CrmAccountAddress
+from ._crm_contact import CrmContact
 from ._payrate import Payrate
 from ._payrate_adjustment import PayrateAdjustment
 from ._payroll import Payroll
@@ -32,6 +33,7 @@ __all__ = [
     # CRM
     'CrmAccount',
     'CrmAccountAddress',
+    'CrmContact',
     # PPM
     'Category',
     'ChecklistTemplate',

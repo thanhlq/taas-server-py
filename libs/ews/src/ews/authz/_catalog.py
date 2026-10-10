@@ -72,6 +72,7 @@ class EwsResources(StrEnum):
     AUTOMATION = 'ppm.automation'
     DASHBOARD = 'ppm.dashboard'
     CRM_ACCOUNT = 'crm.account'
+    CRM_CONTACT = 'crm.contact'
     SITE = 'sites.site'
     SITE_THEME = 'sites.theme'
     SITE_DOMAIN = 'sites.domain'

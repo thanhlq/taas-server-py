@@ -9,6 +9,7 @@ from advanced_alchemy.mixins import SlugKey
 from advanced_alchemy.types import GUID
 from sqlalchemy import (
     TEXT,
+    ForeignKey,
     TIMESTAMP,
     Boolean,
     Integer,
@@ -19,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.models.base import ID_COLUMN_TYPE, JSONB, TENANT_ID_COLUMN_TYPE
 from db.models.ews._crm_account_address import CrmAccountAddress
-from db.models.ews.constants import CRM_ACCOUNTS_TABLE
+from db.models.ews.constants import CRM_ACCOUNTS_TABLE, CRM_CONTACTS_TABLE
 
 
 class CrmAccount(UUIDv7AuditBase, SlugKey):
@@ -121,6 +122,17 @@ class CrmAccount(UUIDv7AuditBase, SlugKey):
     analytics: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     settings: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     account_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    primary_contact_id: Mapped[Optional[ID_COLUMN_TYPE]] = mapped_column(
+        GUID(length=16),
+        ForeignKey(
+            f'{CRM_CONTACTS_TABLE}.id',
+            ondelete='set null',
+            use_alter=True,
+            name='fk_taas_crm_accounts_primary_contact_id_taas_crm_contacts',
+        ),
+        nullable=True,
+    )
+    """The account's main contact (one of its contacts, ADR-10); ``primary_contact`` is read from it."""
 
     # Timestamps
     last_time_entries_checked: Mapped[Optional[datetime]] = mapped_column(

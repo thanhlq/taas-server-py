@@ -55,6 +55,9 @@ class ProjectCreateRequest(ApiRequest):
     template_id: Optional[str] = None
     # Language of the seeded stage names / work item terms (BCP 47, default en).
     locale: Optional[str] = None
+    # CRM contacts of the project (Ppm-0115) and the default one (else the first).
+    contact_ids: Optional[list[str]] = None
+    default_contact_id: Optional[str] = None
 
 
 class WorkItemTypeInput(ApiRequest):
@@ -91,6 +94,9 @@ class ProjectUpdateRequest(ApiRequest):
     settings: Optional[dict[str, Any]] = None
     # Fields reset to null (omitted / null = unchanged, ADR-9): see ``PROJECT_CLEARABLE_FIELDS``.
     clear: Optional[list[str]] = None
+    # Replace the project's CRM contacts ([] = none) · choose the default among them.
+    contact_ids: Optional[list[str]] = None
+    default_contact_id: Optional[str] = None
 
 
 class ProjectListItem(ApiResponse):
@@ -129,8 +135,23 @@ class ProjectListItem(ApiResponse):
     health: Optional[str] = None
 
 
+class ProjectContactOut(ApiResponse):
+    """A CRM contact of the project (Ppm-0116)."""
+
+    id: str
+    name: str
+    is_default: bool = False
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
+    account_id: Optional[str] = None
+
+
 class ProjectResponse(ProjectListItem):
     """Full project detail."""
+
+    # CRM contacts of the project, the default first.
+    contacts: list[ProjectContactOut] = []
 
     org_id: Optional[str] = None
     # Process: the sticky workflow template and its constraints.

@@ -46,6 +46,8 @@ from sqlalchemy import text  # noqa: E402
 # Tables with a ``tenant_id`` column, deleted at the end of the session (children first). Tables of apps
 # that are not installed (no model yet) are skipped.
 TENANT_TABLES: tuple[str, ...] = (
+    'taas_ppm_project_contacts',
+    'taas_crm_contacts',
     'taas_ppm_requests',
     'taas_ppm_form_versions',
     'taas_ppm_forms',

@@ -16,6 +16,7 @@ from ._automation import (
     PpmAutomationRule,
     PpmAutomationRun,
 )
+from ._project_contacts import PpmProjectContact
 from ._intake import (
     FORM_AUDIENCES,
     FORM_STATUSES,
@@ -62,6 +63,7 @@ __all__ = [
     'RUN_STATUSES',
     'TRIGGER_TYPES',
     'PpmAutomationRule',
+    'PpmProjectContact',
     'PpmAutomationRun',
     'DASHBOARD_SCOPES',
     'DASHBOARD_VISIBILITY',

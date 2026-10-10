@@ -13,15 +13,19 @@ from db.models.ews.ews_enums import CrmAccountStatus
 from foundation.serialization import ApiRequest, ApiResponse
 
 
-class CrmContact(ApiResponse):
-    """A person at the account (primary contact)."""
+class CrmPrimaryContact(ApiResponse):
+    """The account's primary contact (a CRM contact, ADR-10)."""
 
+    # The contact (``/crm/contacts/{id}``); absent for an account not migrated yet (metadata).
+    id: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
 
 
-class CrmContactInput(ApiRequest):
+class CrmPrimaryContactInput(ApiRequest):
+    """Primary contact fields of the account form: written through to the primary contact (Crm-0209)."""
+
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -32,7 +36,9 @@ class _CrmBusinessInput(ApiRequest, kw_only=True):
 
     # Priority tier, e.g. Enterprise, Mid-market, SMB (``account_rank``).
     tier: Optional[str] = None
-    primary_contact: Optional[CrmContactInput] = None
+    primary_contact: Optional[CrmPrimaryContactInput] = None
+    # The primary contact (a contact of the organization); "" clears it.
+    primary_contact_id: Optional[str] = None
     # Annual recurring revenue and open pipeline, in ``currency``.
     arr: Optional[float] = None
     open_pipeline: Optional[float] = None
@@ -123,7 +129,8 @@ class CrmAccountListItem(ApiResponse):
     status_color: Optional[str] = None
     industry_id: Optional[str] = None
     tier: Optional[str] = None
-    primary_contact: Optional[CrmContact] = None
+    primary_contact: Optional[CrmPrimaryContact] = None
+    primary_contact_id: Optional[str] = None
     arr: Optional[float] = None
     open_pipeline: Optional[float] = None
     currency: Optional[str] = None
